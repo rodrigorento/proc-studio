@@ -4,9 +4,11 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -67,34 +69,72 @@ class InstagramReelsAccessibilityService : AccessibilityService() {
                     Log.e("ReelsBlocker", "Overlay permission not granted!")
                     return@post
                 }
-
-
                 val inflater = LayoutInflater.from(this)
                 overlayView = inflater.inflate(R.layout.overlay_go_study, null)
 
-                // Update title based on TaskCache
-                val titleTv = overlayView?.findViewById<TextView>(R.id.tvOverlayTitle)
+                val layoutEmpty = overlayView?.findViewById<View>(R.id.layoutEmptyState)
+                val layoutTasks = overlayView?.findViewById<View>(R.id.layoutTasksState)
+                val tvFirstTask = overlayView?.findViewById<TextView>(R.id.tvFirstTask)
+
                 val tasks = TaskCache.getTasks(this)
                 if (tasks.isEmpty()) {
-                    titleTv?.text = "the list is empty"
-                } else {
-                    titleTv?.text = "You have ${tasks.size} task(s) on your list:\n" + tasks.joinToString("\n") { "• $it" }
-                }
+                    layoutEmpty?.visibility = View.VISIBLE
+                    layoutTasks?.visibility = View.GONE
 
-                val typeItBtn = overlayView?.findViewById<Button>(R.id.btnTypeIt)
-                typeItBtn?.setOnClickListener {
-                    Log.d("ReelsBlocker", "Type it clicked")
-                    removeOverlay()
-                    val intent = Intent(this, TaskInputActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    val typeItBtn = overlayView?.findViewById<Button>(R.id.btnTypeIt)
+                    typeItBtn?.setOnClickListener {
+                        Log.d("ReelsBlocker", "Type it clicked")
+                        removeOverlay()
+                        val intent = Intent(this, TaskInputActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        }
+                        startActivity(intent)
                     }
-                    startActivity(intent)
-                }
 
-                val dismissBtn = overlayView?.findViewById<Button>(R.id.btnDismiss)
-                dismissBtn?.setOnClickListener {
-                    Log.d("ReelsBlocker", "Nothing for now clicked")
-                    removeOverlay()
+                    val dismissBtn = overlayView?.findViewById<Button>(R.id.btnDismiss)
+                    dismissBtn?.setOnClickListener {
+                        Log.d("ReelsBlocker", "Nothing for now clicked")
+                        removeOverlay()
+                    }
+                } else {
+                    layoutEmpty?.visibility = View.GONE
+                    layoutTasks?.visibility = View.VISIBLE
+                    tvFirstTask?.text = tasks[0]
+
+                    val doItNowBtn = overlayView?.findViewById<Button>(R.id.btnDoItNow)
+                    doItNowBtn?.setOnClickListener {
+                        Log.d("ReelsBlocker", "Do it now clicked")
+                        removeOverlay()
+
+                        // 1. Remove the first task from cache
+                        val currentTasks = TaskCache.getTasks(this).toMutableList()
+                        if (currentTasks.isNotEmpty()) {
+                            currentTasks.removeAt(0)
+                            TaskCache.saveTasks(this, currentTasks)
+                        }
+
+                        // 2. Open Instagram App Info settings where user can tap "Force Stop" with 1 click
+                        try {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.parse("package:com.instagram.android")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            performGlobalAction(GLOBAL_ACTION_HOME)
+                        }
+                    }
+
+                    val pickTimeBtn = overlayView?.findViewById<Button>(R.id.btnPickTime)
+                    pickTimeBtn?.setOnClickListener {
+                        Log.d("ReelsBlocker", "Pick a time clicked")
+                        removeOverlay()
+                        val intent = Intent(this, TaskTimePickerActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        }
+                        startActivity(intent)
+                    }
                 }
 
                 val params = WindowManager.LayoutParams(
@@ -111,7 +151,7 @@ class InstagramReelsAccessibilityService : AccessibilityService() {
                 }
 
                 windowManager?.addView(overlayView, params)
-                Log.d("ReelsBlocker", "Overlay added successfully (stays until dismissed).")
+                Log.d("ReelsBlocker", "Overlay added successfully.")
             } catch (e: Exception) {
                 Log.e("ReelsBlocker", "Failed to show overlay", e)
             }
@@ -124,7 +164,7 @@ class InstagramReelsAccessibilityService : AccessibilityService() {
                 if (overlayView != null) {
                     windowManager?.removeView(overlayView)
                     overlayView = null
-                    Log.d("ReelsBlocker", "Overlay removed.")
+                    Log.d("ReelsBlocker", "Review overlay removed.")
                 }
             } catch (e: Exception) {
                 Log.e("ReelsBlocker", "Failed to remove overlay", e)

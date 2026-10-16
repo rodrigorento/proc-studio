@@ -58,7 +58,7 @@ fun ReelsBlockerScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "🛑 Instagram Reels Blocker",
+            text = "🛑 Stop getting distracted",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -67,7 +67,7 @@ fun ReelsBlockerScreen(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "After watching 3 different Reels, displays 'GO STUDY' overlay!",
+            text = "After watching 8 different Reels, displays what you should actually be doing!",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -162,7 +162,7 @@ fun ReelsBlockerScreen(modifier: Modifier = Modifier) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Current Reels Watched: $reelsCount / 3",
+                    text = "Current Reels Watched: $reelsCount / 8",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
