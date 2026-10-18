@@ -88,10 +88,10 @@
             android:textSize="15sp" />
 
         <Button
-            android:id="@+id/btnDoItNow"
+            android:id="@+id/btnMarkCompleted"
             style="@style/ScrollGate.Button.Primary"
             android:layout_marginTop="24dp"
-            android:text="@string/gate_do_it_now" />
+            android:text="@string/gate_mark_completed" />
 
         <Button
             android:id="@+id/btnPickTime"
