@@ -311,6 +311,11 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         return true
     }
 
+    override fun onTaskRemoved(task: Task) {
+        TaskCache.remove(this, task.id)
+        EventLog.log(this, "task_removed", "where" to "overlay", "task" to task.title)
+    }
+
     override fun onAddTasksClosed() {
         EventLog.log(this, "add_tasks_closed", "tasks" to TaskCache.getTasks(this).size)
         backToFeed()

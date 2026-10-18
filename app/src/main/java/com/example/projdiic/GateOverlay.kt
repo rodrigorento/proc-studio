@@ -15,12 +15,14 @@ import android.text.format.DateFormat
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -54,6 +56,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
         /** Returns false when the task could not be added (blank, or the list is full). */
         fun onTaskAdded(title: String, via: String): Boolean
+        fun onTaskRemoved(task: Task)
         fun onAddTasksClosed()
     }
 
@@ -90,11 +93,14 @@ class GateOverlay(service: Context, private val actions: Actions) {
             is GateScreen.CheckIn -> task?.let(::buildCheckIn)
             GateScreen.AddTasks -> buildAddTasks()
         } ?: return false
+        val host = OverlayRoot(context, backActionFor(screen, task)).apply {
+            addView(next, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        }
 
         removeView()
         return try {
-            windowManager.addView(next, layoutParams(screen))
-            view = next
+            windowManager.addView(host, layoutParams(screen))
+            view = host
             shown = screen
             holdAudioFocus()
             true
@@ -122,6 +128,14 @@ class GateOverlay(service: Context, private val actions: Actions) {
             }
         }
         view = null
+    }
+
+    /** The system Back gesture: a step back where the screen has one; the gate itself only closes through its choices. */
+    private fun backActionFor(screen: GateScreen, task: Task?): (() -> Unit)? = when {
+        screen == GateScreen.AddTasks -> actions::onAddTasksClosed
+        task != null && (screen is GateScreen.PickTime || screen is GateScreen.DoingNow) ->
+            { -> actions.onBackToChoices(task, screen) }
+        else -> null
     }
 
     private fun buildGate(task: Task): View {
@@ -214,10 +228,16 @@ class GateOverlay(service: Context, private val actions: Actions) {
             val tasks = TaskCache.getTasks(context)
             val next = TaskRules.next(tasks, now)
             list.removeAllViews()
-            tasks.forEach { list.addView(taskRow(list, it, it.id == next?.id, now)) }
+            tasks.forEach { task ->
+                list.addView(taskRow(list, task, task.id == next?.id, now) {
+                    actions.onTaskRemoved(task)
+                    bind()
+                })
+            }
             listTitle.isVisible = tasks.isNotEmpty()
             listTitle.text = context.getString(R.string.add_list_title, tasks.size, TaskRules.MAX_TASKS)
             val hasRoom = tasks.size < TaskRules.MAX_TASKS
+            if (!hasRoom) hideKeyboard(input)
             voiceBlock.isVisible = hasRoom && voiceReady
             typeBlock.isVisible = hasRoom
             listFull.isVisible = !hasRoom
@@ -233,12 +253,16 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
         bind()
         root.findViewById<Button>(R.id.btnAddTyped).setOnClickListener { addTyped() }
-        input.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
-                addTyped()
-                true
-            } else {
-                false
+        // Done on the on-screen keyboard, or Enter on a physical one (which reports no action).
+        input.setOnEditorActionListener { _, actionId, event ->
+            val enter = event?.keyCode == KeyEvent.KEYCODE_ENTER
+            when {
+                actionId == EditorInfo.IME_ACTION_DONE || (enter && event?.action == KeyEvent.ACTION_DOWN) -> {
+                    addTyped()
+                    true
+                }
+                enter -> true
+                else -> false
             }
         }
         mic.setOnClickListener {
@@ -254,7 +278,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         return root
     }
 
-    private fun taskRow(parent: ViewGroup, task: Task, isNext: Boolean, now: Long): View {
+    private fun taskRow(parent: ViewGroup, task: Task, isNext: Boolean, now: Long, onRemove: () -> Unit): View {
         val row = inflater.inflate(R.layout.item_task_row, parent, false)
         row.findViewById<View>(R.id.dot)
             .setBackgroundResource(if (isNext) R.drawable.bg_dot_accent else R.drawable.bg_dot_muted)
@@ -264,7 +288,17 @@ class GateOverlay(service: Context, private val actions: Actions) {
             isNext -> context.getString(R.string.status_next)
             else -> ""
         }
+        row.findViewById<ImageButton>(R.id.btnRemoveTask).apply {
+            isVisible = true
+            contentDescription = context.getString(R.string.add_remove, task.title)
+            setOnClickListener { onRemove() }
+        }
         return row
+    }
+
+    private fun hideKeyboard(input: EditText) {
+        context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(input.windowToken, 0)
+        input.clearFocus()
     }
 
     private fun toggleListening(mic: ImageButton, status: TextView, transcript: TextView, onHeard: (String) -> Unit) {
@@ -385,8 +419,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.CENTER
+            // The keyboard only opens when the text field is tapped.
             softInputMode = if (screen == GateScreen.AddTasks) {
-                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
             } else {
                 WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
             }

@@ -75,6 +75,8 @@
     <string name="add_start_scrolling">Start scrolling</string>
     <string name="add_not_now">Not now</string>
 
+    <string name="add_remove">Remove %1$s</string>
+
     <string name="status_next">Next up</string>
     <string name="status_back_at">Back at %1$s</string>
 </resources>

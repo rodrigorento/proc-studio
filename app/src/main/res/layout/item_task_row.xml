@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
-    android:minHeight="44dp"
+    android:minHeight="48dp"
     android:orientation="horizontal">
 
     <View
@@ -28,4 +29,18 @@
         android:layout_marginStart="8dp"
         android:textColor="@color/sg_muted"
         android:textSize="14sp" />
+
+    <ImageButton
+        android:id="@+id/btnRemoveTask"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="-10dp"
+        android:background="@drawable/bg_button_text"
+        android:padding="12dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_close"
+        android:tint="@color/sg_muted"
+        android:visibility="gone"
+        tools:ignore="ContentDescription" />
 </LinearLayout>
