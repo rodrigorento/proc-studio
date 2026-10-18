@@ -1,8 +1,6 @@
 package com.example.projdiic
 
-import java.util.Calendar
 import java.util.TimeZone
-import kotlin.math.roundToInt
 
 data class TimeChoice(val key: String, val at: Long)
 
@@ -28,19 +26,9 @@ object TimeChoices {
     }
 
     /** Calendar days from [from] to [to]: 0 for the same day, 1 for yesterday. */
-    fun daysBetween(from: Long, to: Long, zone: TimeZone = TimeZone.getDefault()): Int {
-        val start = atHour(from, zone, daysAhead = 0, hour = 0)
-        val end = atHour(to, zone, daysAhead = 0, hour = 0)
-        return ((end - start) / (24 * 60 * MINUTE).toDouble()).roundToInt()
-    }
+    fun daysBetween(from: Long, to: Long, zone: TimeZone = TimeZone.getDefault()): Int =
+        DayMath.daysBetween(from, to, zone)
 
     private fun atHour(now: Long, zone: TimeZone, daysAhead: Int, hour: Int): Long =
-        Calendar.getInstance(zone).apply {
-            timeInMillis = now
-            add(Calendar.DAY_OF_YEAR, daysAhead)
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
+        DayMath.at(DayMath.midnight(now, zone, daysAhead), zone, hour)
 }

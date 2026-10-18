@@ -32,16 +32,20 @@ object TaskCache {
 
     fun find(context: Context, id: String): Task? = getTasks(context).firstOrNull { it.id == id }
 
-    /** Adds a task at the end of the list. Returns null when the title is blank or the list is full. */
+    /**
+     * Adds a task at the end of the list, with the time it mentions ("tomorrow at 3")
+     * as its window. Returns null when the title is blank or the list is full.
+     */
     fun addTask(context: Context, rawTitle: String, via: String): Task? {
-        val title = TaskRules.cleanTitle(rawTitle) ?: return null
+        val now = System.currentTimeMillis()
+        val parsed = WhenParser.parse(rawTitle, now)
+        val title = TaskRules.cleanTitle(parsed.title) ?: return null
         val tasks = getTasks(context)
         if (tasks.size >= TaskRules.MAX_TASKS) return null
-        val task = Task(
-            id = UUID.randomUUID().toString(),
-            title = title,
-            createdAt = System.currentTimeMillis(),
-            addedVia = via,
+        val task = TaskRules.withWhen(
+            Task(id = UUID.randomUUID().toString(), title = title, createdAt = now, addedVia = via),
+            parsed.window,
+            now,
         )
         saveTasks(context, tasks + task)
         return task
@@ -80,6 +84,9 @@ object TaskCache {
         .put("deferredBy", task.deferredBy)
         .put("snoozeUsed", task.snoozeUsed)
         .put("passes", task.passes)
+        .put("dueAt", task.dueAt)
+        .put("dueHasTime", task.dueHasTime)
+        .put("whenKey", task.whenKey)
 
     private fun fromJson(json: JSONObject) = Task(
         id = json.getString("id"),
@@ -90,6 +97,9 @@ object TaskCache {
         deferredBy = json.optString("deferredBy"),
         snoozeUsed = json.optBoolean("snoozeUsed"),
         passes = json.optInt("passes"),
+        dueAt = json.optLong("dueAt"),
+        dueHasTime = json.optBoolean("dueHasTime"),
+        whenKey = json.optString("whenKey"),
     )
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

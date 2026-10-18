@@ -8,17 +8,25 @@ data class Task(
     val addedVia: String = VIA_TEXT,
     /** The task stays off the gate until this time; 0 when it was never put off. */
     val deferredUntil: Long = 0L,
-    /** [BY_SNOOZE] or [BY_TIME]: how the task was last put off. */
+    /** [BY_SNOOZE], [BY_TIME] or [BY_WHEN]: why the task is held back. */
     val deferredBy: String = "",
     val snoozeUsed: Boolean = false,
     /** Gates for this task that ended without it being done. */
     val passes: Int = 0,
+    /** When it is due; 0 for Anytime. See [TaskRules.window]. */
+    val dueAt: Long = 0L,
+    val dueHasTime: Boolean = false,
+    /** The chip it was given ([WhenChoices]), or empty for Anytime. */
+    val whenKey: String = "",
 ) {
     companion object {
         const val VIA_TEXT = "text"
         const val VIA_VOICE = "voice"
         const val BY_SNOOZE = "snooze"
         const val BY_TIME = "time"
+
+        /** Waiting for the start of the time it was given when added ("tonight", "on Monday"). */
+        const val BY_WHEN = "when"
     }
 }
 
@@ -28,17 +36,40 @@ object TaskRules {
     const val CHECK_IN_AFTER_PASSES = 2
     const val MAX_TITLE_LENGTH = 120
 
-    /** The one task the gate shows: a task whose picked time has come first, then the oldest. */
+    /**
+     * The one task the gate shows, among those whose time has started: the one due
+     * soonest (a picked time that has come counts as due then), then the oldest.
+     */
     fun next(tasks: List<Task>, now: Long): Task? =
         tasks.filter { it.deferredUntil <= now }
-            .sortedWith(
-                compareBy<Task>(
-                    { if (it.deferredUntil > 0L) 0 else 1 },
-                    { it.deferredUntil },
-                    { it.createdAt },
-                )
-            )
-            .firstOrNull()
+            .minWithOrNull(compareBy<Task>({ dueBy(it) }, { it.createdAt }))
+
+    private fun dueBy(task: Task): Long {
+        val picked = if (task.deferredBy != Task.BY_WHEN) task.deferredUntil else 0L
+        return listOf(task.dueAt, picked).filter { it > 0L }.minOrNull() ?: Long.MAX_VALUE
+    }
+
+    /** The time window the task was given, or null for Anytime. */
+    fun window(task: Task): TimeWindow? {
+        if (task.dueAt <= 0L) return null
+        val start = if (task.deferredBy == Task.BY_WHEN) task.deferredUntil else 0L
+        return TimeWindow(task.whenKey.ifEmpty { WhenChoices.CUSTOM }, start, task.dueAt, task.dueHasTime)
+    }
+
+    /** Gives the task a time window (null: Anytime). A snooze or picked time still running is kept. */
+    fun withWhen(task: Task, window: TimeWindow?, now: Long): Task {
+        val putOff = task.deferredBy != Task.BY_WHEN && task.deferredUntil > now
+        val base = if (putOff) task else task.copy(deferredUntil = 0L, deferredBy = "")
+        if (window == null) return base.copy(dueAt = 0L, dueHasTime = false, whenKey = "")
+        val waits = window.start > now && window.start > base.deferredUntil
+        return base.copy(
+            deferredUntil = if (waits) window.start else base.deferredUntil,
+            deferredBy = if (waits) Task.BY_WHEN else base.deferredBy,
+            dueAt = window.end,
+            dueHasTime = window.hasTime,
+            whenKey = window.key,
+        )
+    }
 
     fun snooze(task: Task, now: Long): Task =
         task.copy(deferredUntil = now + SNOOZE_MS, deferredBy = Task.BY_SNOOZE, snoozeUsed = true)

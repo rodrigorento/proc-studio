@@ -305,10 +305,30 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         show(GateScreen.Gate(task.id))
     }
 
-    override fun onTaskAdded(title: String, via: String): Boolean {
-        val task = TaskCache.addTask(this, title, via) ?: return false
-        EventLog.log(this, "task_added", "via" to via, "where" to "overlay", "task" to task.title)
-        return true
+    override fun onTaskAdded(title: String, via: String): Task? {
+        val task = TaskCache.addTask(this, title, via) ?: return null
+        EventLog.log(
+            this, "task_added",
+            "via" to via,
+            "where" to "overlay",
+            "task" to task.title,
+            "when" to task.whenKey.ifEmpty { "anytime" },
+            "due_ms" to task.dueAt.takeIf { it > 0 },
+        )
+        return task
+    }
+
+    override fun onWhenChanged(task: Task, window: TimeWindow?) {
+        val current = latest(task) ?: return
+        TaskCache.update(this, TaskRules.withWhen(current, window, System.currentTimeMillis()))
+        EventLog.log(
+            this, "when_changed",
+            "where" to "overlay",
+            "task" to task.title,
+            "from" to current.whenKey.ifEmpty { "anytime" },
+            "to" to (window?.key ?: "anytime"),
+            "due_ms" to window?.end,
+        )
     }
 
     override fun onTaskRemoved(task: Task) {

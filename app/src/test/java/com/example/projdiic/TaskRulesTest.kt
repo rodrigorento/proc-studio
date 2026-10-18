@@ -33,6 +33,36 @@ class TaskRulesTest {
     }
 
     @Test
+    fun theTaskDueSoonestGoesFirst() {
+        val anytime = task("a", 1)
+        val thisWeek = task("b", 2).copy(dueAt = 900)
+        val today = task("c", 3).copy(dueAt = 200)
+
+        assertEquals("c", TaskRules.next(listOf(anytime, thisWeek, today), now = 50)?.id)
+    }
+
+    @Test
+    fun aTaskWaitsForItsWindowToStart() {
+        val tonight = TaskRules.withWhen(task("a", 1), TimeWindow(WhenChoices.TONIGHT, start = 100, end = 200), now = 50)
+
+        assertNull(TaskRules.next(listOf(tonight), now = 50))
+        assertEquals("a", TaskRules.next(listOf(tonight), now = 120)?.id)
+        assertEquals(TimeWindow(WhenChoices.TONIGHT, 100, 200), TaskRules.window(tonight))
+    }
+
+    @Test
+    fun choosingAnytimeClearsTheWindowButKeepsASnooze() {
+        val snoozed = TaskRules.snooze(task("a", 1), now = 0)
+        val dated = TaskRules.withWhen(snoozed, TimeWindow(WhenChoices.TODAY, start = 0, end = 900), now = 10)
+
+        val anytime = TaskRules.withWhen(dated, null, now = 10)
+
+        assertNull(TaskRules.window(anytime))
+        assertEquals(snoozed.deferredUntil, anytime.deferredUntil)
+        assertEquals(Task.BY_SNOOZE, anytime.deferredBy)
+    }
+
+    @Test
     fun nextIsNullWhenEverythingIsScheduled() {
         assertNull(TaskRules.next(listOf(task("a", 1, deferredUntil = 100)), now = 50))
     }

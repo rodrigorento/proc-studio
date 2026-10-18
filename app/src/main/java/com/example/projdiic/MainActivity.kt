@@ -16,6 +16,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.example.projdiic.ui.theme.ProjDIICTheme
 import kotlinx.coroutines.delay
 import java.util.Date
+import java.util.TimeZone
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,6 +80,7 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
     var logCount by remember { mutableIntStateOf(EventLog.count(context)) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var showFacilitator by rememberSaveable { mutableStateOf(false) }
+    var expandedId by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -94,9 +97,31 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
 
     fun addTask(text: String, via: String): Boolean {
         val task = TaskCache.addTask(context, text, via) ?: return false
-        EventLog.log(context, "task_added", "via" to via, "where" to "app", "task" to task.title)
+        EventLog.log(
+            context, "task_added",
+            "via" to via,
+            "where" to "app",
+            "task" to task.title,
+            "when" to task.whenKey.ifEmpty { "anytime" },
+            "due_ms" to task.dueAt.takeIf { it > 0 },
+        )
         tasks = TaskCache.getTasks(context)
+        expandedId = task.id
         return true
+    }
+
+    fun changeWhen(task: Task, window: TimeWindow?) {
+        TaskCache.update(context, TaskRules.withWhen(task, window, System.currentTimeMillis()))
+        EventLog.log(
+            context, "when_changed",
+            "where" to "app",
+            "task" to task.title,
+            "from" to task.whenKey.ifEmpty { "anytime" },
+            "to" to (window?.key ?: "anytime"),
+            "due_ms" to window?.end,
+        )
+        tasks = TaskCache.getTasks(context)
+        expandedId = null
     }
 
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -181,6 +206,9 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
                     task = task,
                     isNext = task.id == next?.id,
                     now = now,
+                    expanded = task.id == expandedId,
+                    onToggle = { expandedId = if (expandedId == task.id) null else task.id },
+                    onWhen = { changeWhen(task, it) },
                     onRemove = {
                         TaskCache.remove(context, task.id)
                         EventLog.log(context, "task_removed", "where" to "app", "task" to task.title)
@@ -401,11 +429,21 @@ private fun SetupRow(label: String, detail: String, isOn: Boolean, action: Strin
 }
 
 @Composable
-private fun TaskRow(task: Task, isNext: Boolean, now: Long, onRemove: () -> Unit) {
+private fun TaskRow(
+    task: Task,
+    isNext: Boolean,
+    now: Long,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onWhen: (TimeWindow?) -> Unit,
+    onRemove: () -> Unit,
+) {
     val context = LocalContext.current
+    val formats = remember { whenFormats(context) }
+    val window = TaskRules.window(task)
     val status = buildList {
         when {
-            task.deferredUntil > now ->
+            task.deferredBy != Task.BY_WHEN && task.deferredUntil > now ->
                 add("Back at " + DateFormat.getTimeFormat(context).format(Date(task.deferredUntil)))
             isNext -> add("Next up")
         }
@@ -436,12 +474,42 @@ private fun TaskRow(task: Task, isNext: Boolean, now: Long, onRemove: () -> Unit
                 Text(status, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        AssistChip(
+            onClick = onToggle,
+            label = { Text(WhenText.label(window, now, TimeZone.getDefault(), formats)) },
+            modifier = Modifier.semantics { contentDescription = "When: ${WhenText.label(window, now, TimeZone.getDefault(), formats)}. Tap to change." }
+        )
         IconButton(onClick = onRemove) {
             Icon(
                 painter = painterResource(R.drawable.ic_close),
                 contentDescription = "Remove ${task.title}",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+    if (expanded) {
+        val options = WhenChoices.chips(now).toMutableList<TimeWindow?>()
+        // What he said that isn't one of the chips ("Tomorrow 15:00") stays on offer, first so it's in view.
+        if (window != null && window.key == WhenChoices.CUSTOM) options.add(0, window)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(start = 20.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            options.forEach { option ->
+                FilterChip(
+                    selected = (option?.key ?: "") == task.whenKey &&
+                        (option?.key != WhenChoices.CUSTOM || option == window),
+                    onClick = { onWhen(option) },
+                    label = { Text(WhenText.label(option, now, TimeZone.getDefault(), formats)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    )
+                )
+            }
         }
     }
 }
@@ -464,7 +532,7 @@ private fun AddTaskRow(onAdd: (String) -> Boolean, onVoice: () -> Unit) {
         OutlinedTextField(
             value = draft,
             onValueChange = { draft = it },
-            placeholder = { Text("Type a task") },
+            placeholder = { Text("e.g. Gym on Monday") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Sentences,

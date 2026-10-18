@@ -13,6 +13,7 @@ The screens follow the Scroll Gate design (Gate A: a calm sheet over the dimmed 
 - **Rotating wording:** the line above the task changes every gate so it doesn't go stale.
 - **Trusted-person check-in (Wizard of Oz):** off by default. When the participant switches it on, the third gate for a task that was passed twice asks whether their trusted person may check in. The app logs `check_in` and a teammate sends the real message by hand.
 - **Task list:** up to three tasks, added on the main screen or on the pause screen when the list is empty, by voice or by typing.
+- **When a task is for:** each task has a time pill. Tap it for fixed choices: Anytime, Today, Tonight, Tomorrow, This week. Times said or typed with the task are read on the phone, with no network call: "dentist tomorrow at 3pm", "gym on Monday", "return the book by Wednesday", "next week", "in 2 hours", "on the 25th". The words are taken out of the title, and the chip they matched is pre-selected. A task only reaches the gate once its time has started; the one due soonest comes first. English only for now (`WhenParser`).
 - **Facilitator panel:** hidden on the main screen; **long-press the "Scroll Gate" title** to show it. Set N, T and the cooldown, switch check-ins on, trigger a gate on the next swipe, export the log, reset the data.
 - **Interaction log:** every event (swipe, gate shown, choice, time on the gate, task done, leaving Instagram) is kept on the phone with a timestamp and exported as JSON or CSV through the share sheet.
 - **Local only:** tasks, settings and the log stay on the device; no backend.
@@ -87,6 +88,7 @@ app/src/main/
 │   ├── GateTrigger.kt                         # N swipes or T minutes, debounce, cooldown
 │   ├── Task.kt                                # Task model and rules (next task, snooze, passes)
 │   ├── TimeChoices.kt                         # Pick a time quick choices
+│   ├── TaskWhen.kt / WhenParser.kt            # Time chips, their labels, reading times from speech or text
 │   ├── TaskCache.kt                           # Task storage (JSON in SharedPreferences)
 │   ├── GateSettings.kt                        # Facilitator settings
 │   ├── EventLog.kt / LogFormat.kt             # On-device log and JSON/CSV export

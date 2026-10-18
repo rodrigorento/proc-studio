@@ -35,6 +35,7 @@ import androidx.core.view.updatePadding
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Draws the Scroll Gate screens over Instagram, one at a time, and reports
@@ -54,9 +55,10 @@ class GateOverlay(service: Context, private val actions: Actions) {
         fun onCheckInAccepted(task: Task)
         fun onCheckInOff(task: Task)
 
-        /** Returns false when the task could not be added (blank, or the list is full). */
-        fun onTaskAdded(title: String, via: String): Boolean
+        /** Returns the new task, or null when it could not be added (blank, or the list is full). */
+        fun onTaskAdded(title: String, via: String): Task?
         fun onTaskRemoved(task: Task)
+        fun onWhenChanged(task: Task, window: TimeWindow?)
         fun onAddTasksClosed()
     }
 
@@ -68,6 +70,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private val windowManager = service.getSystemService(WindowManager::class.java)
     private val audioManager = service.getSystemService(AudioManager::class.java)
     private val settings = GateSettings(service)
+    private val formats = whenFormats(context)
 
     private var view: View? = null
     private var shown: GateScreen? = null
@@ -222,6 +225,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
         val start = root.findViewById<Button>(R.id.btnStartScrolling)
         val voiceReady = PermissionUtils.hasMicPermission(context) &&
             SpeechRecognizer.isRecognitionAvailable(context)
+        // The task whose time chips are open: the one just added, or one whose time pill was tapped.
+        var expandedId: String? = null
 
         fun bind() {
             val now = System.currentTimeMillis()
@@ -229,10 +234,28 @@ class GateOverlay(service: Context, private val actions: Actions) {
             val next = TaskRules.next(tasks, now)
             list.removeAllViews()
             tasks.forEach { task ->
-                list.addView(taskRow(list, task, task.id == next?.id, now) {
-                    actions.onTaskRemoved(task)
-                    bind()
-                })
+                list.addView(
+                    taskRow(
+                        parent = list,
+                        task = task,
+                        isNext = task.id == next?.id,
+                        now = now,
+                        expanded = task.id == expandedId,
+                        onToggle = {
+                            expandedId = if (expandedId == task.id) null else task.id
+                            bind()
+                        },
+                        onWhen = { window ->
+                            actions.onWhenChanged(task, window)
+                            expandedId = null
+                            bind()
+                        },
+                        onRemove = {
+                            actions.onTaskRemoved(task)
+                            bind()
+                        },
+                    )
+                )
             }
             listTitle.isVisible = tasks.isNotEmpty()
             listTitle.text = context.getString(R.string.add_list_title, tasks.size, TaskRules.MAX_TASKS)
@@ -245,10 +268,10 @@ class GateOverlay(service: Context, private val actions: Actions) {
         }
 
         fun addTyped() {
-            if (actions.onTaskAdded(input.text.toString(), Task.VIA_TEXT)) {
-                input.text.clear()
-                bind()
-            }
+            val task = actions.onTaskAdded(input.text.toString(), Task.VIA_TEXT) ?: return
+            input.text.clear()
+            expandedId = task.id
+            bind()
         }
 
         bind()
@@ -267,10 +290,10 @@ class GateOverlay(service: Context, private val actions: Actions) {
         }
         mic.setOnClickListener {
             toggleListening(mic, micStatus, transcript) { heard ->
-                if (actions.onTaskAdded(heard, Task.VIA_VOICE)) {
-                    micStatus.setText(R.string.add_voice_added)
-                    bind()
-                }
+                val task = actions.onTaskAdded(heard, Task.VIA_VOICE) ?: return@toggleListening
+                micStatus.setText(R.string.add_voice_added)
+                expandedId = task.id
+                bind()
             }
         }
         start.setOnClickListener { actions.onAddTasksClosed() }
@@ -278,23 +301,56 @@ class GateOverlay(service: Context, private val actions: Actions) {
         return root
     }
 
-    private fun taskRow(parent: ViewGroup, task: Task, isNext: Boolean, now: Long, onRemove: () -> Unit): View {
+    private fun taskRow(
+        parent: ViewGroup,
+        task: Task,
+        isNext: Boolean,
+        now: Long,
+        expanded: Boolean,
+        onToggle: () -> Unit,
+        onWhen: (TimeWindow?) -> Unit,
+        onRemove: () -> Unit,
+    ): View {
         val row = inflater.inflate(R.layout.item_task_row, parent, false)
         row.findViewById<View>(R.id.dot)
             .setBackgroundResource(if (isNext) R.drawable.bg_dot_accent else R.drawable.bg_dot_muted)
         row.findViewById<TextView>(R.id.tvRowTitle).text = task.title
-        row.findViewById<TextView>(R.id.tvRowStatus).text = when {
-            task.deferredUntil > now -> context.getString(R.string.status_back_at, timeText(task.deferredUntil))
-            isNext -> context.getString(R.string.status_next)
-            else -> ""
+        row.findViewById<TextView>(R.id.tvRowWhen).apply {
+            text = pillText(task, now)
+            contentDescription = context.getString(R.string.when_change, text)
+            setOnClickListener { onToggle() }
         }
         row.findViewById<ImageButton>(R.id.btnRemoveTask).apply {
             isVisible = true
             contentDescription = context.getString(R.string.add_remove, task.title)
             setOnClickListener { onRemove() }
         }
+        row.findViewById<View>(R.id.whenChipsScroll).isVisible = expanded
+        if (expanded) {
+            val chips = row.findViewById<LinearLayout>(R.id.whenChips)
+            val current = TaskRules.window(task)
+            val options = WhenChoices.chips(now).toMutableList<TimeWindow?>()
+            // What he said that isn't one of the chips ("Tomorrow 15:00") stays on offer, first so it's in view.
+            if (current != null && current.key == WhenChoices.CUSTOM) options.add(0, current)
+            options.forEach { window ->
+                val chip = inflater.inflate(R.layout.item_when_chip, chips, false) as Button
+                chip.text = WhenText.label(window, now, TimeZone.getDefault(), formats)
+                chip.isSelected = (window?.key ?: "") == task.whenKey &&
+                    (window?.key != WhenChoices.CUSTOM || window == current)
+                chip.setOnClickListener { onWhen(window) }
+                chips.addView(chip)
+            }
+        }
         return row
     }
+
+    /** The task's time, or when it comes back after a snooze or a picked time. */
+    private fun pillText(task: Task, now: Long): String =
+        if (task.deferredBy != Task.BY_WHEN && task.deferredUntil > now) {
+            context.getString(R.string.status_back_at, timeText(task.deferredUntil))
+        } else {
+            WhenText.label(TaskRules.window(task), now, TimeZone.getDefault(), formats)
+        }
 
     private fun hideKeyboard(input: EditText) {
         context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(input.windowToken, 0)
@@ -363,13 +419,14 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
     private fun metaFor(task: Task): String {
         val now = System.currentTimeMillis()
-        if (task.deferredUntil in 1..now) {
+        if (task.deferredUntil in 1..now && task.deferredBy != Task.BY_WHEN) {
             return if (task.deferredBy == Task.BY_SNOOZE) {
                 context.getString(R.string.gate_meta_snoozed)
             } else {
                 context.getString(R.string.gate_meta_picked, timeText(task.deferredUntil))
             }
         }
+        WhenText.gateLine(TaskRules.window(task), now, TimeZone.getDefault(), formats)?.let { return it }
         val day = when (TimeChoices.daysBetween(task.createdAt, now)) {
             0 -> context.getString(R.string.day_today)
             1 -> context.getString(R.string.day_yesterday)
