@@ -1,9 +1,12 @@
 package com.example.projdiic
 
+import android.Manifest
 import android.app.AppOpsManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 
 object PermissionUtils {
     fun hasUsageStatsPermission(context: Context): Boolean {
@@ -31,4 +34,9 @@ object PermissionUtils {
             true
         }
     }
+
+    /** Needed only for adding tasks by voice on the overlay. */
+    fun hasMicPermission(context: Context): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
 }

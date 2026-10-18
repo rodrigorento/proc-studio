@@ -7,4 +7,22 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Scroll Gate: a dark, calm palette with one mint accent and no alarm colours. -->
+    <color name="sg_bg">#FF0B0B0D</color>
+    <color name="sg_surface">#FF18191D</color>
+    <color name="sg_surface_2">#FF26282D</color>
+    <color name="sg_line">#FF34363C</color>
+    <color name="sg_text">#FFF4F4F1</color>
+    <color name="sg_text_soft">#FFD4D5D8</color>
+    <color name="sg_muted">#FFA9ABB0</color>
+    <color name="sg_faint">#FF8A8C92</color>
+    <color name="sg_accent">#FF8FD3BE</color>
+    <color name="sg_accent_soft">#248FD3BE</color>
+    <color name="sg_on_accent">#FF0B0B0D</color>
+    <color name="sg_scrim">#B80B0B0D</color>
+    <color name="sg_pill">#E618191D</color>
+    <color name="sg_dot_muted">#FF4A4D54</color>
+    <color name="sg_ripple_dark">#1F000000</color>
+    <color name="sg_ripple_light">#1FFFFFFF</color>
 </resources>

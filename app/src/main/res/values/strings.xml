@@ -1,3 +1,80 @@
 <resources>
     <string name="app_name">ProjDIIC</string>
+    <string name="accessibility_description">Counts your swipes in Instagram and, after a stretch of scrolling, pauses it to show the next thing on your list. It notices which app is open; it does not save what is on screen.</string>
+
+    <!-- Gate: one task, three ways out -->
+    <string name="gate_feed_paused">Feed paused</string>
+    <string-array name="gate_eyebrows">
+        <item>A quick one before you keep going</item>
+        <item>Before the next video</item>
+        <item>Still on your list</item>
+        <item>One thing first</item>
+    </string-array>
+    <string name="gate_meta_added">From your list · added %1$s</string>
+    <string name="gate_meta_said">From your list · said out loud %1$s</string>
+    <string name="gate_meta_picked">You picked %1$s for this</string>
+    <string name="gate_meta_snoozed">Back after your snooze</string>
+    <string name="gate_do_it_now">Do it now</string>
+    <string name="gate_pick_time">Pick a time</string>
+    <string name="gate_snooze">Snooze 5 min · once</string>
+    <string name="gate_snooze_used">You\'ve used your snooze for this one.</string>
+    <string name="gate_hint">Pick one to get back to the feed.</string>
+    <string name="day_today">today</string>
+    <string name="day_yesterday">yesterday</string>
+
+    <!-- Pick a time -->
+    <string name="pick_back">Back</string>
+    <string name="pick_title">When will you do it?</string>
+    <string name="time_in_15">In 15 minutes</string>
+    <string name="time_in_60">In 1 hour</string>
+    <string name="time_tonight">Tonight</string>
+    <string name="time_tomorrow">Tomorrow morning</string>
+    <string name="pick_calendar">Add to Calendar instead</string>
+    <string name="pick_footnote">One tap and you\'re back in the feed. It comes back at the first pause after that time.</string>
+    <string name="calendar_description">Scheduled via Instagram Reels Blocker</string>
+    <string name="calendar_missing">No calendar app found.</string>
+
+    <!-- Do it now -->
+    <string name="doing_back">Back to choices</string>
+    <string name="doing_feed_closed">Feed closed</string>
+    <string name="doing_label">Doing now</string>
+    <string name="doing_body">The feed stays closed until you tap Done. No rush.</string>
+    <string name="doing_started">Started %1$s</string>
+    <string name="doing_done">Done</string>
+    <string name="doing_close_instagram">Close Instagram for now</string>
+    <string name="doing_footnote">Done takes it off your list and opens the feed again.</string>
+    <string name="toast_done">Done. It\'s off your list.</string>
+
+    <!-- Trusted-person check-in -->
+    <string name="check_in_title">This one keeps coming back</string>
+    <string name="check_in_body">You\'ve passed on “%1$s” twice. You asked for %2$s to check in when that happens.</string>
+    <string name="check_in_who">What %1$s gets</string>
+    <string name="check_in_message">“Could you check in about: %1$s?”</string>
+    <string name="check_in_privacy">Only the task name. Nothing about your scrolling.</string>
+    <string name="check_in_do_now">Do it now instead</string>
+    <string name="check_in_ok">OK, let %1$s check in</string>
+    <string name="check_in_off">Turn off check-ins</string>
+    <string name="trusted_person_fallback">your trusted person</string>
+    <string name="toast_check_in">Okay. We\'ll ask %1$s to check in.</string>
+
+    <!-- Add tasks -->
+    <string name="add_title">What do you keep putting off?</string>
+    <string name="add_subtitle">Say one thing at a time. You\'ll only ever see the next one.</string>
+    <string name="add_mic">Say a task</string>
+    <string name="add_mic_stop">Stop listening</string>
+    <string name="add_mic_idle">Tap and say one thing</string>
+    <string name="add_listening">Listening…</string>
+    <string name="add_voice_retry">Didn\'t catch that. Try again, or type it.</string>
+    <string name="add_voice_added">Added. Say another, or start scrolling.</string>
+    <string name="add_transcript">“%1$s”</string>
+    <string name="add_list_title">Your list · %1$d of %2$d</string>
+    <string name="add_type_label">Or type it</string>
+    <string name="add_type_hint">Type a task</string>
+    <string name="add_button">Add</string>
+    <string name="add_list_full">Your list is full. Finish one to add another.</string>
+    <string name="add_start_scrolling">Start scrolling</string>
+    <string name="add_not_now">Not now</string>
+
+    <string name="status_next">Next up</string>
+    <string name="status_back_at">Back at %1$s</string>
 </resources>

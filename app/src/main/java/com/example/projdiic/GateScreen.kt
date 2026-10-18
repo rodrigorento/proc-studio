@@ -1,0 +1,38 @@
+package com.example.projdiic
+
+/** What the overlay shows while Instagram is on screen. */
+sealed interface GateScreen {
+    /** The task this screen is about; null for [AddTasks]. */
+    val taskId: String?
+    val logName: String
+
+    /** Drawn as a sheet over the dimmed feed rather than as a full screen. */
+    val overFeed: Boolean get() = false
+
+    /** One task and three ways out. */
+    data class Gate(override val taskId: String) : GateScreen {
+        override val logName get() = "gate"
+        override val overFeed get() = true
+    }
+
+    data class PickTime(override val taskId: String) : GateScreen {
+        override val logName get() = "pick_time"
+        override val overFeed get() = true
+    }
+
+    /** The feed stays closed until Done or Back. */
+    data class DoingNow(override val taskId: String, val startedAt: Long) : GateScreen {
+        override val logName get() = "doing_now"
+    }
+
+    /** After two passes on the same task, when he has switched check-ins on. */
+    data class CheckIn(override val taskId: String) : GateScreen {
+        override val logName get() = "check_in"
+    }
+
+    /** Shown instead of the gate while the list is empty. */
+    data object AddTasks : GateScreen {
+        override val taskId: String? get() = null
+        override val logName get() = "add_tasks"
+    }
+}
