@@ -134,8 +134,6 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
                 TriggerReason.FACILITATOR
             }
             result.reason != null -> result.reason
-            // With nothing due there is nothing to count towards: ask for tasks now.
-            shouldAskNow(now) -> TriggerReason.EMPTY_LIST
             else -> null
         }
         if (reason != null) openGate(reason, now)
@@ -207,12 +205,17 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         return false
     }
 
-    private fun backToFeed() {
+    /**
+     * Closes the overlay. After a gate a cooldown follows; after the ask-for-tasks screen
+     * ([withCooldown] false) it comes back after the usual number of swipes.
+     */
+    private fun backToFeed(withCooldown: Boolean = true) {
         screen = null
-        trigger.startCooldown(System.currentTimeMillis(), settings.triggerConfig())
+        val now = System.currentTimeMillis()
+        if (withCooldown) trigger.startCooldown(now, settings.triggerConfig()) else trigger.startCountAgain(now)
         currentReelsCount = 0
         overlay.hide()
-        EventLog.log(this, "back_to_feed", "cooldown_min" to settings.cooldownMinutes)
+        EventLog.log(this, "back_to_feed", "cooldown_min" to if (withCooldown) settings.cooldownMinutes else 0)
     }
 
     /** Counts at most one pass per gate, however it ends. */
@@ -352,7 +355,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
 
     override fun onAddTasksClosed() {
         EventLog.log(this, "add_tasks_closed", "tasks" to TaskCache.getTasks(this).size)
-        backToFeed()
+        // With nothing for now, it asks again after the next few swipes rather than after a cooldown.
+        backToFeed(withCooldown = false)
     }
 
     override fun onInterrupt() {}

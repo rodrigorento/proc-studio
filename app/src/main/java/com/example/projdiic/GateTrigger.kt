@@ -15,7 +15,7 @@ enum class TriggerReason(val logName: String) {
     MINUTES("minutes"),
     FACILITATOR("facilitator"),
 
-    /** Nothing on the list is due now: ask for tasks straight away instead of waiting for swipes. */
+    /** Instagram opened with nothing on the list due now: ask for tasks straight away. */
     EMPTY_LIST("nothing_due"),
 }
 
@@ -60,6 +60,12 @@ class GateTrigger {
 
     fun startCooldown(now: Long, config: TriggerConfig) {
         cooldownUntil = now + config.cooldownMinutes * 60_000L
+        restart(now)
+    }
+
+    /** Counts from zero again with no cooldown: the next gate comes after the usual swipes. */
+    fun startCountAgain(now: Long) {
+        cooldownUntil = 0L
         restart(now)
     }
 

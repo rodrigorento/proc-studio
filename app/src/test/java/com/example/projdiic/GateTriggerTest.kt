@@ -69,6 +69,19 @@ class GateTriggerTest {
     }
 
     @Test
+    fun startingTheCountAgainSkipsTheCooldown() {
+        val trigger = GateTrigger()
+        trigger.startCooldown(0, config)
+
+        trigger.startCountAgain(10_000)
+
+        assertFalse(trigger.coolingDown(10_000))
+        assertNull(trigger.onScroll(11_000, config).reason)
+        assertNull(trigger.onScroll(13_000, config).reason)
+        assertEquals(TriggerReason.SWIPES, trigger.onScroll(15_000, config).reason)
+    }
+
+    @Test
     fun cooldownKeepsTheGateAway() {
         val trigger = GateTrigger()
         trigger.startCooldown(0, config)
