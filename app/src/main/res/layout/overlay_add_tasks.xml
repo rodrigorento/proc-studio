@@ -22,6 +22,7 @@
             android:paddingBottom="16dp">
 
             <TextView
+                android:id="@+id/tvAddTitle"
                 style="@style/ScrollGate.Title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -30,6 +31,7 @@
                 android:textSize="28sp" />
 
             <TextView
+                android:id="@+id/tvAddSubtitle"
                 style="@style/ScrollGate.Body"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

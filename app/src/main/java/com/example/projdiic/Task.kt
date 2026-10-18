@@ -44,6 +44,13 @@ object TaskRules {
         tasks.filter { it.deferredUntil <= now }
             .minWithOrNull(compareBy<Task>({ dueBy(it) }, { it.createdAt }))
 
+    /**
+     * Nothing on the list is for now (or there is no list): the gate asks for tasks instead.
+     * Not when the list is full, since then there's nothing to ask for.
+     */
+    fun shouldAskForTasks(tasks: List<Task>, now: Long): Boolean =
+        tasks.size < MAX_TASKS && next(tasks, now) == null
+
     private fun dueBy(task: Task): Long {
         val picked = if (task.deferredBy != Task.BY_WHEN) task.deferredUntil else 0L
         return listOf(task.dueAt, picked).filter { it > 0L }.minOrNull() ?: Long.MAX_VALUE

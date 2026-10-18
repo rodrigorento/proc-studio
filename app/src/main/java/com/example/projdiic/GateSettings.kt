@@ -50,7 +50,7 @@ class GateSettings(context: Context) {
         private const val KEY_TRUSTED_PERSON = "trusted_person"
         private const val KEY_WORDING = "wording_index"
 
-        const val DEFAULT_SWIPES = 8
+        const val DEFAULT_SWIPES = 3
         const val DEFAULT_MINUTES = 3
         const val DEFAULT_COOLDOWN = 2
 

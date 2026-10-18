@@ -63,6 +63,16 @@ class TaskRulesTest {
     }
 
     @Test
+    fun asksForTasksWhenNothingIsDueNowAndThereIsRoom() {
+        val forTomorrow = task("a", 1, deferredUntil = 100)
+
+        assertTrue(TaskRules.shouldAskForTasks(emptyList(), now = 50))
+        assertTrue(TaskRules.shouldAskForTasks(listOf(forTomorrow), now = 50))
+        assertFalse(TaskRules.shouldAskForTasks(listOf(forTomorrow, task("b", 2)), now = 50))
+        assertFalse(TaskRules.shouldAskForTasks(List(TaskRules.MAX_TASKS) { forTomorrow.copy(id = "$it") }, now = 50))
+    }
+
+    @Test
     fun nextIsNullWhenEverythingIsScheduled() {
         assertNull(TaskRules.next(listOf(task("a", 1, deferredUntil = 100)), now = 50))
     }

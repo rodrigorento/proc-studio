@@ -15,8 +15,8 @@ enum class TriggerReason(val logName: String) {
     MINUTES("minutes"),
     FACILITATOR("facilitator"),
 
-    /** The list is empty: ask for tasks straight away instead of waiting for swipes. */
-    EMPTY_LIST("empty_list"),
+    /** Nothing on the list is due now: ask for tasks straight away instead of waiting for swipes. */
+    EMPTY_LIST("nothing_due"),
 }
 
 /**

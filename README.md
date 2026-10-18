@@ -7,7 +7,8 @@ The screens follow the Scroll Gate design (Gate A: a calm sheet over the dimmed 
 ## Features
 
 - **Gate over Instagram:** after **N swipes or T minutes** of continuous scrolling (whichever comes first), the feed is dimmed (blurred on Android 12+) and a sheet shows one task with three choices. A cooldown follows every gate.
-- **Empty list:** with nothing on the list, opening Instagram asks for tasks straight away instead of waiting for swipes. After "Not now" it asks again on the first swipe once the cooldown has passed.
+- **Nothing due:** with an empty list, or with every task planned for later ("tomorrow", "on Monday"), opening Instagram asks for tasks straight away instead of waiting for swipes; the screen then says "Nothing on your list is for now". After "Not now" it asks again on the first swipe once the cooldown has passed. A full list of tasks all planned for later lets him scroll.
+- **Default trigger:** 3 swipes (change it in the facilitator panel).
 - **Do it now:** Instagram stays closed (the screen says "Feed closed") until you tap **Done**, which removes the task, or **Back to choices**. Other apps stay free to use, so you can go and do the task.
 - **Pick a time:** quick choices (in 15 minutes, in 1 hour, tonight, tomorrow morning). The task comes back at the first gate after that time. **Add to Calendar instead** keeps the calendar flow: it opens a new Calendar event 15 minutes from now.
 - **Snooze once:** 5 minutes, once per task. The next gate for that task has no Snooze button.

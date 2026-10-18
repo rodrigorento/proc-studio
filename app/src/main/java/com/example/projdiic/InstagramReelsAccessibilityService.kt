@@ -91,17 +91,17 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             gateOpenedAt = now
             EventLog.log(this, "gate_shown_again", "screen" to current.logName, "away_ms" to now - leftInstagramAt)
         }
-        // Opening Instagram with nothing on the list asks for tasks straight away. The window
+        // Opening Instagram with nothing due on the list asks for tasks straight away. The window
         // event itself says Instagram is on screen, so there's no need to check the active window.
-        if (screen == null && listIsEmptyAndNotCoolingDown(now)) {
+        if (screen == null && shouldAskNow(now)) {
             openGate(TriggerReason.EMPTY_LIST, now, confirmActive = false)
         } else {
             render()
         }
     }
 
-    private fun listIsEmptyAndNotCoolingDown(now: Long): Boolean =
-        !trigger.coolingDown(now) && TaskCache.getTasks(this).isEmpty()
+    private fun shouldAskNow(now: Long): Boolean =
+        !trigger.coolingDown(now) && TaskRules.shouldAskForTasks(TaskCache.getTasks(this), now)
 
     private fun onLeftInstagram() {
         val current = screen ?: return
@@ -134,8 +134,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
                 TriggerReason.FACILITATOR
             }
             result.reason != null -> result.reason
-            // With an empty list there is nothing to count towards: ask for tasks now.
-            listIsEmptyAndNotCoolingDown(now) -> TriggerReason.EMPTY_LIST
+            // With nothing due there is nothing to count towards: ask for tasks now.
+            shouldAskNow(now) -> TriggerReason.EMPTY_LIST
             else -> null
         }
         if (reason != null) openGate(reason, now)
@@ -145,14 +145,14 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         val tasks = TaskCache.getTasks(this)
         val next = TaskRules.next(tasks, now)
         val opened = when {
-            tasks.isEmpty() -> GateScreen.AddTasks
+            TaskRules.shouldAskForTasks(tasks, now) -> GateScreen.AddTasks
             next == null -> null
             TaskRules.needsCheckIn(next, settings.checkInEnabled) -> GateScreen.CheckIn(next.id)
             else -> GateScreen.Gate(next.id)
         }
         if (opened == null) {
-            // Every task has a picked time still to come: let him scroll.
-            EventLog.log(this, "gate_skipped", "trigger" to reason.logName, "why" to "all_tasks_scheduled")
+            // A full list, all of it for later: nothing to show or ask for, so let him scroll.
+            EventLog.log(this, "gate_skipped", "trigger" to reason.logName, "why" to "full_list_all_for_later")
             trigger.startCooldown(now, settings.triggerConfig())
             return
         }
@@ -178,6 +178,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             "task" to next?.title,
             "passes" to next?.passes,
             "snooze_left" to next?.let { !it.snoozeUsed },
+            "tasks" to tasks.size,
             "sound_paused" to overlay.holdsAudioFocus,
         )
     }

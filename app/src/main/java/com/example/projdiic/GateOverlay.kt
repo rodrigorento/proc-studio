@@ -223,6 +223,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
         val micStatus = root.findViewById<TextView>(R.id.tvMicStatus)
         val transcript = root.findViewById<TextView>(R.id.tvTranscript)
         val start = root.findViewById<Button>(R.id.btnStartScrolling)
+        val title = root.findViewById<TextView>(R.id.tvAddTitle)
+        val subtitle = root.findViewById<TextView>(R.id.tvAddSubtitle)
         val voiceReady = PermissionUtils.hasMicPermission(context) &&
             SpeechRecognizer.isRecognitionAvailable(context)
         // The task whose time chips are open: the one just added, or one whose time pill was tapped.
@@ -257,6 +259,10 @@ class GateOverlay(service: Context, private val actions: Actions) {
                     )
                 )
             }
+            // Tasks, but none for now: say so, so the screen doesn't look like the list was lost.
+            val nothingDue = tasks.isNotEmpty() && next == null
+            title.setText(if (nothingDue) R.string.add_title_nothing_due else R.string.add_title)
+            subtitle.setText(if (nothingDue) R.string.add_subtitle_nothing_due else R.string.add_subtitle)
             listTitle.isVisible = tasks.isNotEmpty()
             listTitle.text = context.getString(R.string.add_list_title, tasks.size, TaskRules.MAX_TASKS)
             val hasRoom = tasks.size < TaskRules.MAX_TASKS
