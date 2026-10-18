@@ -93,7 +93,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         }
         // Opening Instagram with nothing due on the list asks for tasks straight away. The window
         // event itself says Instagram is on screen, so there's no need to check the active window.
-        if (screen == null && shouldAskNow(now)) {
+        if (screen == null && !settings.isSnoozed(now) && shouldAskNow(now)) {
             openGate(TriggerReason.EMPTY_LIST, now, confirmActive = false)
         } else {
             render()
@@ -129,10 +129,12 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         EventLog.log(this, "swipe", "count" to result.swipes)
 
         val reason = when {
+            // The facilitator's "Pause at the next swipe" works even while snoozed, for testing.
             pauseAtNextSwipe -> {
                 pauseAtNextSwipe = false
                 TriggerReason.FACILITATOR
             }
+            settings.isSnoozed(now) -> null
             result.reason != null -> result.reason
             else -> null
         }
@@ -351,6 +353,14 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     override fun onTaskRemoved(task: Task) {
         TaskCache.remove(this, task.id)
         EventLog.log(this, "task_removed", "where" to "overlay", "task" to task.title)
+    }
+
+    override fun onSnoozeAppUntilTomorrow() {
+        val until = WhenChoices.startOfTomorrow(System.currentTimeMillis())
+        settings.snoozedUntil = until
+        EventLog.log(this, "app_snoozed", "until_ms" to until, "tasks" to TaskCache.getTasks(this).size)
+        Toast.makeText(this, R.string.toast_app_snoozed, Toast.LENGTH_LONG).show()
+        backToFeed(withCooldown = false)
     }
 
     override fun onAddTasksClosed() {

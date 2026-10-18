@@ -60,6 +60,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
         fun onTaskRemoved(task: Task)
         fun onWhenChanged(task: Task, window: TimeWindow?)
         fun onAddTasksClosed()
+
+        /** "Snooze until tomorrow" on the ask-for-tasks screen: no gates until midnight. */
+        fun onSnoozeAppUntilTomorrow()
     }
 
     /** The line above the task. The service picks a new one for every gate. */
@@ -303,6 +306,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
             }
         }
         start.setOnClickListener { actions.onAddTasksClosed() }
+        root.findViewById<Button>(R.id.btnSnoozeApp).setOnClickListener { actions.onSnoozeAppUntilTomorrow() }
         fitSystemBars(root, bottom = root)
         return root
     }

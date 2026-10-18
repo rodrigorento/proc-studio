@@ -87,6 +87,12 @@ class WhenChoicesTest {
     }
 
     @Test
+    fun snoozingTheAppLastsUntilMidnight() {
+        assertEquals(at(17, 0), WhenChoices.startOfTomorrow(friday, utc))
+        assertEquals(at(17, 0), WhenChoices.startOfTomorrow(at(16, 23, 59), utc))
+    }
+
+    @Test
     fun theGateLine() {
         assertNull(WhenText.gateLine(null, friday, utc, formats))
         assertEquals("For today", WhenText.gateLine(WhenChoices.today(friday, utc), friday, utc, formats))

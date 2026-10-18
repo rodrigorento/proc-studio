@@ -76,6 +76,7 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
     var hasMicPermission by remember { mutableStateOf(PermissionUtils.hasMicPermission(context)) }
     var isAccessibilityRunning by remember { mutableStateOf(InstagramReelsAccessibilityService.isServiceEnabled) }
     var swipesSincePause by remember { mutableIntStateOf(InstagramReelsAccessibilityService.currentReelsCount) }
+    var snoozedUntil by remember { mutableLongStateOf(settings.snoozedUntil) }
     var tasks by remember { mutableStateOf(TaskCache.getTasks(context)) }
     var logCount by remember { mutableIntStateOf(EventLog.count(context)) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -88,6 +89,7 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
             hasMicPermission = PermissionUtils.hasMicPermission(context)
             isAccessibilityRunning = InstagramReelsAccessibilityService.isServiceEnabled
             swipesSincePause = InstagramReelsAccessibilityService.currentReelsCount
+            snoozedUntil = settings.snoozedUntil
             tasks = TaskCache.getTasks(context)
             logCount = EventLog.count(context)
             now = System.currentTimeMillis()
@@ -156,6 +158,22 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        if (snoozedUntil > now) {
+            Section("Snoozed") {
+                SetupRow(
+                    label = "Scroll Gate is off until tomorrow",
+                    detail = "No pauses in Instagram until midnight.",
+                    isOn = false,
+                    action = "Turn back on",
+                    onAction = {
+                        settings.snoozedUntil = 0L
+                        snoozedUntil = 0L
+                        EventLog.log(context, "app_turned_back_on", "where" to "app")
+                    }
+                )
+            }
         }
 
         Section("Setup") {

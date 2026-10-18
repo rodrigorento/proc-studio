@@ -159,14 +159,22 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Outside the scroll view so it stays on screen, keyboard or not. -->
+    <!-- Outside the scroll view so they stay on screen, keyboard or not. -->
     <Button
         android:id="@+id/btnStartScrolling"
         style="@style/ScrollGate.Button.Primary"
         android:layout_marginStart="24dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="24dp"
-        android:layout_marginBottom="24dp"
         android:backgroundTint="@color/sg_text"
         android:text="@string/add_start_scrolling" />
+
+    <Button
+        android:id="@+id/btnSnoozeApp"
+        style="@style/ScrollGate.Button.Text"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="12dp"
+        android:text="@string/add_snooze_app"
+        android:textColor="@color/sg_muted" />
 </LinearLayout>

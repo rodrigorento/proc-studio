@@ -76,6 +76,8 @@
     <string name="add_list_full">Your list is full. Finish one to add another.</string>
     <string name="add_start_scrolling">Start scrolling</string>
     <string name="add_not_now">Not now</string>
+    <string name="add_snooze_app">Snooze until tomorrow</string>
+    <string name="toast_app_snoozed">Scroll Gate is off until tomorrow.</string>
 
     <string name="add_remove">Remove %1$s</string>
     <string name="when_change">When: %1$s. Tap to change.</string>

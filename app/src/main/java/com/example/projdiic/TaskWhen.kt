@@ -46,6 +46,10 @@ object WhenChoices {
         return TimeWindow(THIS_WEEK, now, DayMath.endOfDay(sunday, zone))
     }
 
+    /** Midnight tonight: when "Snooze until tomorrow" ends. */
+    fun startOfTomorrow(now: Long, zone: TimeZone = TimeZone.getDefault()): Long =
+        DayMath.midnight(now, zone, plusDays = 1)
+
     /** Anytime (null) first; Tonight drops off late at night and This week on Sundays. */
     fun chips(now: Long, zone: TimeZone = TimeZone.getDefault()): List<TimeWindow?> = buildList {
         add(null)
