@@ -58,6 +58,17 @@ class GateTriggerTest {
     }
 
     @Test
+    fun saysWhenItIsCoolingDown() {
+        val trigger = GateTrigger()
+        assertFalse(trigger.coolingDown(0))
+
+        trigger.startCooldown(0, config)
+
+        assertTrue(trigger.coolingDown(59_000))
+        assertFalse(trigger.coolingDown(60_000))
+    }
+
+    @Test
     fun cooldownKeepsTheGateAway() {
         val trigger = GateTrigger()
         trigger.startCooldown(0, config)

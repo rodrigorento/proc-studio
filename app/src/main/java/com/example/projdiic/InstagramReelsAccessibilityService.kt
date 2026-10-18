@@ -91,8 +91,17 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             gateOpenedAt = now
             EventLog.log(this, "gate_shown_again", "screen" to current.logName, "away_ms" to now - leftInstagramAt)
         }
-        render()
+        // Opening Instagram with nothing on the list asks for tasks straight away. The window
+        // event itself says Instagram is on screen, so there's no need to check the active window.
+        if (screen == null && listIsEmptyAndNotCoolingDown(now)) {
+            openGate(TriggerReason.EMPTY_LIST, now, confirmActive = false)
+        } else {
+            render()
+        }
     }
+
+    private fun listIsEmptyAndNotCoolingDown(now: Long): Boolean =
+        !trigger.coolingDown(now) && TaskCache.getTasks(this).isEmpty()
 
     private fun onLeftInstagram() {
         val current = screen ?: return
@@ -119,16 +128,20 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         currentReelsCount = trigger.swipes
         EventLog.log(this, "swipe", "count" to result.swipes)
 
-        val reason = if (pauseAtNextSwipe) {
-            pauseAtNextSwipe = false
-            TriggerReason.FACILITATOR
-        } else {
-            result.reason
+        val reason = when {
+            pauseAtNextSwipe -> {
+                pauseAtNextSwipe = false
+                TriggerReason.FACILITATOR
+            }
+            result.reason != null -> result.reason
+            // With an empty list there is nothing to count towards: ask for tasks now.
+            listIsEmptyAndNotCoolingDown(now) -> TriggerReason.EMPTY_LIST
+            else -> null
         }
         if (reason != null) openGate(reason, now)
     }
 
-    private fun openGate(reason: TriggerReason, now: Long) {
+    private fun openGate(reason: TriggerReason, now: Long, confirmActive: Boolean = true) {
         val tasks = TaskCache.getTasks(this)
         val next = TaskRules.next(tasks, now)
         val opened = when {
@@ -143,7 +156,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             trigger.startCooldown(now, settings.triggerConfig())
             return
         }
-        if (activePackage() != INSTAGRAM) {
+        if (confirmActive && activePackage() != INSTAGRAM) {
             // A late scroll event after Instagram left: never open the gate over another app.
             instagramOnScreen = false
             return

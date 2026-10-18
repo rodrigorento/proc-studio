@@ -14,6 +14,9 @@ enum class TriggerReason(val logName: String) {
     SWIPES("swipes"),
     MINUTES("minutes"),
     FACILITATOR("facilitator"),
+
+    /** The list is empty: ask for tasks straight away instead of waiting for swipes. */
+    EMPTY_LIST("empty_list"),
 }
 
 /**
@@ -52,6 +55,8 @@ class GateTrigger {
         if (reason != null) restart(now)
         return result
     }
+
+    fun coolingDown(now: Long): Boolean = now < cooldownUntil
 
     fun startCooldown(now: Long, config: TriggerConfig) {
         cooldownUntil = now + config.cooldownMinutes * 60_000L
