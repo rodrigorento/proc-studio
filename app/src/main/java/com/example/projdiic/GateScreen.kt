@@ -20,6 +20,11 @@ sealed interface GateScreen {
         override val overFeed get() = true
     }
 
+    /** The feed stays closed until Done or Back. */
+    data class DoingNow(override val taskId: String, val startedAt: Long) : GateScreen {
+        override val logName get() = "doing_now"
+    }
+
     /** After two passes on the same task, when he has switched check-ins on. */
     data class CheckIn(override val taskId: String) : GateScreen {
         override val logName get() = "check_in"

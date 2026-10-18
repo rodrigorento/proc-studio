@@ -1,6 +1,6 @@
 # Instagram Reels Blocker (ProjDIIC) · Scroll Gate
 
-An Android app that pauses Instagram after a stretch of scrolling and shows **only your next pending task**. To keep scrolling you pick one of three ways out: **Mark as Completed**, **Pick a time** or **Snooze once**. It is the working prototype for Session 3 of the study.
+An Android app that pauses Instagram after a stretch of scrolling and shows **only your next pending task**. To keep scrolling you pick one of three ways out: **Do it now**, **Pick a time** or **Snooze once**. It is the working prototype for Session 3 of the study.
 
 The screens follow the Scroll Gate design (Gate A: a calm sheet over the dimmed feed). The gate has no close button; leaving Instagram hides it, and it comes back when Instagram does.
 
@@ -10,7 +10,7 @@ The screens follow the Scroll Gate design (Gate A: a calm sheet over the dimmed 
 - **Nothing due:** with an empty list, or with every task planned for later ("tomorrow", "on Monday"), opening Instagram asks for tasks straight away instead of waiting for swipes; the screen then says "Nothing on your list is for now". After "Not now" it asks again every 3 swipes (the swipe setting), with no cooldown. A full list of tasks all planned for later lets him scroll.
 - **Default trigger:** 3 swipes (change it in the facilitator panel).
 - **Snooze until tomorrow:** a button on the ask-for-tasks screen turns every gate and question off until midnight. The app's main screen then shows "Scroll Gate is off until tomorrow" with **Turn back on**. Both are logged (`app_snoozed`, `app_turned_back_on`).
-- **Mark as Completed:** takes the task off the list and closes the gate straight away, so scrolling can carry on.
+- **Do it now:** Instagram stays closed (the screen says "Feed closed") until you tap **Done**, which removes the task, or **Back to choices**. Other apps stay free to use, so you can go and do the task.
 - **Pick a time:** quick choices (in 15 minutes, in 1 hour, tonight, tomorrow morning). The task comes back at the first gate after that time. **Add to Calendar instead** keeps the calendar flow: it opens a new Calendar event 15 minutes from now.
 - **Snooze once:** 5 minutes, once per task. The next gate for that task has no Snooze button.
 - **Rotating wording:** the line above the task changes every gate so it doesn't go stale.
@@ -75,8 +75,8 @@ Accessibility access is powerful. Enable it only on a device where you understan
 
 1. `InstagramReelsAccessibilityService` receives scroll events and window changes. It counts only `TYPE_VIEW_SCROLLED` from `com.instagram.android`, at most one every 800 ms (`GateTrigger`).
 2. When the swipe count or the minutes of continuous scrolling reach the threshold, it picks the next task (`TaskRules.next`: a task whose picked time has come first, then the oldest) and asks `GateOverlay` to draw the gate.
-3. Each choice updates the task in `TaskCache` (snooze, picked time, passes) and is written to `EventLog`. Mark as Completed removes the task.
-4. Window changes from other apps (not the keyboard or the system UI) mean Instagram left the screen: the overlay is hidden and shown again when Instagram returns. Walking away from a gate counts as a pass on its task, and a gate left for more than 10 minutes is dropped. A gate only opens while Instagram is the active app, so late scroll events never draw it over another app.
+3. Each choice updates the task in `TaskCache` (snooze, picked time, passes) and is written to `EventLog`. Done removes the task.
+4. Window changes from other apps (not the keyboard or the system UI) mean Instagram left the screen: the overlay is hidden and shown again when Instagram returns. Walking away from a gate counts as a pass on its task, and a gate left for more than 10 minutes is dropped (the "Feed closed" screen of Do it now is kept). A gate only opens while Instagram is the active app, so late scroll events never draw it over another app.
 5. After two passes on the same task, and only if check-ins are on, the next gate for it is the check-in screen.
 
 ## Project structure
@@ -99,7 +99,7 @@ app/src/main/
 │   ├── PopupWarningActivity.kt                # Additional warning UI (unused)
 │   └── BootReceiver.kt                        # Currently a no-op receiver class
 └── res/
-    ├── layout/overlay_*.xml                   # Gate, Pick a time, Check-in, Add tasks
+    ├── layout/overlay_*.xml                   # Gate, Pick a time, Do it now, Check-in, Add tasks
     └── xml/accessibility_service_config.xml   # Accessibility event configuration
 ```
 

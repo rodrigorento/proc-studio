@@ -97,9 +97,9 @@
             android:minHeight="24dp" />
 
         <Button
-            android:id="@+id/btnCheckInCompleted"
+            android:id="@+id/btnCheckInDoNow"
             style="@style/ScrollGate.Button.Primary"
-            android:text="@string/gate_mark_completed" />
+            android:text="@string/check_in_do_now" />
 
         <Button
             android:id="@+id/btnCheckInOk"

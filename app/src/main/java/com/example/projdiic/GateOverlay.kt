@@ -44,12 +44,14 @@ import java.util.TimeZone
 class GateOverlay(service: Context, private val actions: Actions) {
 
     interface Actions {
-        fun onMarkCompleted(task: Task)
+        fun onDoItNow(task: Task)
         fun onPickTime(task: Task)
         fun onSnooze(task: Task)
         fun onTimeChosen(task: Task, choice: TimeChoice)
         fun onAddToCalendar(task: Task)
         fun onBackToChoices(task: Task, from: GateScreen)
+        fun onDone(task: Task, startedAt: Long)
+        fun onCloseInstagram(task: Task)
         fun onCheckInAccepted(task: Task)
         fun onCheckInOff(task: Task)
 
@@ -93,6 +95,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         val next = when (screen) {
             is GateScreen.Gate -> task?.let(::buildGate)
             is GateScreen.PickTime -> task?.let(::buildPickTime)
+            is GateScreen.DoingNow -> task?.let { buildDoingNow(it, screen.startedAt) }
             is GateScreen.CheckIn -> task?.let(::buildCheckIn)
             GateScreen.AddTasks -> buildAddTasks()
         } ?: return false
@@ -136,7 +139,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     /** The system Back gesture: a step back where the screen has one; the gate itself only closes through its choices. */
     private fun backActionFor(screen: GateScreen, task: Task?): (() -> Unit)? = when {
         screen == GateScreen.AddTasks -> actions::onAddTasksClosed
-        task != null && screen is GateScreen.PickTime ->
+        task != null && (screen is GateScreen.PickTime || screen is GateScreen.DoingNow) ->
             { -> actions.onBackToChoices(task, screen) }
         else -> null
     }
@@ -146,7 +149,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         root.findViewById<TextView>(R.id.tvEyebrow).text = eyebrow
         root.findViewById<TextView>(R.id.tvTaskTitle).text = task.title
         root.findViewById<TextView>(R.id.tvTaskMeta).text = metaFor(task)
-        root.findViewById<Button>(R.id.btnMarkCompleted).setOnClickListener { actions.onMarkCompleted(task) }
+        root.findViewById<Button>(R.id.btnDoItNow).setOnClickListener { actions.onDoItNow(task) }
         root.findViewById<Button>(R.id.btnPickTime).setOnClickListener { actions.onPickTime(task) }
         root.findViewById<Button>(R.id.btnSnooze).apply {
             isVisible = !task.snoozeUsed
@@ -179,6 +182,20 @@ class GateOverlay(service: Context, private val actions: Actions) {
         return root
     }
 
+    private fun buildDoingNow(task: Task, startedAt: Long): View {
+        val root = inflater.inflate(R.layout.overlay_doing_now, null)
+        root.findViewById<TextView>(R.id.tvDoingTitle).text = task.title
+        root.findViewById<TextView>(R.id.tvStarted).text =
+            context.getString(R.string.doing_started, timeText(startedAt))
+        root.findViewById<Button>(R.id.btnBackToChoices).setOnClickListener {
+            actions.onBackToChoices(task, GateScreen.DoingNow(task.id, startedAt))
+        }
+        root.findViewById<Button>(R.id.btnDone).setOnClickListener { actions.onDone(task, startedAt) }
+        root.findViewById<Button>(R.id.btnCloseInstagram).setOnClickListener { actions.onCloseInstagram(task) }
+        fitSystemBars(root, bottom = root)
+        return root
+    }
+
     private fun buildCheckIn(task: Task): View {
         val root = inflater.inflate(R.layout.overlay_check_in, null)
         val person = settings.trustedPerson.ifBlank { context.getString(R.string.trusted_person_fallback) }
@@ -187,7 +204,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         root.findViewById<TextView>(R.id.tvCheckInWho).text = context.getString(R.string.check_in_who, person)
         root.findViewById<TextView>(R.id.tvCheckInMessage).text =
             context.getString(R.string.check_in_message, task.title)
-        root.findViewById<Button>(R.id.btnCheckInCompleted).setOnClickListener { actions.onMarkCompleted(task) }
+        root.findViewById<Button>(R.id.btnCheckInDoNow).setOnClickListener { actions.onDoItNow(task) }
         root.findViewById<Button>(R.id.btnCheckInOk).apply {
             text = context.getString(R.string.check_in_ok, person)
             setOnClickListener { actions.onCheckInAccepted(task) }

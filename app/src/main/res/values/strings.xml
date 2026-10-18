@@ -14,7 +14,7 @@
     <string name="gate_meta_said">From your list · said out loud %1$s</string>
     <string name="gate_meta_picked">You picked %1$s for this</string>
     <string name="gate_meta_snoozed">Back after your snooze</string>
-    <string name="gate_mark_completed">Mark as Completed</string>
+    <string name="gate_do_it_now">Do it now</string>
     <string name="gate_pick_time">Pick a time</string>
     <string name="gate_snooze">Snooze 5 min · once</string>
     <string name="gate_snooze_used">You\'ve used your snooze for this one.</string>
@@ -34,6 +34,15 @@
     <string name="calendar_description">Scheduled via Instagram Reels Blocker</string>
     <string name="calendar_missing">No calendar app found.</string>
 
+    <!-- Do it now -->
+    <string name="doing_back">Back to choices</string>
+    <string name="doing_feed_closed">Feed closed</string>
+    <string name="doing_label">Doing now</string>
+    <string name="doing_body">The feed stays closed until you tap Done. No rush.</string>
+    <string name="doing_started">Started %1$s</string>
+    <string name="doing_done">Done</string>
+    <string name="doing_close_instagram">Close Instagram for now</string>
+    <string name="doing_footnote">Done takes it off your list and opens the feed again.</string>
     <string name="toast_done">Done. It\'s off your list.</string>
 
     <!-- Trusted-person check-in -->
@@ -42,6 +51,7 @@
     <string name="check_in_who">What %1$s gets</string>
     <string name="check_in_message">“Could you check in about: %1$s?”</string>
     <string name="check_in_privacy">Only the task name. Nothing about your scrolling.</string>
+    <string name="check_in_do_now">Do it now instead</string>
     <string name="check_in_ok">OK, let %1$s check in</string>
     <string name="check_in_off">Turn off check-ins</string>
     <string name="trusted_person_fallback">your trusted person</string>
