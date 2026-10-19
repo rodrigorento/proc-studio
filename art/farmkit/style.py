@@ -32,6 +32,11 @@ PALETTE = {
     "petal_back": ("#FFC93A", "#F2A30F", "#B06A05"),
     "seed_disc": ("#8A4A1E", "#6A3412", "#401E08"),
     "seed_dot": ("#E8892A", "#C96A18", "#8A440A"),
+    "can": ("#6DBBFF", "#3B8EF2", "#1E56B4"),
+    "can_rose": ("#B9E2FF", "#82C0F2", "#3F7CC4"),
+    "water": ("#D2F0FF", "#8CD0F7", "#4596D2"),
+    "cloud": ("#FFFFFF", "#E4E9F6", "#A3ADD3"),
+    "sparkle": ("#FFFBD6", "#FFF29A", "#FFE45C"),  # nearly flat: sparkles glow rather than shade
 }
 
 OUTLINE = "#251803"  # warm dark brown ink
@@ -44,7 +49,8 @@ TINT_STRENGTH = {name: 0.35 for name in ("carrot", "radish", "radish_tail", "lea
                                          "lettuce_heart", "lettuce_heart_dry", "flower", "blossom",
                                          "yellow_flower", "pumpkin", "pumpkin_old", "pumpkin_young",
                                          "pumpkin_groove", "pumpkin_old_groove", "leaf_broad", "petal",
-                                         "petal_back", "seed_disc", "seed_dot")}
+                                         "petal_back", "seed_disc", "seed_dot", "can", "can_rose", "water",
+                                         "cloud", "sparkle")}
 
 # Direction from the scene towards the isometric camera: leaves are turned to face it so they read.
 TO_CAMERA = (0.5774, -0.5774, 0.5774)

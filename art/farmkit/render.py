@@ -28,16 +28,17 @@ def render_all(out_dir: str, crops: list[str] | None = None, lights: list[str] |
     lights = lights or list(style.LIGHTS)
     written = []
     for wet in (True, False):
-        _build(card, None, None, wet)
+        build(card, None, None, wet)
         written += _render_lights(card, out_dir, lambda light: empty_name(wet, light), lights)
         for crop in crops or list(CROPS):
             for stage in CROPS[crop].STAGES:
-                _build(card, crop, stage, wet)
+                build(card, crop, stage, wet)
                 written += _render_lights(card, out_dir, lambda light: card_name(crop, stage, wet, light), lights)
     return written
 
 
-def _build(card, crop: str | None, stage: str | None, wet: bool) -> None:
+def build(card, crop: str | None, stage: str | None, wet: bool) -> None:
+    """Replace the bed in the card scene with an empty bed, or one growing `crop` at `stage`."""
     collection = scene.collection(card, "Bed")
     bed.build(collection, wet=wet)
     if crop:

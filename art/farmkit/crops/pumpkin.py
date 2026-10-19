@@ -32,6 +32,8 @@ VINE = [(-0.3, 0.02), (-0.2, 0.2), (0.02, 0.28), (0.24, 0.17), (0.31, -0.04), (0
 LEAVES = [(0.02, 0.34), (0.45, 0.28), (0.72, 0.32), (1.0, 0.3)]
 TENDRILS = [0.25, 0.6, 0.88]
 SPECKLES = 16
+# When the pumpkin is picked these shrink back into the soil instead of flying off with it.
+LEFT_BEHIND = ("Vine", "Leaves", "OldLeaves")
 
 
 def build(collection: bpy.types.Collection, stage: str, wet: bool = True) -> None:
