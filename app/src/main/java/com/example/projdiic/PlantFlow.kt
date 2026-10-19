@@ -143,7 +143,7 @@ fun PlantFlow(
                 val packet = SeedPackets.current(chosen, System.currentTimeMillis())
                 val task = onPlant(planting.title, packet.window, via)
                 if (task == null) {
-                    Toast.makeText(context, "Your field is full. Finish one to plant another.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Your field is full. Harvest one to plant another.", Toast.LENGTH_SHORT).show()
                     onClose()
                 } else {
                     plantedId = task.id
@@ -276,7 +276,7 @@ private fun SeedsStep(
     fun label(packet: SeedPackets.Packet) = WhenText.label(packet.window, now, TimeZone.getDefault(), formats)
     val choice = packets.getOrNull(picked)
     StepScreen(
-        pane = "When is it for?",
+        pane = "When should it be ripe?",
         top = { StepBar(back = "Name", onBack = onBack, step = 2) },
         bottom = {
             PrimaryButton(
@@ -296,7 +296,7 @@ private fun SeedsStep(
                 .background(LeafContainer, RoundedCornerShape(50))
                 .padding(horizontal = 14.dp, vertical = 6.dp)
         )
-        Heading("When is it for?")
+        Heading("When should it be ripe?")
         Body("Each time grows its own crop. Sooner things grow as smaller crops.")
         val said = packets.indexOfFirst { it.said }
         Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {

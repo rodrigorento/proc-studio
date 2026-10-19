@@ -127,6 +127,13 @@ class SeedPacketsTest {
     }
 
     @Test
+    fun theGateSaysTheCropAndHowFarItHasGrown() {
+        assertEquals("radish seeds", FarmViews.cropAndStage("radish", "seed"))
+        assertEquals("carrot, ripe", FarmViews.cropAndStage("carrot", "ripe"))
+        assertEquals("lettuce, gone to seed", FarmViews.cropAndStage("lettuce", "overripe"))
+    }
+
+    @Test
     fun thePlantedLineSaysWhatItGrowsIntoAndWhen() {
         assertEquals(
             "Call the dentist grows into lettuce, ripe by 15:00 tomorrow.",

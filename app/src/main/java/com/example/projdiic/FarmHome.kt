@@ -92,7 +92,7 @@ private fun PlotCard(task: Task, isNext: Boolean, now: Long, look: FieldLook, on
         modifier = modifier
             .clickable(onClickLabel = "Change or remove", role = Role.Button, onClick = onClick)
             .semantics(mergeDescendants = true) {
-                contentDescription = "${task.title}, $label, $crop ${FarmViews.stageWords(stage)}" + if (isNext) ", next up" else ""
+                contentDescription = "${task.title}, $label, $crop ${FarmViews.stageWords(stage)}" + if (isNext) ", tend next" else ""
             }
     ) {
         Column(Modifier.padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -100,7 +100,7 @@ private fun PlotCard(task: Task, isNext: Boolean, now: Long, look: FieldLook, on
                 Bed({ wet -> CropArt.bed(crop, stage, wet) }, look)
                 if (isNext) {
                     Text(
-                        text = "Next up",
+                        text = "Tend next",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary,
@@ -201,7 +201,7 @@ fun WateringRow(watered: Boolean) {
 fun PlantButton(full: Boolean, onPlant: () -> Unit) {
     if (full) {
         Text(
-            text = "Your field is full. Finish one to plant another.",
+            text = "Your field is full. Harvest one to plant another.",
             fontSize = 15.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(vertical = 4.dp)
@@ -241,7 +241,7 @@ fun PlotSheet(task: Task, now: Long, look: FieldLook, onWhen: (TimeWindow?) -> U
                     )
                 }
             }
-            Text("When is it for?", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text("When should it be ripe?", fontSize = 15.sp, fontWeight = FontWeight.Bold)
             val options = WhenChoices.chips(now).toMutableList<TimeWindow?>()
             // What was said that isn't one of the chips ("Tomorrow 15:00") stays on offer, first so it's in view.
             if (window != null && window.key == WhenChoices.CUSTOM) options.add(0, window)
@@ -268,7 +268,7 @@ fun PlotSheet(task: Task, now: Long, look: FieldLook, onWhen: (TimeWindow?) -> U
                 onClick = onRemove,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Remove from the field", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            ) { Text("Pull it up", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }
@@ -276,10 +276,10 @@ fun PlotSheet(task: Task, now: Long, look: FieldLook, onWhen: (TimeWindow?) -> U
 private fun whenLabel(context: Context, task: Task, now: Long): String =
     WhenText.label(TaskRules.window(task), now, TimeZone.getDefault(), whenFormats(context))
 
-/** "Back at 15:00" while the task is put off, otherwise null. */
+/** "Resting till 15:00" while the task is put off, otherwise null. */
 private fun statusFor(context: Context, task: Task, now: Long): String? =
     if (task.deferredBy != Task.BY_WHEN && task.deferredUntil > now) {
-        "Back at " + DateFormat.getTimeFormat(context).format(Date(task.deferredUntil))
+        "Resting till " + DateFormat.getTimeFormat(context).format(Date(task.deferredUntil))
     } else null
 
-private fun cropWords(crop: String, stage: String): String = crop.replaceFirstChar { it.uppercaseChar() } + ", " + FarmViews.stageWords(stage)
+private fun cropWords(crop: String, stage: String): String = FarmViews.cropAndStage(crop, stage).replaceFirstChar { it.uppercaseChar() }

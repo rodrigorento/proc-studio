@@ -1,22 +1,22 @@
 # Instagram Reels Blocker (ProjDIIC) · Scroll Gate
 
-An Android app that pauses Instagram after a stretch of scrolling and shows **only your next pending task**. To keep scrolling you pick one of three ways out: **Do it now**, **Pick a time** or **Snooze once**. It is the working prototype for Session 3 of the study.
+An Android app that pauses Instagram after a stretch of scrolling and shows **only your next pending task**, as a crop growing in a small field. To keep scrolling you pick one of three ways out: **Harvest it** (it's done), **Let it grow** (pick a time) or **5 more minutes** (once). It is the working prototype for Session 3 of the study.
 
 The screens follow the Scroll Gate design (Gate A: a calm sheet over the dimmed feed). The gate has no close button; leaving Instagram hides it, and it comes back when Instagram does.
 
 ## Features
 
 - **Gate over Instagram:** after **N swipes or T minutes** of continuous scrolling (whichever comes first), the feed is dimmed (blurred on Android 12+) and a sheet shows one task with three choices. A cooldown follows every gate.
-- **Nothing due:** with an empty list, or with every task planned for later ("tomorrow", "on Monday"), opening Instagram asks for tasks straight away instead of waiting for swipes; the screen then says "Nothing on your list is for now". After "Not now" it asks again every 3 swipes (the swipe setting), with no cooldown. A full list of tasks all planned for later lets him scroll.
+- **Nothing due:** with an empty list, or with every task planned for later ("tomorrow", "on Monday"), opening Instagram asks for tasks straight away instead of waiting for swipes; the screen then says "Nothing's ripe right now". After "Not now" it asks again every 3 swipes (the swipe setting), with no cooldown. A full list of tasks all planned for later lets him scroll.
 - **Default trigger:** 3 swipes (change it in the facilitator panel).
-- **Snooze until tomorrow:** a button on the ask-for-tasks screen turns every gate and question off until midnight. The app's main screen then shows "Scroll Gate is off until tomorrow" with **Turn back on**. Both are logged (`app_snoozed`, `app_turned_back_on`).
-- **Do it now:** Instagram stays closed (the screen says "Feed closed") until you tap **Done**, which removes the task, or **Back to choices**. Other apps stay free to use, so you can go and do the task.
-- **Pick a time:** quick choices (in 15 minutes, in 1 hour, tonight, tomorrow morning). The task comes back at the first gate after that time. **Add to Calendar instead** keeps the calendar flow: it opens a new Calendar event 15 minutes from now.
-- **Snooze once:** 5 minutes, once per task. The next gate for that task has no Snooze button.
+- **Close the gate until tomorrow:** a button on the ask-for-tasks screen turns every gate and question off until midnight. The app's main screen then shows "Gate closed until tomorrow" with **Open it**. Both are logged (`app_snoozed`, `app_turned_back_on`).
+- **Harvest it:** the task is done. Its crop ripens if it isn't ready yet and flies out of the bed, then the feed opens. Logged as a `harvest` choice and `task_done`. The check-in screen has the same button.
+- **Let it grow:** pick a time from quick choices (in 15 minutes, in 1 hour, tonight, tomorrow morning). The task comes back at the first gate after that time. **Put it on your calendar instead** keeps the calendar flow: it opens a new Calendar event 15 minutes from now.
+- **5 more minutes:** once per task. The next gate for that task doesn't offer it.
 - **Rotating wording:** the line above the task changes every gate so it doesn't go stale.
 - **Trusted-person check-in (Wizard of Oz):** off by default. When the participant switches it on, the third gate for a task that was passed twice asks whether their trusted person may check in. The app logs `check_in` and a teammate sends the real message by hand.
-- **Task list:** up to three tasks, added on the main screen or on the pause screen when the list is empty, by voice or by typing.
-- **When a task is for:** each task has a time pill. Tap it for fixed choices: Anytime, Today, Tonight, Tomorrow, This week. Times said or typed with the task are read on the phone, with no network call: "dentist tomorrow at 3pm", "gym on Monday", "return the book by Wednesday", "next week", "in 2 hours", "on the 25th". The words are taken out of the title, and the chip they matched is pre-selected. A task only reaches the gate once its time has started; the one due soonest comes first. English only for now (`WhenParser`).
+- **The field:** up to four tasks, one per plot. Each is planted in three steps, on the main screen or on the pause screen when nothing is due: name it (by voice or typing), pick its seed packet (when it's for), and watch it go in. The crop grows from planting to its due time.
+- **When a task is for:** each task has a time pill. Tap it for fixed choices: Anytime, Today, Tonight, Tomorrow, This week, This month. Times said or typed with the task are read on the phone, with no network call: "dentist tomorrow at 3pm", "gym on Monday", "return the book by Wednesday", "next week", "in 2 hours", "on the 25th". The words are taken out of the title, and the chip they matched is pre-selected. A task only reaches the gate once its time has started; the one due soonest comes first. English only for now (`WhenParser`).
 - **Facilitator panel:** hidden on the main screen; **long-press the "Scroll Gate" title** to show it. Set N, T and the cooldown, switch check-ins on, trigger a gate on the next swipe, export the log, reset the data.
 - **Interaction log:** every event (swipe, gate shown, choice, time on the gate, task done, leaving Instagram) is kept on the phone with a timestamp and exported as JSON or CSV through the share sheet.
 - **Local only:** tasks, settings and the log stay on the device; no backend.
@@ -58,14 +58,14 @@ The main screen lists what the app needs and has a button for each:
 2. **Display over other apps:** tap **Allow** and allow the app to display over other apps.
 3. **Microphone (optional):** lets the pause screen take tasks by voice. Typing always works.
 
-Then add up to three tasks, open Instagram and scroll.
+Then plant up to four tasks, open Instagram and scroll.
 
 Accessibility access is powerful. Enable it only on a device where you understand and consent to the access being granted.
 
 ## Running Session 3
 
 1. Long-press the **Scroll Gate** title to open the facilitator panel. Lower **N** (for example to 5) so the gate fires at least twice in ten minutes.
-2. Add the participant's three real tasks with them (the mic button on the task field uses the phone's voice input).
+2. Plant the participant's real tasks with them (up to four; **Plant a task** takes them by typing or by voice).
 3. Switch **Trusted-person check-in** on only if they agree, and enter the person's first name.
 4. Use **Pause at the next swipe** to show the gate on demand.
 5. When the screen shows a check-in being accepted (the log records a `check_in` event with `choice=accepted`), the teammate sends the real message.
@@ -75,8 +75,8 @@ Accessibility access is powerful. Enable it only on a device where you understan
 
 1. `InstagramReelsAccessibilityService` receives scroll events and window changes. It counts only `TYPE_VIEW_SCROLLED` from `com.instagram.android`, at most one every 800 ms (`GateTrigger`).
 2. When the swipe count or the minutes of continuous scrolling reach the threshold, it picks the next task (`TaskRules.next`: a task whose picked time has come first, then the oldest) and asks `GateOverlay` to draw the gate.
-3. Each choice updates the task in `TaskCache` (snooze, picked time, passes) and is written to `EventLog`. Done removes the task.
-4. A full-screen window from another app means Instagram left the screen: the overlay is hidden and shown again when Instagram returns. The keyboard (any keyboard app, recognised by its window), the system UI and windows that don't fill the screen, such as pop-ups, overlays and the navigation bar that Samsung's launcher draws, don't count (`WindowRules`). Each `left_instagram` event records the package and window that replaced Instagram, and each `window_ignored` event a window that opened over a screen without hiding it. Walking away from a gate counts as a pass on its task, and a gate left for more than 10 minutes is dropped (the "Feed closed" screen of Do it now is kept). A gate only opens while Instagram is the active app, so late scroll events never draw it over another app.
+3. Each choice updates the task in `TaskCache` (snooze, picked time, passes) and is written to `EventLog`. Harvest it removes the task.
+4. A full-screen window from another app means Instagram left the screen: the overlay is hidden and shown again when Instagram returns. The keyboard (any keyboard app, recognised by its window), the system UI and windows that don't fill the screen, such as pop-ups, overlays and the navigation bar that Samsung's launcher draws, don't count (`WindowRules`). Each `left_instagram` event records the package and window that replaced Instagram, and each `window_ignored` event a window that opened over a screen without hiding it. Walking away from a gate counts as a pass on its task, and a gate left for more than 10 minutes is dropped. A gate only opens while Instagram is the active app, so late scroll events never draw it over another app.
 5. After two passes on the same task, and only if check-ins are on, the next gate for it is the check-in screen.
 
 ## Project structure
@@ -98,11 +98,13 @@ app/src/main/
 │   ├── PermissionUtils.kt                     # Permission checks
 │   ├── PopupWarningActivity.kt                # Additional warning UI (unused)
 │   ├── BootReceiver.kt                        # Currently a no-op receiver class
+│   ├── FarmHome.kt / PlantFlow.kt             # The field on the main screen, and planting a task
+│   ├── FarmRules.kt / FarmCache.kt            # Crops and growth, and the field's watering
 │   ├── CropArt.kt / CropMotion.kt             # Farm images and animation frames (generated from art/)
 │   └── FarmArtPreview.kt                      # Facilitator preview of the farm art
 └── res/
     ├── drawable-nodpi/                        # Rendered farm cards, animation frames and props (generated)
-    ├── layout/overlay_*.xml                   # Gate, Pick a time, Do it now, Check-in, Add tasks
+    ├── layout/overlay_*.xml                   # Gate, Pick a time, Check-in, Add tasks and its planting steps
     └── xml/accessibility_service_config.xml   # Accessibility event configuration
 ```
 

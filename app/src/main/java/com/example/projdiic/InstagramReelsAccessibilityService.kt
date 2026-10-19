@@ -103,7 +103,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         instagramOnScreen = true
         val current = screen
         val now = System.currentTimeMillis()
-        if (current != null && current !is GateScreen.DoingNow && now - leftInstagramAt > STALE_GATE_MS) {
+        if (current != null && now - leftInstagramAt > STALE_GATE_MS) {
             EventLog.log(this, "gate_expired", "screen" to current.logName, "away_ms" to now - leftInstagramAt)
             screen = null
         } else if (current != null) {
@@ -126,8 +126,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     private fun onLeftInstagram(pkg: String, className: String?, windowType: Int?) {
         val current = screen ?: return
         val task = current.taskId?.let { TaskCache.find(this, it) }
-        // Walking away from a gate counts as passing on its task, once the task was on screen.
-        if (task != null && current !is GateScreen.DoingNow && !overlay.thirsty) TaskCache.update(this, passOnce(task))
+        // Walking away from a gate counts as passing on its task, once the task was on screen (and isn't being harvested).
+        if (task != null && !overlay.thirsty && !overlay.harvesting) TaskCache.update(this, passOnce(task))
         EventLog.log(
             this, "left_instagram",
             "screen" to current.logName,
@@ -266,9 +266,12 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
 
     // GateOverlay.Actions: what each tap does.
 
-    override fun onDoItNow(task: Task) {
-        EventLog.log(this, "choice", "choice" to "do_it_now", "task" to task.title, "ms_on_gate" to msOnGate())
-        show(GateScreen.DoingNow(task.id, System.currentTimeMillis()))
+    override fun onHarvested(task: Task, where: String) {
+        EventLog.log(this, "choice", "choice" to "harvest", "screen" to where, "task" to task.title, "ms_on_gate" to msOnGate())
+        TaskCache.remove(this, task.id)
+        EventLog.log(this, "task_done", "task" to task.title, "screen" to where)
+        Toast.makeText(this, R.string.toast_done, Toast.LENGTH_SHORT).show()
+        backToFeed()
     }
 
     override fun onPickTime(task: Task) {
@@ -318,22 +321,6 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     override fun onBackToChoices(task: Task, from: GateScreen) {
         EventLog.log(this, "back_to_choices", "from" to from.logName, "task" to task.title)
         show(GateScreen.Gate(task.id))
-    }
-
-    override fun onDone(task: Task, startedAt: Long) {
-        TaskCache.remove(this, task.id)
-        EventLog.log(
-            this, "task_done",
-            "task" to task.title,
-            "ms_doing" to System.currentTimeMillis() - startedAt,
-        )
-        Toast.makeText(this, R.string.toast_done, Toast.LENGTH_SHORT).show()
-        backToFeed()
-    }
-
-    override fun onCloseInstagram(task: Task) {
-        EventLog.log(this, "close_instagram", "task" to task.title)
-        performGlobalAction(GLOBAL_ACTION_HOME)
     }
 
     override fun onCheckInAccepted(task: Task) {

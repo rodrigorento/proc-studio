@@ -28,6 +28,10 @@ object FarmViews {
         return if (due == null) "$title grows into $into that blooms in $days days." else "$title grows into $into, ripe $due."
     }
 
+    /** "radish seeds", "carrot, ripe": a crop and how far it has grown, for the gate and the plot sheet. */
+    fun cropAndStage(crop: String, stage: String): String =
+        if (stage == "seed") "$crop seeds" else "$crop, ${stageWords(stage)}"
+
     /** A [FarmRules.stage] in words, for the home screen and screen readers. */
     fun stageWords(stage: String): String = when (stage) {
         "seed" -> "just planted"

@@ -145,10 +145,10 @@
             android:textSize="15sp" />
 
         <Button
-            android:id="@+id/btnDoItNow"
+            android:id="@+id/btnHarvest"
             style="@style/ScrollGate.Button.Primary"
             android:layout_marginTop="24dp"
-            android:text="@string/gate_do_it_now" />
+            android:text="@string/gate_harvest" />
 
         <Button
             android:id="@+id/btnPickTime"
