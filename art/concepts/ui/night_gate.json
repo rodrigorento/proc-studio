@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1536",
+  "quality": "high",
+  "background": "opaque",
+  "prompt": "The reference image shows the game's art: chunky wooden raised garden beds with crops, in cel-shaded toon 3D with dark-brown ink outlines, strict isometric view. Use exactly these beds, drawn the same way, inside the app UI. A polished mobile app screen mockup, portrait phone screen filling the whole image edge to edge, Android status bar at the top, crisp readable UI text in a friendly rounded sans-serif font, no device frame, no hands. The screen is the pause that appears over a social video feed: behind, a blurred and dimmed vertical video feed; in front, a large bottom sheet. On the sheet: a small pill \"Feed paused\", a small line \"Before the next video\", a big card with the isometric bed of nine radishes, the task title \"Call mom\" in large bold text with \"For today\" under it, then three stacked full-width buttons: \"Do it now\" (the main one), \"Pick a time\", and \"Snooze 5 min \u00b7 once\", and a small hint \"Pick one to get back to the feed.\" Visual style: calm and dark, keeping the app's existing look. Near-black charcoal background (#0B0B0D), slightly lighter rounded dark cards (#18191D), soft off-white text, one soft leaf-green accent for the main button and selected chips, small touches of warm wood only on section headers. The colourful beds glow against the dark. Minimal and restful.",
+  "refs": [
+    "art/style/references/field.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T18:23:50"
+}

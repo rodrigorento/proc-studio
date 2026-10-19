@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1536",
+  "quality": "high",
+  "background": "opaque",
+  "prompt": "The reference image shows the game's art: chunky wooden raised garden beds with crops, in cel-shaded toon 3D with dark-brown ink outlines, strict isometric view. Use exactly these beds, drawn the same way, inside the app UI. A polished mobile app screen mockup, portrait phone screen filling the whole image edge to edge, Android status bar at the top, crisp readable UI text in a friendly rounded sans-serif font, no device frame, no hands. The screen is the app's home: the title \"Scroll Gate\" with a small line \"Your field\" under it; a 2 by 2 grid of four bed cards, each showing one isometric bed with a small label under it: top left nine radishes labelled \"Call mom\" with a small chip \"Today\"; top right four lettuces labelled \"Dentist\" with a chip \"Tomorrow 3pm\"; bottom left two carrots labelled \"Gym\" with a chip \"This week\"; bottom right an empty bed of tilled soil with a \"+ Plant a task\" label. Under the field a small row with a blue watering can icon and \"Watered today\". At the bottom a text field \"What do you keep putting off?\" with a microphone button and a \"Plant\" button. Visual style: calm and dark, keeping the app's existing look. Near-black charcoal background (#0B0B0D), slightly lighter rounded dark cards (#18191D), soft off-white text, one soft leaf-green accent for the main button and selected chips, small touches of warm wood only on section headers. The colourful beds glow against the dark. Minimal and restful.",
+  "refs": [
+    "art/style/references/field.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T18:23:53"
+}

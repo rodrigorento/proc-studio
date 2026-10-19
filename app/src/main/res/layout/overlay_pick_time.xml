@@ -41,7 +41,7 @@
             android:background="@drawable/bg_pill_surface"
             android:backgroundTint="@color/sg_surface_2"
             android:ellipsize="end"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/nunito_semibold"
             android:maxLines="2"
             android:paddingStart="14dp"
             android:paddingTop="8dp"

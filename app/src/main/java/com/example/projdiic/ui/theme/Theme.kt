@@ -7,11 +7,11 @@ import androidx.compose.runtime.Composable
 // The app always uses the same dark scheme as the overlay screens, so the
 // setup screen and the gate look like one product.
 private val ScrollGateColorScheme = darkColorScheme(
-    primary = Mint,
+    primary = Leaf,
     onPrimary = Ink,
-    primaryContainer = MintContainer,
-    onPrimaryContainer = Mint,
-    secondary = Mint,
+    primaryContainer = LeafContainer,
+    onPrimaryContainer = Leaf,
+    secondary = Leaf,
     onSecondary = Ink,
     secondaryContainer = Surface2,
     onSecondaryContainer = Paper,

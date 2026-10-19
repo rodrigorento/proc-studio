@@ -64,7 +64,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
                     android:accessibilityLiveRegion="polite"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/nunito_semibold"
                     android:text="@string/add_mic_idle"
                     android:textColor="@color/sg_accent"
                     android:textSize="15sp" />

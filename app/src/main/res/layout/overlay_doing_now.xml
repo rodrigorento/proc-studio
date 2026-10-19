@@ -50,7 +50,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/nunito_semibold"
                 android:text="@string/doing_feed_closed"
                 android:textColor="@color/sg_muted"
                 android:textSize="13sp" />
@@ -67,7 +67,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/nunito_semibold"
             android:letterSpacing="0.06"
             android:text="@string/doing_label"
             android:textAllCaps="true"

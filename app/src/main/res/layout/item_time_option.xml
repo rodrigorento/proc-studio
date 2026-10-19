@@ -17,7 +17,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:fontFamily="sans-serif-medium"
+        android:fontFamily="@font/nunito_semibold"
         android:importantForAccessibility="no"
         android:textColor="@color/sg_text"
         android:textSize="17sp" />

@@ -8,7 +8,8 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- Scroll Gate: a dark, calm palette with one mint accent and no alarm colours. -->
+    <!-- Scroll Gate's night garden: a dark, calm palette where the rendered beds glow, one leaf-green accent,
+         warm wood for section headers, and no alarm colours. -->
     <color name="sg_bg">#FF0B0B0D</color>
     <color name="sg_surface">#FF18191D</color>
     <color name="sg_surface_2">#FF26282D</color>
@@ -17,8 +18,11 @@
     <color name="sg_text_soft">#FFD4D5D8</color>
     <color name="sg_muted">#FFA9ABB0</color>
     <color name="sg_faint">#FF8A8C92</color>
-    <color name="sg_accent">#FF8FD3BE</color>
-    <color name="sg_accent_soft">#248FD3BE</color>
+    <color name="sg_accent">#FF8FD06A</color>
+    <color name="sg_accent_soft">#248FD06A</color>
+    <color name="sg_leaf_container">#FF1D3319</color>
+    <color name="sg_wood">#FFD79A5E</color>
+    <color name="sg_water">#FF6DBBFF</color>
     <color name="sg_on_accent">#FF0B0B0D</color>
     <color name="sg_scrim">#B80B0B0D</color>
     <color name="sg_pill">#E618191D</color>
