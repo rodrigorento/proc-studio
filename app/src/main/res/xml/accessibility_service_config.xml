@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    No packageNames filter: the service needs window changes from every app to
+    know when Instagram leaves the screen, so it can hide the gate there.
+    The code ignores scroll events from anything but Instagram.
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeViewScrolled|typeWindowContentChanged"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeViewScrolled"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault"
     android:canRetrieveWindowContent="true"
-    android:notificationTimeout="50"
-    android:packageNames="com.instagram.android" />
+    android:description="@string/accessibility_description"
+    android:notificationTimeout="50" />
