@@ -31,9 +31,6 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         private const val TAG = "ReelsBlocker"
         private const val INSTAGRAM = "com.instagram.android"
 
-        /** Windows that open on top of Instagram without leaving it. */
-        private val PASS_THROUGH = setOf("com.android.systemui", "android", "com.android.intentresolver")
-
         /** A gate he walked away from for longer than this is dropped; the next stretch starts fresh. */
         private const val STALE_GATE_MS = 10 * 60_000L
 
@@ -57,28 +54,50 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val pkg = event.packageName?.toString() ?: return
         when (event.eventType) {
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> onWindowChanged(pkg, event.className?.toString())
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ->
+                onWindowChanged(pkg, event.className?.toString(), event.windowId, event.isFullScreen)
             AccessibilityEvent.TYPE_VIEW_SCROLLED -> if (pkg == INSTAGRAM) onInstagramScroll()
         }
     }
 
-    private fun onWindowChanged(pkg: String, className: String?) {
-        when {
-            pkg == INSTAGRAM -> if (!instagramOnScreen) onReturnedToInstagram()
-            opensOverInstagram(pkg, className) -> Unit
-            instagramOnScreen -> {
-                instagramOnScreen = false
-                leftInstagramAt = System.currentTimeMillis()
-                onLeftInstagram()
-            }
+    private fun onWindowChanged(pkg: String, className: String?, windowId: Int, fullScreen: Boolean) {
+        if (pkg == INSTAGRAM) {
+            if (!instagramOnScreen) onReturnedToInstagram()
+            return
         }
+        if (!instagramOnScreen) return
+        val windowType = windowType(windowId)
+        val opensOver = WindowRules.opensOverInstagram(
+            pkg, className, windowType, fullScreen, packageName, MainActivity::class.java.name, keyboardPackage()
+        )
+        if (opensOver) {
+            // Which windows opened over a screen without hiding it, to check the rules on a tester's phone.
+            if (screen != null && pkg != packageName) {
+                EventLog.log(
+                    this, "window_ignored",
+                    "package" to pkg,
+                    "window" to className,
+                    "window_type" to windowType,
+                    "full_screen" to fullScreen,
+                )
+            }
+            return
+        }
+        instagramOnScreen = false
+        leftInstagramAt = System.currentTimeMillis()
+        onLeftInstagram(pkg, className, windowType)
     }
 
-    /** The gate's own windows, toasts, the keyboard and system UI appear without Instagram leaving the screen. */
-    private fun opensOverInstagram(pkg: String, className: String?): Boolean =
-        (pkg == packageName && className != MainActivity::class.java.name) ||
-            pkg in PASS_THROUGH ||
-            pkg == keyboardPackage()
+    /**
+     * The kind of window an event came from (an app screen, the keyboard, an overlay), or null if it isn't listed.
+     * A window that has just opened is often not listed yet, so null is common and is treated as an app screen.
+     */
+    private fun windowType(windowId: Int): Int? =
+        try {
+            windows.firstOrNull { it.id == windowId }?.type
+        } catch (e: RuntimeException) {
+            null
+        }
 
     private fun onReturnedToInstagram() {
         instagramOnScreen = true
@@ -103,12 +122,21 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     private fun shouldAskNow(now: Long): Boolean =
         !trigger.coolingDown(now) && TaskRules.shouldAskForTasks(TaskCache.getTasks(this), now)
 
-    private fun onLeftInstagram() {
+    /** [pkg], [className] and [windowType] describe the window that replaced Instagram, for the log. */
+    private fun onLeftInstagram(pkg: String, className: String?, windowType: Int?) {
         val current = screen ?: return
         val task = current.taskId?.let { TaskCache.find(this, it) }
         // Walking away from a gate counts as passing on its task.
         if (task != null && current !is GateScreen.DoingNow) TaskCache.update(this, passOnce(task))
-        EventLog.log(this, "left_instagram", "screen" to current.logName, "task" to task?.title, "ms_on_gate" to msOnGate())
+        EventLog.log(
+            this, "left_instagram",
+            "screen" to current.logName,
+            "task" to task?.title,
+            "ms_on_gate" to msOnGate(),
+            "to_package" to pkg,
+            "to_window" to className,
+            "window_type" to windowType,
+        )
         render()
     }
 
