@@ -55,12 +55,12 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         val pkg = event.packageName?.toString() ?: return
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ->
-                onWindowChanged(pkg, event.className?.toString(), event.windowId)
+                onWindowChanged(pkg, event.className?.toString(), event.windowId, event.isFullScreen)
             AccessibilityEvent.TYPE_VIEW_SCROLLED -> if (pkg == INSTAGRAM) onInstagramScroll()
         }
     }
 
-    private fun onWindowChanged(pkg: String, className: String?, windowId: Int) {
+    private fun onWindowChanged(pkg: String, className: String?, windowId: Int, fullScreen: Boolean) {
         if (pkg == INSTAGRAM) {
             if (!instagramOnScreen) onReturnedToInstagram()
             return
@@ -68,9 +68,21 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         if (!instagramOnScreen) return
         val windowType = windowType(windowId)
         val opensOver = WindowRules.opensOverInstagram(
-            pkg, className, windowType, packageName, MainActivity::class.java.name, keyboardPackage()
+            pkg, className, windowType, fullScreen, packageName, MainActivity::class.java.name, keyboardPackage()
         )
-        if (opensOver) return
+        if (opensOver) {
+            // Which windows opened over a screen without hiding it, to check the rules on a tester's phone.
+            if (screen != null && pkg != packageName) {
+                EventLog.log(
+                    this, "window_ignored",
+                    "package" to pkg,
+                    "window" to className,
+                    "window_type" to windowType,
+                    "full_screen" to fullScreen,
+                )
+            }
+            return
+        }
         instagramOnScreen = false
         leftInstagramAt = System.currentTimeMillis()
         onLeftInstagram(pkg, className, windowType)
