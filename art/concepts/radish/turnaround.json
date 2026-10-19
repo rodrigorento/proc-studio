@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image shows nine radishes in a raised bed, in cel-shaded toon 3D with crisp warm dark-brown ink outlines. Make a modeling reference sheet for one of those ripe radishes, pulled out of the ground and shown whole: round red root with a thin white tail, and its leaves, no bed and no soil. Three orthographic views side by side at the same scale on one baseline: front, side and top. Same style, colours and outlines, soft even daylight, plain flat dark charcoal background (#16171A). No text.",
+  "refs": [
+    "art/style/references/bed_radish.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T15:19:21"
+}

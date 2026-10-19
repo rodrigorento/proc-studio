@@ -50,12 +50,12 @@ fun FarmArtPreview() {
             Switch(checked = wet, onCheckedChange = { wet = it })
         }
 
-        val field = listOf(
-            CropArt.bed("carrot", "ripe", wet, light) to "Carrot, ripe",
-            CropArt.bed("carrot", "growing", wet, light) to "Carrot, growing",
-            CropArt.bed("carrot", "sprout", wet, light) to "Carrot, sprout",
-            CropArt.emptyBed(wet, light) to "Empty bed",
-        )
+        // Each crop's grown bed, then empty beds to fill the four plots.
+        val grown = CropArt.STAGES.entries.take(4).map { (crop, stages) ->
+            val stage = if ("ripe" in stages) "ripe" else stages.last()
+            CropArt.bed(crop, stage, wet, light) to "${crop.label()}, $stage"
+        }
+        val field = grown + List(4 - grown.size) { CropArt.emptyBed(wet, light) to "Empty bed" }
         field.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 row.forEach { (image, label) -> BedCard(image, label, Modifier.weight(1f)) }

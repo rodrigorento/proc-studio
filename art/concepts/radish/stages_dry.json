@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image shows five copies of a chunky wooden raised garden bed in one row, the growth stages of nine radishes in a 3 by 3 grid, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, plain flat dark charcoal background (#16171A). Keep everything exactly the same: the beds, the angle, the number and position of every plant, mound, radish and flower stalk. Change only how dry they are: in all five the soil becomes pale, dry and cracked, and every leaf droops and sags, a duller olive green, as if the plants badly need water; the plants are thirsty, not dead. In the fourth bed, remove the small white flower so it has only leaves and red radishes. No text.",
+  "refs": [
+    "art/concepts/radish/stages_wet.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T15:19:59"
+}
