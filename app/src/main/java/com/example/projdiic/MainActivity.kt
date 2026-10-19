@@ -102,7 +102,7 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
                 }
                 if (rains || (!planting && FarmCache.takeRainToShow(context))) {
                     try {
-                        for (frame in CropMotion.rain(fieldLight(now)).indices) {
+                        for (frame in CropMotion.rain().indices) {
                             rainFrame = frame
                             delay(1000L / CropMotion.FPS)
                         }
@@ -150,7 +150,7 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
         hasMicPermission = granted
     }
     val rainWetness = rainFrame?.let { ((it - CropMotion.WET_FROM).toFloat() / (CropMotion.WET_TO - CropMotion.WET_FROM)).coerceIn(0f, 1f) }
-    val look = FieldLook(fieldLight(now), watered && rainFrame == null, rainFrame, rainWetness ?: if (watered) 1f else 0f)
+    val look = FieldLook(watered && rainFrame == null, rainFrame, rainWetness ?: if (watered) 1f else 0f)
 
     if (planting) {
         Box(modifier.fillMaxSize()) {

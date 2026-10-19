@@ -26,17 +26,16 @@ object CropMotion {
     )
 
     /** The watering can pouring, played over any bed. */
-    fun water(light: String): List<Int> = sequences.getValue("water_can_$light")
+    fun water(): List<Int> = sequences.getValue("water_can")
 
     /** The rain cloud, played over any bed. */
-    fun rain(light: String): List<Int> = sequences.getValue("water_rain_$light")
+    fun rain(): List<Int> = sequences.getValue("water_rain")
 
     /** The crop's seed packet pouring seeds into the bed, played over any bed. */
-    fun plant(crop: String, light: String): List<Int> = sequences.getValue("plant_${crop}_$light")
+    fun plant(crop: String): List<Int> = sequences.getValue("plant_$crop")
 
     /** The crop flying out of its bed, played over the watered [CropArt.emptyBed]. */
-    fun harvest(crop: String, stage: String, light: String): List<Int> =
-        sequences.getValue("harvest_${crop}_${stage}_$light")
+    fun harvest(crop: String, stage: String): List<Int> = sequences.getValue("harvest_${crop}_$stage")
 
     /** The stage a crop at [stage] is harvested from: its own if it can be, otherwise it ripens to the usual one. */
     fun harvestedAs(crop: String, stage: String): String {
@@ -45,405 +44,105 @@ object CropMotion {
     }
 
     private val sequences: Map<String, List<Int>> = mapOf(
-        "water_can_morning" to listOf(
-            R.drawable.anim_water_can_morning_00, R.drawable.anim_water_can_morning_01, R.drawable.anim_water_can_morning_02, R.drawable.anim_water_can_morning_03,
-            R.drawable.anim_water_can_morning_04, R.drawable.anim_water_can_morning_05, R.drawable.anim_water_can_morning_06, R.drawable.anim_water_can_morning_07,
-            R.drawable.anim_water_can_morning_08, R.drawable.anim_water_can_morning_09, R.drawable.anim_water_can_morning_10, R.drawable.anim_water_can_morning_11,
-            R.drawable.anim_water_can_morning_12, R.drawable.anim_water_can_morning_13, R.drawable.anim_water_can_morning_14, R.drawable.anim_water_can_morning_15,
-            R.drawable.anim_water_can_morning_16, R.drawable.anim_water_can_morning_17, R.drawable.anim_water_can_morning_18, R.drawable.anim_water_can_morning_19,
-            R.drawable.anim_water_can_morning_20, R.drawable.anim_water_can_morning_21, R.drawable.anim_water_can_morning_22, R.drawable.anim_water_can_morning_23,
+        "water_can" to listOf(
+            R.drawable.anim_water_can_00, R.drawable.anim_water_can_01, R.drawable.anim_water_can_02, R.drawable.anim_water_can_03,
+            R.drawable.anim_water_can_04, R.drawable.anim_water_can_05, R.drawable.anim_water_can_06, R.drawable.anim_water_can_07,
+            R.drawable.anim_water_can_08, R.drawable.anim_water_can_09, R.drawable.anim_water_can_10, R.drawable.anim_water_can_11,
+            R.drawable.anim_water_can_12, R.drawable.anim_water_can_13, R.drawable.anim_water_can_14, R.drawable.anim_water_can_15,
+            R.drawable.anim_water_can_16, R.drawable.anim_water_can_17, R.drawable.anim_water_can_18, R.drawable.anim_water_can_19,
+            R.drawable.anim_water_can_20, R.drawable.anim_water_can_21, R.drawable.anim_water_can_22, R.drawable.anim_water_can_23,
         ),
-        "water_rain_morning" to listOf(
-            R.drawable.anim_water_rain_morning_00, R.drawable.anim_water_rain_morning_01, R.drawable.anim_water_rain_morning_02, R.drawable.anim_water_rain_morning_03,
-            R.drawable.anim_water_rain_morning_04, R.drawable.anim_water_rain_morning_05, R.drawable.anim_water_rain_morning_06, R.drawable.anim_water_rain_morning_07,
-            R.drawable.anim_water_rain_morning_08, R.drawable.anim_water_rain_morning_09, R.drawable.anim_water_rain_morning_10, R.drawable.anim_water_rain_morning_11,
-            R.drawable.anim_water_rain_morning_12, R.drawable.anim_water_rain_morning_13, R.drawable.anim_water_rain_morning_14, R.drawable.anim_water_rain_morning_15,
-            R.drawable.anim_water_rain_morning_16, R.drawable.anim_water_rain_morning_17, R.drawable.anim_water_rain_morning_18, R.drawable.anim_water_rain_morning_19,
-            R.drawable.anim_water_rain_morning_20, R.drawable.anim_water_rain_morning_21, R.drawable.anim_water_rain_morning_22, R.drawable.anim_water_rain_morning_23,
+        "water_rain" to listOf(
+            R.drawable.anim_water_rain_00, R.drawable.anim_water_rain_01, R.drawable.anim_water_rain_02, R.drawable.anim_water_rain_03,
+            R.drawable.anim_water_rain_04, R.drawable.anim_water_rain_05, R.drawable.anim_water_rain_06, R.drawable.anim_water_rain_07,
+            R.drawable.anim_water_rain_08, R.drawable.anim_water_rain_09, R.drawable.anim_water_rain_10, R.drawable.anim_water_rain_11,
+            R.drawable.anim_water_rain_12, R.drawable.anim_water_rain_13, R.drawable.anim_water_rain_14, R.drawable.anim_water_rain_15,
+            R.drawable.anim_water_rain_16, R.drawable.anim_water_rain_17, R.drawable.anim_water_rain_18, R.drawable.anim_water_rain_19,
+            R.drawable.anim_water_rain_20, R.drawable.anim_water_rain_21, R.drawable.anim_water_rain_22, R.drawable.anim_water_rain_23,
         ),
-        "plant_carrot_morning" to listOf(
-            R.drawable.anim_plant_carrot_morning_00, R.drawable.anim_plant_carrot_morning_01, R.drawable.anim_plant_carrot_morning_02, R.drawable.anim_plant_carrot_morning_03,
-            R.drawable.anim_plant_carrot_morning_04, R.drawable.anim_plant_carrot_morning_05, R.drawable.anim_plant_carrot_morning_06, R.drawable.anim_plant_carrot_morning_07,
-            R.drawable.anim_plant_carrot_morning_08, R.drawable.anim_plant_carrot_morning_09, R.drawable.anim_plant_carrot_morning_10, R.drawable.anim_plant_carrot_morning_11,
-            R.drawable.anim_plant_carrot_morning_12, R.drawable.anim_plant_carrot_morning_13, R.drawable.anim_plant_carrot_morning_14, R.drawable.anim_plant_carrot_morning_15,
+        "plant_carrot" to listOf(
+            R.drawable.anim_plant_carrot_00, R.drawable.anim_plant_carrot_01, R.drawable.anim_plant_carrot_02, R.drawable.anim_plant_carrot_03,
+            R.drawable.anim_plant_carrot_04, R.drawable.anim_plant_carrot_05, R.drawable.anim_plant_carrot_06, R.drawable.anim_plant_carrot_07,
+            R.drawable.anim_plant_carrot_08, R.drawable.anim_plant_carrot_09, R.drawable.anim_plant_carrot_10, R.drawable.anim_plant_carrot_11,
+            R.drawable.anim_plant_carrot_12, R.drawable.anim_plant_carrot_13, R.drawable.anim_plant_carrot_14, R.drawable.anim_plant_carrot_15,
         ),
-        "plant_lettuce_morning" to listOf(
-            R.drawable.anim_plant_lettuce_morning_00, R.drawable.anim_plant_lettuce_morning_01, R.drawable.anim_plant_lettuce_morning_02, R.drawable.anim_plant_lettuce_morning_03,
-            R.drawable.anim_plant_lettuce_morning_04, R.drawable.anim_plant_lettuce_morning_05, R.drawable.anim_plant_lettuce_morning_06, R.drawable.anim_plant_lettuce_morning_07,
-            R.drawable.anim_plant_lettuce_morning_08, R.drawable.anim_plant_lettuce_morning_09, R.drawable.anim_plant_lettuce_morning_10, R.drawable.anim_plant_lettuce_morning_11,
-            R.drawable.anim_plant_lettuce_morning_12, R.drawable.anim_plant_lettuce_morning_13, R.drawable.anim_plant_lettuce_morning_14, R.drawable.anim_plant_lettuce_morning_15,
+        "plant_lettuce" to listOf(
+            R.drawable.anim_plant_lettuce_00, R.drawable.anim_plant_lettuce_01, R.drawable.anim_plant_lettuce_02, R.drawable.anim_plant_lettuce_03,
+            R.drawable.anim_plant_lettuce_04, R.drawable.anim_plant_lettuce_05, R.drawable.anim_plant_lettuce_06, R.drawable.anim_plant_lettuce_07,
+            R.drawable.anim_plant_lettuce_08, R.drawable.anim_plant_lettuce_09, R.drawable.anim_plant_lettuce_10, R.drawable.anim_plant_lettuce_11,
+            R.drawable.anim_plant_lettuce_12, R.drawable.anim_plant_lettuce_13, R.drawable.anim_plant_lettuce_14, R.drawable.anim_plant_lettuce_15,
         ),
-        "plant_pumpkin_morning" to listOf(
-            R.drawable.anim_plant_pumpkin_morning_00, R.drawable.anim_plant_pumpkin_morning_01, R.drawable.anim_plant_pumpkin_morning_02, R.drawable.anim_plant_pumpkin_morning_03,
-            R.drawable.anim_plant_pumpkin_morning_04, R.drawable.anim_plant_pumpkin_morning_05, R.drawable.anim_plant_pumpkin_morning_06, R.drawable.anim_plant_pumpkin_morning_07,
-            R.drawable.anim_plant_pumpkin_morning_08, R.drawable.anim_plant_pumpkin_morning_09, R.drawable.anim_plant_pumpkin_morning_10, R.drawable.anim_plant_pumpkin_morning_11,
-            R.drawable.anim_plant_pumpkin_morning_12, R.drawable.anim_plant_pumpkin_morning_13, R.drawable.anim_plant_pumpkin_morning_14, R.drawable.anim_plant_pumpkin_morning_15,
+        "plant_pumpkin" to listOf(
+            R.drawable.anim_plant_pumpkin_00, R.drawable.anim_plant_pumpkin_01, R.drawable.anim_plant_pumpkin_02, R.drawable.anim_plant_pumpkin_03,
+            R.drawable.anim_plant_pumpkin_04, R.drawable.anim_plant_pumpkin_05, R.drawable.anim_plant_pumpkin_06, R.drawable.anim_plant_pumpkin_07,
+            R.drawable.anim_plant_pumpkin_08, R.drawable.anim_plant_pumpkin_09, R.drawable.anim_plant_pumpkin_10, R.drawable.anim_plant_pumpkin_11,
+            R.drawable.anim_plant_pumpkin_12, R.drawable.anim_plant_pumpkin_13, R.drawable.anim_plant_pumpkin_14, R.drawable.anim_plant_pumpkin_15,
         ),
-        "plant_radish_morning" to listOf(
-            R.drawable.anim_plant_radish_morning_00, R.drawable.anim_plant_radish_morning_01, R.drawable.anim_plant_radish_morning_02, R.drawable.anim_plant_radish_morning_03,
-            R.drawable.anim_plant_radish_morning_04, R.drawable.anim_plant_radish_morning_05, R.drawable.anim_plant_radish_morning_06, R.drawable.anim_plant_radish_morning_07,
-            R.drawable.anim_plant_radish_morning_08, R.drawable.anim_plant_radish_morning_09, R.drawable.anim_plant_radish_morning_10, R.drawable.anim_plant_radish_morning_11,
-            R.drawable.anim_plant_radish_morning_12, R.drawable.anim_plant_radish_morning_13, R.drawable.anim_plant_radish_morning_14, R.drawable.anim_plant_radish_morning_15,
+        "plant_radish" to listOf(
+            R.drawable.anim_plant_radish_00, R.drawable.anim_plant_radish_01, R.drawable.anim_plant_radish_02, R.drawable.anim_plant_radish_03,
+            R.drawable.anim_plant_radish_04, R.drawable.anim_plant_radish_05, R.drawable.anim_plant_radish_06, R.drawable.anim_plant_radish_07,
+            R.drawable.anim_plant_radish_08, R.drawable.anim_plant_radish_09, R.drawable.anim_plant_radish_10, R.drawable.anim_plant_radish_11,
+            R.drawable.anim_plant_radish_12, R.drawable.anim_plant_radish_13, R.drawable.anim_plant_radish_14, R.drawable.anim_plant_radish_15,
         ),
-        "plant_sunflower_morning" to listOf(
-            R.drawable.anim_plant_sunflower_morning_00, R.drawable.anim_plant_sunflower_morning_01, R.drawable.anim_plant_sunflower_morning_02, R.drawable.anim_plant_sunflower_morning_03,
-            R.drawable.anim_plant_sunflower_morning_04, R.drawable.anim_plant_sunflower_morning_05, R.drawable.anim_plant_sunflower_morning_06, R.drawable.anim_plant_sunflower_morning_07,
-            R.drawable.anim_plant_sunflower_morning_08, R.drawable.anim_plant_sunflower_morning_09, R.drawable.anim_plant_sunflower_morning_10, R.drawable.anim_plant_sunflower_morning_11,
-            R.drawable.anim_plant_sunflower_morning_12, R.drawable.anim_plant_sunflower_morning_13, R.drawable.anim_plant_sunflower_morning_14, R.drawable.anim_plant_sunflower_morning_15,
+        "plant_sunflower" to listOf(
+            R.drawable.anim_plant_sunflower_00, R.drawable.anim_plant_sunflower_01, R.drawable.anim_plant_sunflower_02, R.drawable.anim_plant_sunflower_03,
+            R.drawable.anim_plant_sunflower_04, R.drawable.anim_plant_sunflower_05, R.drawable.anim_plant_sunflower_06, R.drawable.anim_plant_sunflower_07,
+            R.drawable.anim_plant_sunflower_08, R.drawable.anim_plant_sunflower_09, R.drawable.anim_plant_sunflower_10, R.drawable.anim_plant_sunflower_11,
+            R.drawable.anim_plant_sunflower_12, R.drawable.anim_plant_sunflower_13, R.drawable.anim_plant_sunflower_14, R.drawable.anim_plant_sunflower_15,
         ),
-        "harvest_carrot_ripe_morning" to listOf(
-            R.drawable.anim_harvest_carrot_ripe_morning_00, R.drawable.anim_harvest_carrot_ripe_morning_01, R.drawable.anim_harvest_carrot_ripe_morning_02, R.drawable.anim_harvest_carrot_ripe_morning_03,
-            R.drawable.anim_harvest_carrot_ripe_morning_04, R.drawable.anim_harvest_carrot_ripe_morning_05, R.drawable.anim_harvest_carrot_ripe_morning_06, R.drawable.anim_harvest_carrot_ripe_morning_07,
-            R.drawable.anim_harvest_carrot_ripe_morning_08, R.drawable.anim_harvest_carrot_ripe_morning_09, R.drawable.anim_harvest_carrot_ripe_morning_10, R.drawable.anim_harvest_carrot_ripe_morning_11,
-            R.drawable.anim_harvest_carrot_ripe_morning_12, R.drawable.anim_harvest_carrot_ripe_morning_13,
+        "harvest_carrot_ripe" to listOf(
+            R.drawable.anim_harvest_carrot_ripe_00, R.drawable.anim_harvest_carrot_ripe_01, R.drawable.anim_harvest_carrot_ripe_02, R.drawable.anim_harvest_carrot_ripe_03,
+            R.drawable.anim_harvest_carrot_ripe_04, R.drawable.anim_harvest_carrot_ripe_05, R.drawable.anim_harvest_carrot_ripe_06, R.drawable.anim_harvest_carrot_ripe_07,
+            R.drawable.anim_harvest_carrot_ripe_08, R.drawable.anim_harvest_carrot_ripe_09, R.drawable.anim_harvest_carrot_ripe_10, R.drawable.anim_harvest_carrot_ripe_11,
+            R.drawable.anim_harvest_carrot_ripe_12, R.drawable.anim_harvest_carrot_ripe_13,
         ),
-        "harvest_carrot_overripe_morning" to listOf(
-            R.drawable.anim_harvest_carrot_overripe_morning_00, R.drawable.anim_harvest_carrot_overripe_morning_01, R.drawable.anim_harvest_carrot_overripe_morning_02, R.drawable.anim_harvest_carrot_overripe_morning_03,
-            R.drawable.anim_harvest_carrot_overripe_morning_04, R.drawable.anim_harvest_carrot_overripe_morning_05, R.drawable.anim_harvest_carrot_overripe_morning_06, R.drawable.anim_harvest_carrot_overripe_morning_07,
-            R.drawable.anim_harvest_carrot_overripe_morning_08, R.drawable.anim_harvest_carrot_overripe_morning_09, R.drawable.anim_harvest_carrot_overripe_morning_10, R.drawable.anim_harvest_carrot_overripe_morning_11,
-            R.drawable.anim_harvest_carrot_overripe_morning_12, R.drawable.anim_harvest_carrot_overripe_morning_13,
+        "harvest_carrot_overripe" to listOf(
+            R.drawable.anim_harvest_carrot_overripe_00, R.drawable.anim_harvest_carrot_overripe_01, R.drawable.anim_harvest_carrot_overripe_02, R.drawable.anim_harvest_carrot_overripe_03,
+            R.drawable.anim_harvest_carrot_overripe_04, R.drawable.anim_harvest_carrot_overripe_05, R.drawable.anim_harvest_carrot_overripe_06, R.drawable.anim_harvest_carrot_overripe_07,
+            R.drawable.anim_harvest_carrot_overripe_08, R.drawable.anim_harvest_carrot_overripe_09, R.drawable.anim_harvest_carrot_overripe_10, R.drawable.anim_harvest_carrot_overripe_11,
+            R.drawable.anim_harvest_carrot_overripe_12, R.drawable.anim_harvest_carrot_overripe_13,
         ),
-        "harvest_lettuce_ripe_morning" to listOf(
-            R.drawable.anim_harvest_lettuce_ripe_morning_00, R.drawable.anim_harvest_lettuce_ripe_morning_01, R.drawable.anim_harvest_lettuce_ripe_morning_02, R.drawable.anim_harvest_lettuce_ripe_morning_03,
-            R.drawable.anim_harvest_lettuce_ripe_morning_04, R.drawable.anim_harvest_lettuce_ripe_morning_05, R.drawable.anim_harvest_lettuce_ripe_morning_06, R.drawable.anim_harvest_lettuce_ripe_morning_07,
-            R.drawable.anim_harvest_lettuce_ripe_morning_08, R.drawable.anim_harvest_lettuce_ripe_morning_09, R.drawable.anim_harvest_lettuce_ripe_morning_10, R.drawable.anim_harvest_lettuce_ripe_morning_11,
-            R.drawable.anim_harvest_lettuce_ripe_morning_12, R.drawable.anim_harvest_lettuce_ripe_morning_13,
+        "harvest_lettuce_ripe" to listOf(
+            R.drawable.anim_harvest_lettuce_ripe_00, R.drawable.anim_harvest_lettuce_ripe_01, R.drawable.anim_harvest_lettuce_ripe_02, R.drawable.anim_harvest_lettuce_ripe_03,
+            R.drawable.anim_harvest_lettuce_ripe_04, R.drawable.anim_harvest_lettuce_ripe_05, R.drawable.anim_harvest_lettuce_ripe_06, R.drawable.anim_harvest_lettuce_ripe_07,
+            R.drawable.anim_harvest_lettuce_ripe_08, R.drawable.anim_harvest_lettuce_ripe_09, R.drawable.anim_harvest_lettuce_ripe_10, R.drawable.anim_harvest_lettuce_ripe_11,
+            R.drawable.anim_harvest_lettuce_ripe_12, R.drawable.anim_harvest_lettuce_ripe_13,
         ),
-        "harvest_lettuce_overripe_morning" to listOf(
-            R.drawable.anim_harvest_lettuce_overripe_morning_00, R.drawable.anim_harvest_lettuce_overripe_morning_01, R.drawable.anim_harvest_lettuce_overripe_morning_02, R.drawable.anim_harvest_lettuce_overripe_morning_03,
-            R.drawable.anim_harvest_lettuce_overripe_morning_04, R.drawable.anim_harvest_lettuce_overripe_morning_05, R.drawable.anim_harvest_lettuce_overripe_morning_06, R.drawable.anim_harvest_lettuce_overripe_morning_07,
-            R.drawable.anim_harvest_lettuce_overripe_morning_08, R.drawable.anim_harvest_lettuce_overripe_morning_09, R.drawable.anim_harvest_lettuce_overripe_morning_10, R.drawable.anim_harvest_lettuce_overripe_morning_11,
-            R.drawable.anim_harvest_lettuce_overripe_morning_12, R.drawable.anim_harvest_lettuce_overripe_morning_13,
+        "harvest_lettuce_overripe" to listOf(
+            R.drawable.anim_harvest_lettuce_overripe_00, R.drawable.anim_harvest_lettuce_overripe_01, R.drawable.anim_harvest_lettuce_overripe_02, R.drawable.anim_harvest_lettuce_overripe_03,
+            R.drawable.anim_harvest_lettuce_overripe_04, R.drawable.anim_harvest_lettuce_overripe_05, R.drawable.anim_harvest_lettuce_overripe_06, R.drawable.anim_harvest_lettuce_overripe_07,
+            R.drawable.anim_harvest_lettuce_overripe_08, R.drawable.anim_harvest_lettuce_overripe_09, R.drawable.anim_harvest_lettuce_overripe_10, R.drawable.anim_harvest_lettuce_overripe_11,
+            R.drawable.anim_harvest_lettuce_overripe_12, R.drawable.anim_harvest_lettuce_overripe_13,
         ),
-        "harvest_pumpkin_ripe_morning" to listOf(
-            R.drawable.anim_harvest_pumpkin_ripe_morning_00, R.drawable.anim_harvest_pumpkin_ripe_morning_01, R.drawable.anim_harvest_pumpkin_ripe_morning_02, R.drawable.anim_harvest_pumpkin_ripe_morning_03,
-            R.drawable.anim_harvest_pumpkin_ripe_morning_04, R.drawable.anim_harvest_pumpkin_ripe_morning_05, R.drawable.anim_harvest_pumpkin_ripe_morning_06, R.drawable.anim_harvest_pumpkin_ripe_morning_07,
-            R.drawable.anim_harvest_pumpkin_ripe_morning_08, R.drawable.anim_harvest_pumpkin_ripe_morning_09, R.drawable.anim_harvest_pumpkin_ripe_morning_10, R.drawable.anim_harvest_pumpkin_ripe_morning_11,
-            R.drawable.anim_harvest_pumpkin_ripe_morning_12, R.drawable.anim_harvest_pumpkin_ripe_morning_13,
+        "harvest_pumpkin_ripe" to listOf(
+            R.drawable.anim_harvest_pumpkin_ripe_00, R.drawable.anim_harvest_pumpkin_ripe_01, R.drawable.anim_harvest_pumpkin_ripe_02, R.drawable.anim_harvest_pumpkin_ripe_03,
+            R.drawable.anim_harvest_pumpkin_ripe_04, R.drawable.anim_harvest_pumpkin_ripe_05, R.drawable.anim_harvest_pumpkin_ripe_06, R.drawable.anim_harvest_pumpkin_ripe_07,
+            R.drawable.anim_harvest_pumpkin_ripe_08, R.drawable.anim_harvest_pumpkin_ripe_09, R.drawable.anim_harvest_pumpkin_ripe_10, R.drawable.anim_harvest_pumpkin_ripe_11,
+            R.drawable.anim_harvest_pumpkin_ripe_12, R.drawable.anim_harvest_pumpkin_ripe_13,
         ),
-        "harvest_pumpkin_overripe_morning" to listOf(
-            R.drawable.anim_harvest_pumpkin_overripe_morning_00, R.drawable.anim_harvest_pumpkin_overripe_morning_01, R.drawable.anim_harvest_pumpkin_overripe_morning_02, R.drawable.anim_harvest_pumpkin_overripe_morning_03,
-            R.drawable.anim_harvest_pumpkin_overripe_morning_04, R.drawable.anim_harvest_pumpkin_overripe_morning_05, R.drawable.anim_harvest_pumpkin_overripe_morning_06, R.drawable.anim_harvest_pumpkin_overripe_morning_07,
-            R.drawable.anim_harvest_pumpkin_overripe_morning_08, R.drawable.anim_harvest_pumpkin_overripe_morning_09, R.drawable.anim_harvest_pumpkin_overripe_morning_10, R.drawable.anim_harvest_pumpkin_overripe_morning_11,
-            R.drawable.anim_harvest_pumpkin_overripe_morning_12, R.drawable.anim_harvest_pumpkin_overripe_morning_13,
+        "harvest_pumpkin_overripe" to listOf(
+            R.drawable.anim_harvest_pumpkin_overripe_00, R.drawable.anim_harvest_pumpkin_overripe_01, R.drawable.anim_harvest_pumpkin_overripe_02, R.drawable.anim_harvest_pumpkin_overripe_03,
+            R.drawable.anim_harvest_pumpkin_overripe_04, R.drawable.anim_harvest_pumpkin_overripe_05, R.drawable.anim_harvest_pumpkin_overripe_06, R.drawable.anim_harvest_pumpkin_overripe_07,
+            R.drawable.anim_harvest_pumpkin_overripe_08, R.drawable.anim_harvest_pumpkin_overripe_09, R.drawable.anim_harvest_pumpkin_overripe_10, R.drawable.anim_harvest_pumpkin_overripe_11,
+            R.drawable.anim_harvest_pumpkin_overripe_12, R.drawable.anim_harvest_pumpkin_overripe_13,
         ),
-        "harvest_radish_ripe_morning" to listOf(
-            R.drawable.anim_harvest_radish_ripe_morning_00, R.drawable.anim_harvest_radish_ripe_morning_01, R.drawable.anim_harvest_radish_ripe_morning_02, R.drawable.anim_harvest_radish_ripe_morning_03,
-            R.drawable.anim_harvest_radish_ripe_morning_04, R.drawable.anim_harvest_radish_ripe_morning_05, R.drawable.anim_harvest_radish_ripe_morning_06, R.drawable.anim_harvest_radish_ripe_morning_07,
-            R.drawable.anim_harvest_radish_ripe_morning_08, R.drawable.anim_harvest_radish_ripe_morning_09, R.drawable.anim_harvest_radish_ripe_morning_10, R.drawable.anim_harvest_radish_ripe_morning_11,
-            R.drawable.anim_harvest_radish_ripe_morning_12, R.drawable.anim_harvest_radish_ripe_morning_13,
+        "harvest_radish_ripe" to listOf(
+            R.drawable.anim_harvest_radish_ripe_00, R.drawable.anim_harvest_radish_ripe_01, R.drawable.anim_harvest_radish_ripe_02, R.drawable.anim_harvest_radish_ripe_03,
+            R.drawable.anim_harvest_radish_ripe_04, R.drawable.anim_harvest_radish_ripe_05, R.drawable.anim_harvest_radish_ripe_06, R.drawable.anim_harvest_radish_ripe_07,
+            R.drawable.anim_harvest_radish_ripe_08, R.drawable.anim_harvest_radish_ripe_09, R.drawable.anim_harvest_radish_ripe_10, R.drawable.anim_harvest_radish_ripe_11,
+            R.drawable.anim_harvest_radish_ripe_12, R.drawable.anim_harvest_radish_ripe_13,
         ),
-        "harvest_radish_overripe_morning" to listOf(
-            R.drawable.anim_harvest_radish_overripe_morning_00, R.drawable.anim_harvest_radish_overripe_morning_01, R.drawable.anim_harvest_radish_overripe_morning_02, R.drawable.anim_harvest_radish_overripe_morning_03,
-            R.drawable.anim_harvest_radish_overripe_morning_04, R.drawable.anim_harvest_radish_overripe_morning_05, R.drawable.anim_harvest_radish_overripe_morning_06, R.drawable.anim_harvest_radish_overripe_morning_07,
-            R.drawable.anim_harvest_radish_overripe_morning_08, R.drawable.anim_harvest_radish_overripe_morning_09, R.drawable.anim_harvest_radish_overripe_morning_10, R.drawable.anim_harvest_radish_overripe_morning_11,
-            R.drawable.anim_harvest_radish_overripe_morning_12, R.drawable.anim_harvest_radish_overripe_morning_13,
+        "harvest_radish_overripe" to listOf(
+            R.drawable.anim_harvest_radish_overripe_00, R.drawable.anim_harvest_radish_overripe_01, R.drawable.anim_harvest_radish_overripe_02, R.drawable.anim_harvest_radish_overripe_03,
+            R.drawable.anim_harvest_radish_overripe_04, R.drawable.anim_harvest_radish_overripe_05, R.drawable.anim_harvest_radish_overripe_06, R.drawable.anim_harvest_radish_overripe_07,
+            R.drawable.anim_harvest_radish_overripe_08, R.drawable.anim_harvest_radish_overripe_09, R.drawable.anim_harvest_radish_overripe_10, R.drawable.anim_harvest_radish_overripe_11,
+            R.drawable.anim_harvest_radish_overripe_12, R.drawable.anim_harvest_radish_overripe_13,
         ),
-        "harvest_sunflower_bloom_morning" to listOf(
-            R.drawable.anim_harvest_sunflower_bloom_morning_00, R.drawable.anim_harvest_sunflower_bloom_morning_01, R.drawable.anim_harvest_sunflower_bloom_morning_02, R.drawable.anim_harvest_sunflower_bloom_morning_03,
-            R.drawable.anim_harvest_sunflower_bloom_morning_04, R.drawable.anim_harvest_sunflower_bloom_morning_05, R.drawable.anim_harvest_sunflower_bloom_morning_06, R.drawable.anim_harvest_sunflower_bloom_morning_07,
-            R.drawable.anim_harvest_sunflower_bloom_morning_08, R.drawable.anim_harvest_sunflower_bloom_morning_09, R.drawable.anim_harvest_sunflower_bloom_morning_10, R.drawable.anim_harvest_sunflower_bloom_morning_11,
-            R.drawable.anim_harvest_sunflower_bloom_morning_12, R.drawable.anim_harvest_sunflower_bloom_morning_13,
-        ),
-        "water_can_day" to listOf(
-            R.drawable.anim_water_can_day_00, R.drawable.anim_water_can_day_01, R.drawable.anim_water_can_day_02, R.drawable.anim_water_can_day_03,
-            R.drawable.anim_water_can_day_04, R.drawable.anim_water_can_day_05, R.drawable.anim_water_can_day_06, R.drawable.anim_water_can_day_07,
-            R.drawable.anim_water_can_day_08, R.drawable.anim_water_can_day_09, R.drawable.anim_water_can_day_10, R.drawable.anim_water_can_day_11,
-            R.drawable.anim_water_can_day_12, R.drawable.anim_water_can_day_13, R.drawable.anim_water_can_day_14, R.drawable.anim_water_can_day_15,
-            R.drawable.anim_water_can_day_16, R.drawable.anim_water_can_day_17, R.drawable.anim_water_can_day_18, R.drawable.anim_water_can_day_19,
-            R.drawable.anim_water_can_day_20, R.drawable.anim_water_can_day_21, R.drawable.anim_water_can_day_22, R.drawable.anim_water_can_day_23,
-        ),
-        "water_rain_day" to listOf(
-            R.drawable.anim_water_rain_day_00, R.drawable.anim_water_rain_day_01, R.drawable.anim_water_rain_day_02, R.drawable.anim_water_rain_day_03,
-            R.drawable.anim_water_rain_day_04, R.drawable.anim_water_rain_day_05, R.drawable.anim_water_rain_day_06, R.drawable.anim_water_rain_day_07,
-            R.drawable.anim_water_rain_day_08, R.drawable.anim_water_rain_day_09, R.drawable.anim_water_rain_day_10, R.drawable.anim_water_rain_day_11,
-            R.drawable.anim_water_rain_day_12, R.drawable.anim_water_rain_day_13, R.drawable.anim_water_rain_day_14, R.drawable.anim_water_rain_day_15,
-            R.drawable.anim_water_rain_day_16, R.drawable.anim_water_rain_day_17, R.drawable.anim_water_rain_day_18, R.drawable.anim_water_rain_day_19,
-            R.drawable.anim_water_rain_day_20, R.drawable.anim_water_rain_day_21, R.drawable.anim_water_rain_day_22, R.drawable.anim_water_rain_day_23,
-        ),
-        "plant_carrot_day" to listOf(
-            R.drawable.anim_plant_carrot_day_00, R.drawable.anim_plant_carrot_day_01, R.drawable.anim_plant_carrot_day_02, R.drawable.anim_plant_carrot_day_03,
-            R.drawable.anim_plant_carrot_day_04, R.drawable.anim_plant_carrot_day_05, R.drawable.anim_plant_carrot_day_06, R.drawable.anim_plant_carrot_day_07,
-            R.drawable.anim_plant_carrot_day_08, R.drawable.anim_plant_carrot_day_09, R.drawable.anim_plant_carrot_day_10, R.drawable.anim_plant_carrot_day_11,
-            R.drawable.anim_plant_carrot_day_12, R.drawable.anim_plant_carrot_day_13, R.drawable.anim_plant_carrot_day_14, R.drawable.anim_plant_carrot_day_15,
-        ),
-        "plant_lettuce_day" to listOf(
-            R.drawable.anim_plant_lettuce_day_00, R.drawable.anim_plant_lettuce_day_01, R.drawable.anim_plant_lettuce_day_02, R.drawable.anim_plant_lettuce_day_03,
-            R.drawable.anim_plant_lettuce_day_04, R.drawable.anim_plant_lettuce_day_05, R.drawable.anim_plant_lettuce_day_06, R.drawable.anim_plant_lettuce_day_07,
-            R.drawable.anim_plant_lettuce_day_08, R.drawable.anim_plant_lettuce_day_09, R.drawable.anim_plant_lettuce_day_10, R.drawable.anim_plant_lettuce_day_11,
-            R.drawable.anim_plant_lettuce_day_12, R.drawable.anim_plant_lettuce_day_13, R.drawable.anim_plant_lettuce_day_14, R.drawable.anim_plant_lettuce_day_15,
-        ),
-        "plant_pumpkin_day" to listOf(
-            R.drawable.anim_plant_pumpkin_day_00, R.drawable.anim_plant_pumpkin_day_01, R.drawable.anim_plant_pumpkin_day_02, R.drawable.anim_plant_pumpkin_day_03,
-            R.drawable.anim_plant_pumpkin_day_04, R.drawable.anim_plant_pumpkin_day_05, R.drawable.anim_plant_pumpkin_day_06, R.drawable.anim_plant_pumpkin_day_07,
-            R.drawable.anim_plant_pumpkin_day_08, R.drawable.anim_plant_pumpkin_day_09, R.drawable.anim_plant_pumpkin_day_10, R.drawable.anim_plant_pumpkin_day_11,
-            R.drawable.anim_plant_pumpkin_day_12, R.drawable.anim_plant_pumpkin_day_13, R.drawable.anim_plant_pumpkin_day_14, R.drawable.anim_plant_pumpkin_day_15,
-        ),
-        "plant_radish_day" to listOf(
-            R.drawable.anim_plant_radish_day_00, R.drawable.anim_plant_radish_day_01, R.drawable.anim_plant_radish_day_02, R.drawable.anim_plant_radish_day_03,
-            R.drawable.anim_plant_radish_day_04, R.drawable.anim_plant_radish_day_05, R.drawable.anim_plant_radish_day_06, R.drawable.anim_plant_radish_day_07,
-            R.drawable.anim_plant_radish_day_08, R.drawable.anim_plant_radish_day_09, R.drawable.anim_plant_radish_day_10, R.drawable.anim_plant_radish_day_11,
-            R.drawable.anim_plant_radish_day_12, R.drawable.anim_plant_radish_day_13, R.drawable.anim_plant_radish_day_14, R.drawable.anim_plant_radish_day_15,
-        ),
-        "plant_sunflower_day" to listOf(
-            R.drawable.anim_plant_sunflower_day_00, R.drawable.anim_plant_sunflower_day_01, R.drawable.anim_plant_sunflower_day_02, R.drawable.anim_plant_sunflower_day_03,
-            R.drawable.anim_plant_sunflower_day_04, R.drawable.anim_plant_sunflower_day_05, R.drawable.anim_plant_sunflower_day_06, R.drawable.anim_plant_sunflower_day_07,
-            R.drawable.anim_plant_sunflower_day_08, R.drawable.anim_plant_sunflower_day_09, R.drawable.anim_plant_sunflower_day_10, R.drawable.anim_plant_sunflower_day_11,
-            R.drawable.anim_plant_sunflower_day_12, R.drawable.anim_plant_sunflower_day_13, R.drawable.anim_plant_sunflower_day_14, R.drawable.anim_plant_sunflower_day_15,
-        ),
-        "harvest_carrot_ripe_day" to listOf(
-            R.drawable.anim_harvest_carrot_ripe_day_00, R.drawable.anim_harvest_carrot_ripe_day_01, R.drawable.anim_harvest_carrot_ripe_day_02, R.drawable.anim_harvest_carrot_ripe_day_03,
-            R.drawable.anim_harvest_carrot_ripe_day_04, R.drawable.anim_harvest_carrot_ripe_day_05, R.drawable.anim_harvest_carrot_ripe_day_06, R.drawable.anim_harvest_carrot_ripe_day_07,
-            R.drawable.anim_harvest_carrot_ripe_day_08, R.drawable.anim_harvest_carrot_ripe_day_09, R.drawable.anim_harvest_carrot_ripe_day_10, R.drawable.anim_harvest_carrot_ripe_day_11,
-            R.drawable.anim_harvest_carrot_ripe_day_12, R.drawable.anim_harvest_carrot_ripe_day_13,
-        ),
-        "harvest_carrot_overripe_day" to listOf(
-            R.drawable.anim_harvest_carrot_overripe_day_00, R.drawable.anim_harvest_carrot_overripe_day_01, R.drawable.anim_harvest_carrot_overripe_day_02, R.drawable.anim_harvest_carrot_overripe_day_03,
-            R.drawable.anim_harvest_carrot_overripe_day_04, R.drawable.anim_harvest_carrot_overripe_day_05, R.drawable.anim_harvest_carrot_overripe_day_06, R.drawable.anim_harvest_carrot_overripe_day_07,
-            R.drawable.anim_harvest_carrot_overripe_day_08, R.drawable.anim_harvest_carrot_overripe_day_09, R.drawable.anim_harvest_carrot_overripe_day_10, R.drawable.anim_harvest_carrot_overripe_day_11,
-            R.drawable.anim_harvest_carrot_overripe_day_12, R.drawable.anim_harvest_carrot_overripe_day_13,
-        ),
-        "harvest_lettuce_ripe_day" to listOf(
-            R.drawable.anim_harvest_lettuce_ripe_day_00, R.drawable.anim_harvest_lettuce_ripe_day_01, R.drawable.anim_harvest_lettuce_ripe_day_02, R.drawable.anim_harvest_lettuce_ripe_day_03,
-            R.drawable.anim_harvest_lettuce_ripe_day_04, R.drawable.anim_harvest_lettuce_ripe_day_05, R.drawable.anim_harvest_lettuce_ripe_day_06, R.drawable.anim_harvest_lettuce_ripe_day_07,
-            R.drawable.anim_harvest_lettuce_ripe_day_08, R.drawable.anim_harvest_lettuce_ripe_day_09, R.drawable.anim_harvest_lettuce_ripe_day_10, R.drawable.anim_harvest_lettuce_ripe_day_11,
-            R.drawable.anim_harvest_lettuce_ripe_day_12, R.drawable.anim_harvest_lettuce_ripe_day_13,
-        ),
-        "harvest_lettuce_overripe_day" to listOf(
-            R.drawable.anim_harvest_lettuce_overripe_day_00, R.drawable.anim_harvest_lettuce_overripe_day_01, R.drawable.anim_harvest_lettuce_overripe_day_02, R.drawable.anim_harvest_lettuce_overripe_day_03,
-            R.drawable.anim_harvest_lettuce_overripe_day_04, R.drawable.anim_harvest_lettuce_overripe_day_05, R.drawable.anim_harvest_lettuce_overripe_day_06, R.drawable.anim_harvest_lettuce_overripe_day_07,
-            R.drawable.anim_harvest_lettuce_overripe_day_08, R.drawable.anim_harvest_lettuce_overripe_day_09, R.drawable.anim_harvest_lettuce_overripe_day_10, R.drawable.anim_harvest_lettuce_overripe_day_11,
-            R.drawable.anim_harvest_lettuce_overripe_day_12, R.drawable.anim_harvest_lettuce_overripe_day_13,
-        ),
-        "harvest_pumpkin_ripe_day" to listOf(
-            R.drawable.anim_harvest_pumpkin_ripe_day_00, R.drawable.anim_harvest_pumpkin_ripe_day_01, R.drawable.anim_harvest_pumpkin_ripe_day_02, R.drawable.anim_harvest_pumpkin_ripe_day_03,
-            R.drawable.anim_harvest_pumpkin_ripe_day_04, R.drawable.anim_harvest_pumpkin_ripe_day_05, R.drawable.anim_harvest_pumpkin_ripe_day_06, R.drawable.anim_harvest_pumpkin_ripe_day_07,
-            R.drawable.anim_harvest_pumpkin_ripe_day_08, R.drawable.anim_harvest_pumpkin_ripe_day_09, R.drawable.anim_harvest_pumpkin_ripe_day_10, R.drawable.anim_harvest_pumpkin_ripe_day_11,
-            R.drawable.anim_harvest_pumpkin_ripe_day_12, R.drawable.anim_harvest_pumpkin_ripe_day_13,
-        ),
-        "harvest_pumpkin_overripe_day" to listOf(
-            R.drawable.anim_harvest_pumpkin_overripe_day_00, R.drawable.anim_harvest_pumpkin_overripe_day_01, R.drawable.anim_harvest_pumpkin_overripe_day_02, R.drawable.anim_harvest_pumpkin_overripe_day_03,
-            R.drawable.anim_harvest_pumpkin_overripe_day_04, R.drawable.anim_harvest_pumpkin_overripe_day_05, R.drawable.anim_harvest_pumpkin_overripe_day_06, R.drawable.anim_harvest_pumpkin_overripe_day_07,
-            R.drawable.anim_harvest_pumpkin_overripe_day_08, R.drawable.anim_harvest_pumpkin_overripe_day_09, R.drawable.anim_harvest_pumpkin_overripe_day_10, R.drawable.anim_harvest_pumpkin_overripe_day_11,
-            R.drawable.anim_harvest_pumpkin_overripe_day_12, R.drawable.anim_harvest_pumpkin_overripe_day_13,
-        ),
-        "harvest_radish_ripe_day" to listOf(
-            R.drawable.anim_harvest_radish_ripe_day_00, R.drawable.anim_harvest_radish_ripe_day_01, R.drawable.anim_harvest_radish_ripe_day_02, R.drawable.anim_harvest_radish_ripe_day_03,
-            R.drawable.anim_harvest_radish_ripe_day_04, R.drawable.anim_harvest_radish_ripe_day_05, R.drawable.anim_harvest_radish_ripe_day_06, R.drawable.anim_harvest_radish_ripe_day_07,
-            R.drawable.anim_harvest_radish_ripe_day_08, R.drawable.anim_harvest_radish_ripe_day_09, R.drawable.anim_harvest_radish_ripe_day_10, R.drawable.anim_harvest_radish_ripe_day_11,
-            R.drawable.anim_harvest_radish_ripe_day_12, R.drawable.anim_harvest_radish_ripe_day_13,
-        ),
-        "harvest_radish_overripe_day" to listOf(
-            R.drawable.anim_harvest_radish_overripe_day_00, R.drawable.anim_harvest_radish_overripe_day_01, R.drawable.anim_harvest_radish_overripe_day_02, R.drawable.anim_harvest_radish_overripe_day_03,
-            R.drawable.anim_harvest_radish_overripe_day_04, R.drawable.anim_harvest_radish_overripe_day_05, R.drawable.anim_harvest_radish_overripe_day_06, R.drawable.anim_harvest_radish_overripe_day_07,
-            R.drawable.anim_harvest_radish_overripe_day_08, R.drawable.anim_harvest_radish_overripe_day_09, R.drawable.anim_harvest_radish_overripe_day_10, R.drawable.anim_harvest_radish_overripe_day_11,
-            R.drawable.anim_harvest_radish_overripe_day_12, R.drawable.anim_harvest_radish_overripe_day_13,
-        ),
-        "harvest_sunflower_bloom_day" to listOf(
-            R.drawable.anim_harvest_sunflower_bloom_day_00, R.drawable.anim_harvest_sunflower_bloom_day_01, R.drawable.anim_harvest_sunflower_bloom_day_02, R.drawable.anim_harvest_sunflower_bloom_day_03,
-            R.drawable.anim_harvest_sunflower_bloom_day_04, R.drawable.anim_harvest_sunflower_bloom_day_05, R.drawable.anim_harvest_sunflower_bloom_day_06, R.drawable.anim_harvest_sunflower_bloom_day_07,
-            R.drawable.anim_harvest_sunflower_bloom_day_08, R.drawable.anim_harvest_sunflower_bloom_day_09, R.drawable.anim_harvest_sunflower_bloom_day_10, R.drawable.anim_harvest_sunflower_bloom_day_11,
-            R.drawable.anim_harvest_sunflower_bloom_day_12, R.drawable.anim_harvest_sunflower_bloom_day_13,
-        ),
-        "water_can_dusk" to listOf(
-            R.drawable.anim_water_can_dusk_00, R.drawable.anim_water_can_dusk_01, R.drawable.anim_water_can_dusk_02, R.drawable.anim_water_can_dusk_03,
-            R.drawable.anim_water_can_dusk_04, R.drawable.anim_water_can_dusk_05, R.drawable.anim_water_can_dusk_06, R.drawable.anim_water_can_dusk_07,
-            R.drawable.anim_water_can_dusk_08, R.drawable.anim_water_can_dusk_09, R.drawable.anim_water_can_dusk_10, R.drawable.anim_water_can_dusk_11,
-            R.drawable.anim_water_can_dusk_12, R.drawable.anim_water_can_dusk_13, R.drawable.anim_water_can_dusk_14, R.drawable.anim_water_can_dusk_15,
-            R.drawable.anim_water_can_dusk_16, R.drawable.anim_water_can_dusk_17, R.drawable.anim_water_can_dusk_18, R.drawable.anim_water_can_dusk_19,
-            R.drawable.anim_water_can_dusk_20, R.drawable.anim_water_can_dusk_21, R.drawable.anim_water_can_dusk_22, R.drawable.anim_water_can_dusk_23,
-        ),
-        "water_rain_dusk" to listOf(
-            R.drawable.anim_water_rain_dusk_00, R.drawable.anim_water_rain_dusk_01, R.drawable.anim_water_rain_dusk_02, R.drawable.anim_water_rain_dusk_03,
-            R.drawable.anim_water_rain_dusk_04, R.drawable.anim_water_rain_dusk_05, R.drawable.anim_water_rain_dusk_06, R.drawable.anim_water_rain_dusk_07,
-            R.drawable.anim_water_rain_dusk_08, R.drawable.anim_water_rain_dusk_09, R.drawable.anim_water_rain_dusk_10, R.drawable.anim_water_rain_dusk_11,
-            R.drawable.anim_water_rain_dusk_12, R.drawable.anim_water_rain_dusk_13, R.drawable.anim_water_rain_dusk_14, R.drawable.anim_water_rain_dusk_15,
-            R.drawable.anim_water_rain_dusk_16, R.drawable.anim_water_rain_dusk_17, R.drawable.anim_water_rain_dusk_18, R.drawable.anim_water_rain_dusk_19,
-            R.drawable.anim_water_rain_dusk_20, R.drawable.anim_water_rain_dusk_21, R.drawable.anim_water_rain_dusk_22, R.drawable.anim_water_rain_dusk_23,
-        ),
-        "plant_carrot_dusk" to listOf(
-            R.drawable.anim_plant_carrot_dusk_00, R.drawable.anim_plant_carrot_dusk_01, R.drawable.anim_plant_carrot_dusk_02, R.drawable.anim_plant_carrot_dusk_03,
-            R.drawable.anim_plant_carrot_dusk_04, R.drawable.anim_plant_carrot_dusk_05, R.drawable.anim_plant_carrot_dusk_06, R.drawable.anim_plant_carrot_dusk_07,
-            R.drawable.anim_plant_carrot_dusk_08, R.drawable.anim_plant_carrot_dusk_09, R.drawable.anim_plant_carrot_dusk_10, R.drawable.anim_plant_carrot_dusk_11,
-            R.drawable.anim_plant_carrot_dusk_12, R.drawable.anim_plant_carrot_dusk_13, R.drawable.anim_plant_carrot_dusk_14, R.drawable.anim_plant_carrot_dusk_15,
-        ),
-        "plant_lettuce_dusk" to listOf(
-            R.drawable.anim_plant_lettuce_dusk_00, R.drawable.anim_plant_lettuce_dusk_01, R.drawable.anim_plant_lettuce_dusk_02, R.drawable.anim_plant_lettuce_dusk_03,
-            R.drawable.anim_plant_lettuce_dusk_04, R.drawable.anim_plant_lettuce_dusk_05, R.drawable.anim_plant_lettuce_dusk_06, R.drawable.anim_plant_lettuce_dusk_07,
-            R.drawable.anim_plant_lettuce_dusk_08, R.drawable.anim_plant_lettuce_dusk_09, R.drawable.anim_plant_lettuce_dusk_10, R.drawable.anim_plant_lettuce_dusk_11,
-            R.drawable.anim_plant_lettuce_dusk_12, R.drawable.anim_plant_lettuce_dusk_13, R.drawable.anim_plant_lettuce_dusk_14, R.drawable.anim_plant_lettuce_dusk_15,
-        ),
-        "plant_pumpkin_dusk" to listOf(
-            R.drawable.anim_plant_pumpkin_dusk_00, R.drawable.anim_plant_pumpkin_dusk_01, R.drawable.anim_plant_pumpkin_dusk_02, R.drawable.anim_plant_pumpkin_dusk_03,
-            R.drawable.anim_plant_pumpkin_dusk_04, R.drawable.anim_plant_pumpkin_dusk_05, R.drawable.anim_plant_pumpkin_dusk_06, R.drawable.anim_plant_pumpkin_dusk_07,
-            R.drawable.anim_plant_pumpkin_dusk_08, R.drawable.anim_plant_pumpkin_dusk_09, R.drawable.anim_plant_pumpkin_dusk_10, R.drawable.anim_plant_pumpkin_dusk_11,
-            R.drawable.anim_plant_pumpkin_dusk_12, R.drawable.anim_plant_pumpkin_dusk_13, R.drawable.anim_plant_pumpkin_dusk_14, R.drawable.anim_plant_pumpkin_dusk_15,
-        ),
-        "plant_radish_dusk" to listOf(
-            R.drawable.anim_plant_radish_dusk_00, R.drawable.anim_plant_radish_dusk_01, R.drawable.anim_plant_radish_dusk_02, R.drawable.anim_plant_radish_dusk_03,
-            R.drawable.anim_plant_radish_dusk_04, R.drawable.anim_plant_radish_dusk_05, R.drawable.anim_plant_radish_dusk_06, R.drawable.anim_plant_radish_dusk_07,
-            R.drawable.anim_plant_radish_dusk_08, R.drawable.anim_plant_radish_dusk_09, R.drawable.anim_plant_radish_dusk_10, R.drawable.anim_plant_radish_dusk_11,
-            R.drawable.anim_plant_radish_dusk_12, R.drawable.anim_plant_radish_dusk_13, R.drawable.anim_plant_radish_dusk_14, R.drawable.anim_plant_radish_dusk_15,
-        ),
-        "plant_sunflower_dusk" to listOf(
-            R.drawable.anim_plant_sunflower_dusk_00, R.drawable.anim_plant_sunflower_dusk_01, R.drawable.anim_plant_sunflower_dusk_02, R.drawable.anim_plant_sunflower_dusk_03,
-            R.drawable.anim_plant_sunflower_dusk_04, R.drawable.anim_plant_sunflower_dusk_05, R.drawable.anim_plant_sunflower_dusk_06, R.drawable.anim_plant_sunflower_dusk_07,
-            R.drawable.anim_plant_sunflower_dusk_08, R.drawable.anim_plant_sunflower_dusk_09, R.drawable.anim_plant_sunflower_dusk_10, R.drawable.anim_plant_sunflower_dusk_11,
-            R.drawable.anim_plant_sunflower_dusk_12, R.drawable.anim_plant_sunflower_dusk_13, R.drawable.anim_plant_sunflower_dusk_14, R.drawable.anim_plant_sunflower_dusk_15,
-        ),
-        "harvest_carrot_ripe_dusk" to listOf(
-            R.drawable.anim_harvest_carrot_ripe_dusk_00, R.drawable.anim_harvest_carrot_ripe_dusk_01, R.drawable.anim_harvest_carrot_ripe_dusk_02, R.drawable.anim_harvest_carrot_ripe_dusk_03,
-            R.drawable.anim_harvest_carrot_ripe_dusk_04, R.drawable.anim_harvest_carrot_ripe_dusk_05, R.drawable.anim_harvest_carrot_ripe_dusk_06, R.drawable.anim_harvest_carrot_ripe_dusk_07,
-            R.drawable.anim_harvest_carrot_ripe_dusk_08, R.drawable.anim_harvest_carrot_ripe_dusk_09, R.drawable.anim_harvest_carrot_ripe_dusk_10, R.drawable.anim_harvest_carrot_ripe_dusk_11,
-            R.drawable.anim_harvest_carrot_ripe_dusk_12, R.drawable.anim_harvest_carrot_ripe_dusk_13,
-        ),
-        "harvest_carrot_overripe_dusk" to listOf(
-            R.drawable.anim_harvest_carrot_overripe_dusk_00, R.drawable.anim_harvest_carrot_overripe_dusk_01, R.drawable.anim_harvest_carrot_overripe_dusk_02, R.drawable.anim_harvest_carrot_overripe_dusk_03,
-            R.drawable.anim_harvest_carrot_overripe_dusk_04, R.drawable.anim_harvest_carrot_overripe_dusk_05, R.drawable.anim_harvest_carrot_overripe_dusk_06, R.drawable.anim_harvest_carrot_overripe_dusk_07,
-            R.drawable.anim_harvest_carrot_overripe_dusk_08, R.drawable.anim_harvest_carrot_overripe_dusk_09, R.drawable.anim_harvest_carrot_overripe_dusk_10, R.drawable.anim_harvest_carrot_overripe_dusk_11,
-            R.drawable.anim_harvest_carrot_overripe_dusk_12, R.drawable.anim_harvest_carrot_overripe_dusk_13,
-        ),
-        "harvest_lettuce_ripe_dusk" to listOf(
-            R.drawable.anim_harvest_lettuce_ripe_dusk_00, R.drawable.anim_harvest_lettuce_ripe_dusk_01, R.drawable.anim_harvest_lettuce_ripe_dusk_02, R.drawable.anim_harvest_lettuce_ripe_dusk_03,
-            R.drawable.anim_harvest_lettuce_ripe_dusk_04, R.drawable.anim_harvest_lettuce_ripe_dusk_05, R.drawable.anim_harvest_lettuce_ripe_dusk_06, R.drawable.anim_harvest_lettuce_ripe_dusk_07,
-            R.drawable.anim_harvest_lettuce_ripe_dusk_08, R.drawable.anim_harvest_lettuce_ripe_dusk_09, R.drawable.anim_harvest_lettuce_ripe_dusk_10, R.drawable.anim_harvest_lettuce_ripe_dusk_11,
-            R.drawable.anim_harvest_lettuce_ripe_dusk_12, R.drawable.anim_harvest_lettuce_ripe_dusk_13,
-        ),
-        "harvest_lettuce_overripe_dusk" to listOf(
-            R.drawable.anim_harvest_lettuce_overripe_dusk_00, R.drawable.anim_harvest_lettuce_overripe_dusk_01, R.drawable.anim_harvest_lettuce_overripe_dusk_02, R.drawable.anim_harvest_lettuce_overripe_dusk_03,
-            R.drawable.anim_harvest_lettuce_overripe_dusk_04, R.drawable.anim_harvest_lettuce_overripe_dusk_05, R.drawable.anim_harvest_lettuce_overripe_dusk_06, R.drawable.anim_harvest_lettuce_overripe_dusk_07,
-            R.drawable.anim_harvest_lettuce_overripe_dusk_08, R.drawable.anim_harvest_lettuce_overripe_dusk_09, R.drawable.anim_harvest_lettuce_overripe_dusk_10, R.drawable.anim_harvest_lettuce_overripe_dusk_11,
-            R.drawable.anim_harvest_lettuce_overripe_dusk_12, R.drawable.anim_harvest_lettuce_overripe_dusk_13,
-        ),
-        "harvest_pumpkin_ripe_dusk" to listOf(
-            R.drawable.anim_harvest_pumpkin_ripe_dusk_00, R.drawable.anim_harvest_pumpkin_ripe_dusk_01, R.drawable.anim_harvest_pumpkin_ripe_dusk_02, R.drawable.anim_harvest_pumpkin_ripe_dusk_03,
-            R.drawable.anim_harvest_pumpkin_ripe_dusk_04, R.drawable.anim_harvest_pumpkin_ripe_dusk_05, R.drawable.anim_harvest_pumpkin_ripe_dusk_06, R.drawable.anim_harvest_pumpkin_ripe_dusk_07,
-            R.drawable.anim_harvest_pumpkin_ripe_dusk_08, R.drawable.anim_harvest_pumpkin_ripe_dusk_09, R.drawable.anim_harvest_pumpkin_ripe_dusk_10, R.drawable.anim_harvest_pumpkin_ripe_dusk_11,
-            R.drawable.anim_harvest_pumpkin_ripe_dusk_12, R.drawable.anim_harvest_pumpkin_ripe_dusk_13,
-        ),
-        "harvest_pumpkin_overripe_dusk" to listOf(
-            R.drawable.anim_harvest_pumpkin_overripe_dusk_00, R.drawable.anim_harvest_pumpkin_overripe_dusk_01, R.drawable.anim_harvest_pumpkin_overripe_dusk_02, R.drawable.anim_harvest_pumpkin_overripe_dusk_03,
-            R.drawable.anim_harvest_pumpkin_overripe_dusk_04, R.drawable.anim_harvest_pumpkin_overripe_dusk_05, R.drawable.anim_harvest_pumpkin_overripe_dusk_06, R.drawable.anim_harvest_pumpkin_overripe_dusk_07,
-            R.drawable.anim_harvest_pumpkin_overripe_dusk_08, R.drawable.anim_harvest_pumpkin_overripe_dusk_09, R.drawable.anim_harvest_pumpkin_overripe_dusk_10, R.drawable.anim_harvest_pumpkin_overripe_dusk_11,
-            R.drawable.anim_harvest_pumpkin_overripe_dusk_12, R.drawable.anim_harvest_pumpkin_overripe_dusk_13,
-        ),
-        "harvest_radish_ripe_dusk" to listOf(
-            R.drawable.anim_harvest_radish_ripe_dusk_00, R.drawable.anim_harvest_radish_ripe_dusk_01, R.drawable.anim_harvest_radish_ripe_dusk_02, R.drawable.anim_harvest_radish_ripe_dusk_03,
-            R.drawable.anim_harvest_radish_ripe_dusk_04, R.drawable.anim_harvest_radish_ripe_dusk_05, R.drawable.anim_harvest_radish_ripe_dusk_06, R.drawable.anim_harvest_radish_ripe_dusk_07,
-            R.drawable.anim_harvest_radish_ripe_dusk_08, R.drawable.anim_harvest_radish_ripe_dusk_09, R.drawable.anim_harvest_radish_ripe_dusk_10, R.drawable.anim_harvest_radish_ripe_dusk_11,
-            R.drawable.anim_harvest_radish_ripe_dusk_12, R.drawable.anim_harvest_radish_ripe_dusk_13,
-        ),
-        "harvest_radish_overripe_dusk" to listOf(
-            R.drawable.anim_harvest_radish_overripe_dusk_00, R.drawable.anim_harvest_radish_overripe_dusk_01, R.drawable.anim_harvest_radish_overripe_dusk_02, R.drawable.anim_harvest_radish_overripe_dusk_03,
-            R.drawable.anim_harvest_radish_overripe_dusk_04, R.drawable.anim_harvest_radish_overripe_dusk_05, R.drawable.anim_harvest_radish_overripe_dusk_06, R.drawable.anim_harvest_radish_overripe_dusk_07,
-            R.drawable.anim_harvest_radish_overripe_dusk_08, R.drawable.anim_harvest_radish_overripe_dusk_09, R.drawable.anim_harvest_radish_overripe_dusk_10, R.drawable.anim_harvest_radish_overripe_dusk_11,
-            R.drawable.anim_harvest_radish_overripe_dusk_12, R.drawable.anim_harvest_radish_overripe_dusk_13,
-        ),
-        "harvest_sunflower_bloom_dusk" to listOf(
-            R.drawable.anim_harvest_sunflower_bloom_dusk_00, R.drawable.anim_harvest_sunflower_bloom_dusk_01, R.drawable.anim_harvest_sunflower_bloom_dusk_02, R.drawable.anim_harvest_sunflower_bloom_dusk_03,
-            R.drawable.anim_harvest_sunflower_bloom_dusk_04, R.drawable.anim_harvest_sunflower_bloom_dusk_05, R.drawable.anim_harvest_sunflower_bloom_dusk_06, R.drawable.anim_harvest_sunflower_bloom_dusk_07,
-            R.drawable.anim_harvest_sunflower_bloom_dusk_08, R.drawable.anim_harvest_sunflower_bloom_dusk_09, R.drawable.anim_harvest_sunflower_bloom_dusk_10, R.drawable.anim_harvest_sunflower_bloom_dusk_11,
-            R.drawable.anim_harvest_sunflower_bloom_dusk_12, R.drawable.anim_harvest_sunflower_bloom_dusk_13,
-        ),
-        "water_can_night" to listOf(
-            R.drawable.anim_water_can_night_00, R.drawable.anim_water_can_night_01, R.drawable.anim_water_can_night_02, R.drawable.anim_water_can_night_03,
-            R.drawable.anim_water_can_night_04, R.drawable.anim_water_can_night_05, R.drawable.anim_water_can_night_06, R.drawable.anim_water_can_night_07,
-            R.drawable.anim_water_can_night_08, R.drawable.anim_water_can_night_09, R.drawable.anim_water_can_night_10, R.drawable.anim_water_can_night_11,
-            R.drawable.anim_water_can_night_12, R.drawable.anim_water_can_night_13, R.drawable.anim_water_can_night_14, R.drawable.anim_water_can_night_15,
-            R.drawable.anim_water_can_night_16, R.drawable.anim_water_can_night_17, R.drawable.anim_water_can_night_18, R.drawable.anim_water_can_night_19,
-            R.drawable.anim_water_can_night_20, R.drawable.anim_water_can_night_21, R.drawable.anim_water_can_night_22, R.drawable.anim_water_can_night_23,
-        ),
-        "water_rain_night" to listOf(
-            R.drawable.anim_water_rain_night_00, R.drawable.anim_water_rain_night_01, R.drawable.anim_water_rain_night_02, R.drawable.anim_water_rain_night_03,
-            R.drawable.anim_water_rain_night_04, R.drawable.anim_water_rain_night_05, R.drawable.anim_water_rain_night_06, R.drawable.anim_water_rain_night_07,
-            R.drawable.anim_water_rain_night_08, R.drawable.anim_water_rain_night_09, R.drawable.anim_water_rain_night_10, R.drawable.anim_water_rain_night_11,
-            R.drawable.anim_water_rain_night_12, R.drawable.anim_water_rain_night_13, R.drawable.anim_water_rain_night_14, R.drawable.anim_water_rain_night_15,
-            R.drawable.anim_water_rain_night_16, R.drawable.anim_water_rain_night_17, R.drawable.anim_water_rain_night_18, R.drawable.anim_water_rain_night_19,
-            R.drawable.anim_water_rain_night_20, R.drawable.anim_water_rain_night_21, R.drawable.anim_water_rain_night_22, R.drawable.anim_water_rain_night_23,
-        ),
-        "plant_carrot_night" to listOf(
-            R.drawable.anim_plant_carrot_night_00, R.drawable.anim_plant_carrot_night_01, R.drawable.anim_plant_carrot_night_02, R.drawable.anim_plant_carrot_night_03,
-            R.drawable.anim_plant_carrot_night_04, R.drawable.anim_plant_carrot_night_05, R.drawable.anim_plant_carrot_night_06, R.drawable.anim_plant_carrot_night_07,
-            R.drawable.anim_plant_carrot_night_08, R.drawable.anim_plant_carrot_night_09, R.drawable.anim_plant_carrot_night_10, R.drawable.anim_plant_carrot_night_11,
-            R.drawable.anim_plant_carrot_night_12, R.drawable.anim_plant_carrot_night_13, R.drawable.anim_plant_carrot_night_14, R.drawable.anim_plant_carrot_night_15,
-        ),
-        "plant_lettuce_night" to listOf(
-            R.drawable.anim_plant_lettuce_night_00, R.drawable.anim_plant_lettuce_night_01, R.drawable.anim_plant_lettuce_night_02, R.drawable.anim_plant_lettuce_night_03,
-            R.drawable.anim_plant_lettuce_night_04, R.drawable.anim_plant_lettuce_night_05, R.drawable.anim_plant_lettuce_night_06, R.drawable.anim_plant_lettuce_night_07,
-            R.drawable.anim_plant_lettuce_night_08, R.drawable.anim_plant_lettuce_night_09, R.drawable.anim_plant_lettuce_night_10, R.drawable.anim_plant_lettuce_night_11,
-            R.drawable.anim_plant_lettuce_night_12, R.drawable.anim_plant_lettuce_night_13, R.drawable.anim_plant_lettuce_night_14, R.drawable.anim_plant_lettuce_night_15,
-        ),
-        "plant_pumpkin_night" to listOf(
-            R.drawable.anim_plant_pumpkin_night_00, R.drawable.anim_plant_pumpkin_night_01, R.drawable.anim_plant_pumpkin_night_02, R.drawable.anim_plant_pumpkin_night_03,
-            R.drawable.anim_plant_pumpkin_night_04, R.drawable.anim_plant_pumpkin_night_05, R.drawable.anim_plant_pumpkin_night_06, R.drawable.anim_plant_pumpkin_night_07,
-            R.drawable.anim_plant_pumpkin_night_08, R.drawable.anim_plant_pumpkin_night_09, R.drawable.anim_plant_pumpkin_night_10, R.drawable.anim_plant_pumpkin_night_11,
-            R.drawable.anim_plant_pumpkin_night_12, R.drawable.anim_plant_pumpkin_night_13, R.drawable.anim_plant_pumpkin_night_14, R.drawable.anim_plant_pumpkin_night_15,
-        ),
-        "plant_radish_night" to listOf(
-            R.drawable.anim_plant_radish_night_00, R.drawable.anim_plant_radish_night_01, R.drawable.anim_plant_radish_night_02, R.drawable.anim_plant_radish_night_03,
-            R.drawable.anim_plant_radish_night_04, R.drawable.anim_plant_radish_night_05, R.drawable.anim_plant_radish_night_06, R.drawable.anim_plant_radish_night_07,
-            R.drawable.anim_plant_radish_night_08, R.drawable.anim_plant_radish_night_09, R.drawable.anim_plant_radish_night_10, R.drawable.anim_plant_radish_night_11,
-            R.drawable.anim_plant_radish_night_12, R.drawable.anim_plant_radish_night_13, R.drawable.anim_plant_radish_night_14, R.drawable.anim_plant_radish_night_15,
-        ),
-        "plant_sunflower_night" to listOf(
-            R.drawable.anim_plant_sunflower_night_00, R.drawable.anim_plant_sunflower_night_01, R.drawable.anim_plant_sunflower_night_02, R.drawable.anim_plant_sunflower_night_03,
-            R.drawable.anim_plant_sunflower_night_04, R.drawable.anim_plant_sunflower_night_05, R.drawable.anim_plant_sunflower_night_06, R.drawable.anim_plant_sunflower_night_07,
-            R.drawable.anim_plant_sunflower_night_08, R.drawable.anim_plant_sunflower_night_09, R.drawable.anim_plant_sunflower_night_10, R.drawable.anim_plant_sunflower_night_11,
-            R.drawable.anim_plant_sunflower_night_12, R.drawable.anim_plant_sunflower_night_13, R.drawable.anim_plant_sunflower_night_14, R.drawable.anim_plant_sunflower_night_15,
-        ),
-        "harvest_carrot_ripe_night" to listOf(
-            R.drawable.anim_harvest_carrot_ripe_night_00, R.drawable.anim_harvest_carrot_ripe_night_01, R.drawable.anim_harvest_carrot_ripe_night_02, R.drawable.anim_harvest_carrot_ripe_night_03,
-            R.drawable.anim_harvest_carrot_ripe_night_04, R.drawable.anim_harvest_carrot_ripe_night_05, R.drawable.anim_harvest_carrot_ripe_night_06, R.drawable.anim_harvest_carrot_ripe_night_07,
-            R.drawable.anim_harvest_carrot_ripe_night_08, R.drawable.anim_harvest_carrot_ripe_night_09, R.drawable.anim_harvest_carrot_ripe_night_10, R.drawable.anim_harvest_carrot_ripe_night_11,
-            R.drawable.anim_harvest_carrot_ripe_night_12, R.drawable.anim_harvest_carrot_ripe_night_13,
-        ),
-        "harvest_carrot_overripe_night" to listOf(
-            R.drawable.anim_harvest_carrot_overripe_night_00, R.drawable.anim_harvest_carrot_overripe_night_01, R.drawable.anim_harvest_carrot_overripe_night_02, R.drawable.anim_harvest_carrot_overripe_night_03,
-            R.drawable.anim_harvest_carrot_overripe_night_04, R.drawable.anim_harvest_carrot_overripe_night_05, R.drawable.anim_harvest_carrot_overripe_night_06, R.drawable.anim_harvest_carrot_overripe_night_07,
-            R.drawable.anim_harvest_carrot_overripe_night_08, R.drawable.anim_harvest_carrot_overripe_night_09, R.drawable.anim_harvest_carrot_overripe_night_10, R.drawable.anim_harvest_carrot_overripe_night_11,
-            R.drawable.anim_harvest_carrot_overripe_night_12, R.drawable.anim_harvest_carrot_overripe_night_13,
-        ),
-        "harvest_lettuce_ripe_night" to listOf(
-            R.drawable.anim_harvest_lettuce_ripe_night_00, R.drawable.anim_harvest_lettuce_ripe_night_01, R.drawable.anim_harvest_lettuce_ripe_night_02, R.drawable.anim_harvest_lettuce_ripe_night_03,
-            R.drawable.anim_harvest_lettuce_ripe_night_04, R.drawable.anim_harvest_lettuce_ripe_night_05, R.drawable.anim_harvest_lettuce_ripe_night_06, R.drawable.anim_harvest_lettuce_ripe_night_07,
-            R.drawable.anim_harvest_lettuce_ripe_night_08, R.drawable.anim_harvest_lettuce_ripe_night_09, R.drawable.anim_harvest_lettuce_ripe_night_10, R.drawable.anim_harvest_lettuce_ripe_night_11,
-            R.drawable.anim_harvest_lettuce_ripe_night_12, R.drawable.anim_harvest_lettuce_ripe_night_13,
-        ),
-        "harvest_lettuce_overripe_night" to listOf(
-            R.drawable.anim_harvest_lettuce_overripe_night_00, R.drawable.anim_harvest_lettuce_overripe_night_01, R.drawable.anim_harvest_lettuce_overripe_night_02, R.drawable.anim_harvest_lettuce_overripe_night_03,
-            R.drawable.anim_harvest_lettuce_overripe_night_04, R.drawable.anim_harvest_lettuce_overripe_night_05, R.drawable.anim_harvest_lettuce_overripe_night_06, R.drawable.anim_harvest_lettuce_overripe_night_07,
-            R.drawable.anim_harvest_lettuce_overripe_night_08, R.drawable.anim_harvest_lettuce_overripe_night_09, R.drawable.anim_harvest_lettuce_overripe_night_10, R.drawable.anim_harvest_lettuce_overripe_night_11,
-            R.drawable.anim_harvest_lettuce_overripe_night_12, R.drawable.anim_harvest_lettuce_overripe_night_13,
-        ),
-        "harvest_pumpkin_ripe_night" to listOf(
-            R.drawable.anim_harvest_pumpkin_ripe_night_00, R.drawable.anim_harvest_pumpkin_ripe_night_01, R.drawable.anim_harvest_pumpkin_ripe_night_02, R.drawable.anim_harvest_pumpkin_ripe_night_03,
-            R.drawable.anim_harvest_pumpkin_ripe_night_04, R.drawable.anim_harvest_pumpkin_ripe_night_05, R.drawable.anim_harvest_pumpkin_ripe_night_06, R.drawable.anim_harvest_pumpkin_ripe_night_07,
-            R.drawable.anim_harvest_pumpkin_ripe_night_08, R.drawable.anim_harvest_pumpkin_ripe_night_09, R.drawable.anim_harvest_pumpkin_ripe_night_10, R.drawable.anim_harvest_pumpkin_ripe_night_11,
-            R.drawable.anim_harvest_pumpkin_ripe_night_12, R.drawable.anim_harvest_pumpkin_ripe_night_13,
-        ),
-        "harvest_pumpkin_overripe_night" to listOf(
-            R.drawable.anim_harvest_pumpkin_overripe_night_00, R.drawable.anim_harvest_pumpkin_overripe_night_01, R.drawable.anim_harvest_pumpkin_overripe_night_02, R.drawable.anim_harvest_pumpkin_overripe_night_03,
-            R.drawable.anim_harvest_pumpkin_overripe_night_04, R.drawable.anim_harvest_pumpkin_overripe_night_05, R.drawable.anim_harvest_pumpkin_overripe_night_06, R.drawable.anim_harvest_pumpkin_overripe_night_07,
-            R.drawable.anim_harvest_pumpkin_overripe_night_08, R.drawable.anim_harvest_pumpkin_overripe_night_09, R.drawable.anim_harvest_pumpkin_overripe_night_10, R.drawable.anim_harvest_pumpkin_overripe_night_11,
-            R.drawable.anim_harvest_pumpkin_overripe_night_12, R.drawable.anim_harvest_pumpkin_overripe_night_13,
-        ),
-        "harvest_radish_ripe_night" to listOf(
-            R.drawable.anim_harvest_radish_ripe_night_00, R.drawable.anim_harvest_radish_ripe_night_01, R.drawable.anim_harvest_radish_ripe_night_02, R.drawable.anim_harvest_radish_ripe_night_03,
-            R.drawable.anim_harvest_radish_ripe_night_04, R.drawable.anim_harvest_radish_ripe_night_05, R.drawable.anim_harvest_radish_ripe_night_06, R.drawable.anim_harvest_radish_ripe_night_07,
-            R.drawable.anim_harvest_radish_ripe_night_08, R.drawable.anim_harvest_radish_ripe_night_09, R.drawable.anim_harvest_radish_ripe_night_10, R.drawable.anim_harvest_radish_ripe_night_11,
-            R.drawable.anim_harvest_radish_ripe_night_12, R.drawable.anim_harvest_radish_ripe_night_13,
-        ),
-        "harvest_radish_overripe_night" to listOf(
-            R.drawable.anim_harvest_radish_overripe_night_00, R.drawable.anim_harvest_radish_overripe_night_01, R.drawable.anim_harvest_radish_overripe_night_02, R.drawable.anim_harvest_radish_overripe_night_03,
-            R.drawable.anim_harvest_radish_overripe_night_04, R.drawable.anim_harvest_radish_overripe_night_05, R.drawable.anim_harvest_radish_overripe_night_06, R.drawable.anim_harvest_radish_overripe_night_07,
-            R.drawable.anim_harvest_radish_overripe_night_08, R.drawable.anim_harvest_radish_overripe_night_09, R.drawable.anim_harvest_radish_overripe_night_10, R.drawable.anim_harvest_radish_overripe_night_11,
-            R.drawable.anim_harvest_radish_overripe_night_12, R.drawable.anim_harvest_radish_overripe_night_13,
-        ),
-        "harvest_sunflower_bloom_night" to listOf(
-            R.drawable.anim_harvest_sunflower_bloom_night_00, R.drawable.anim_harvest_sunflower_bloom_night_01, R.drawable.anim_harvest_sunflower_bloom_night_02, R.drawable.anim_harvest_sunflower_bloom_night_03,
-            R.drawable.anim_harvest_sunflower_bloom_night_04, R.drawable.anim_harvest_sunflower_bloom_night_05, R.drawable.anim_harvest_sunflower_bloom_night_06, R.drawable.anim_harvest_sunflower_bloom_night_07,
-            R.drawable.anim_harvest_sunflower_bloom_night_08, R.drawable.anim_harvest_sunflower_bloom_night_09, R.drawable.anim_harvest_sunflower_bloom_night_10, R.drawable.anim_harvest_sunflower_bloom_night_11,
-            R.drawable.anim_harvest_sunflower_bloom_night_12, R.drawable.anim_harvest_sunflower_bloom_night_13,
+        "harvest_sunflower_bloom" to listOf(
+            R.drawable.anim_harvest_sunflower_bloom_00, R.drawable.anim_harvest_sunflower_bloom_01, R.drawable.anim_harvest_sunflower_bloom_02, R.drawable.anim_harvest_sunflower_bloom_03,
+            R.drawable.anim_harvest_sunflower_bloom_04, R.drawable.anim_harvest_sunflower_bloom_05, R.drawable.anim_harvest_sunflower_bloom_06, R.drawable.anim_harvest_sunflower_bloom_07,
+            R.drawable.anim_harvest_sunflower_bloom_08, R.drawable.anim_harvest_sunflower_bloom_09, R.drawable.anim_harvest_sunflower_bloom_10, R.drawable.anim_harvest_sunflower_bloom_11,
+            R.drawable.anim_harvest_sunflower_bloom_12, R.drawable.anim_harvest_sunflower_bloom_13,
         ),
     )
 }

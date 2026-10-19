@@ -5,7 +5,7 @@
                                     # ("art/build/anim")
 
 Writes WebPs (with transparency) to app/src/main/res/drawable-nodpi/, generates CropArt.kt (the still cards and
-seed packets) and CropMotion.kt (the animation frames), writes the launcher icon to the mipmap folders, checks that
+seed packets) and CropMotion.kt (the animation frames), all in the day light (LIGHT), writes the launcher icon to the mipmap folders, checks that
 every image the app can ask for exists, and reports the total size. Harvest frames keep only what differs from the
 empty bed, so they play over its card. Props come from farmkit.stills.render_all("art/build/props"). Needs Pillow.
 """
@@ -23,6 +23,9 @@ DRAWABLES = REPO / "app/src/main/res/drawable-nodpi"
 KOTLIN = REPO / "app/src/main/java/com/example/projdiic/CropArt.kt"
 QUALITY = 88  # lossy colour; the transparency is kept lossless
 BUDGET_MB = 12.0  # all the farm art in the app: still cards, animations and (later) props
+# The app shows the farm in one light. farmkit still renders every light in style.LIGHTS (the showroom and the
+# review sheets use them); the export takes this one and leaves the light out of the app's names.
+LIGHT = "day"
 ANIM = ART / "build" / "anim"
 MOTION_KOTLIN = REPO / "app/src/main/java/com/example/projdiic/CropMotion.kt"
 MOTION_QUALITY = 72  # moving frames hide more compression; 72 looks the same as 82 and is 15% smaller
@@ -53,16 +56,18 @@ STAGES = _stages()
 
 
 def expected_images() -> list[str]:
+    """The app's card names; each is rendered as <name>_<LIGHT>.png."""
     names = []
     for wet in ("wet", "dry"):
-        for light in style.LIGHTS:
-            names.append(f"bed_empty_{wet}_{light}")
-            for crop, stages in STAGES.items():
-                names += [f"crop_{crop}_{stage}_{wet}_{light}" for stage in stages]
+        names.append(f"bed_empty_{wet}")
+        for crop, stages in STAGES.items():
+            names += [f"crop_{crop}_{stage}_{wet}" for stage in stages]
     return names
 
 
 def export() -> None:
+    if LIGHT not in style.LIGHTS:
+        raise SystemExit(f"LIGHT {LIGHT!r} is not one of farmkit's lights: {list(style.LIGHTS)}")
     cards = export_cards()
     motion = export_motion()
     props = export_props()
@@ -75,16 +80,20 @@ def export() -> None:
 def export_cards() -> int:
     """The still cards and CropArt.kt. Returns the bytes written."""
     names = expected_images()
-    missing = [name for name in names if not (RENDERS / f"{name}.png").exists()]
+    missing = [name for name in names if not (RENDERS / f"{name}_{LIGHT}.png").exists()]
     if missing:
         raise SystemExit(f"{len(missing)} renders missing from {RENDERS}, e.g. {missing[:3]}")
     DRAWABLES.mkdir(parents=True, exist_ok=True)
     total = 0
+    written = set()
     for name in names:
-        png, out = RENDERS / f"{name}.png", DRAWABLES / f"{name}.webp"
+        png, out = RENDERS / f"{name}_{LIGHT}.png", DRAWABLES / f"{name}.webp"
         if not out.exists() or out.stat().st_mtime < png.stat().st_mtime:  # unchanged renders keep their WebP
             Image.open(png).convert("RGBA").save(out, "WEBP", quality=QUALITY, alpha_quality=100, method=6)
         total += out.stat().st_size
+        written.add(out)
+    for old in (set(DRAWABLES.glob("crop_*.webp")) | set(DRAWABLES.glob("bed_empty_*.webp"))) - written:
+        old.unlink()  # cards the app no longer uses, such as other lights
     KOTLIN.write_text(kotlin(names + seed_packets()))
     print(f"{len(names)} cards, {total / 1_000_000:.1f} MB -> {DRAWABLES.relative_to(REPO)}; generated {KOTLIN.name}")
     return total
@@ -95,28 +104,18 @@ package com.example.projdiic
 
 import androidx.annotation.DrawableRes
 
-/** The farm's pre-rendered beds: each crop's stages, watered or dry, in each time of day. */
+/** The farm's pre-rendered beds, in day light: each crop's stages, watered or dry. */
 object CropArt {
-CONSTANTS
-
-    val LIGHTS = listOf(LIGHT_LIST)
-
     /** Each crop's growth stages, youngest first. */
     val STAGES: Map<String, List<String>> = mapOf(
 STAGE_MAP
     )
 
-    /** The light the field is shown in at an hour of the day (0-23). */
-    fun lightAt(hour: Int): String = when (hour) {
-HOUR_CASES
-    }
+    @DrawableRes
+    fun bed(crop: String, stage: String, wet: Boolean): Int = images.getValue("crop_${crop}_${stage}_${wetness(wet)}")
 
     @DrawableRes
-    fun bed(crop: String, stage: String, wet: Boolean, light: String): Int =
-        images.getValue("crop_${crop}_${stage}_${wetness(wet)}_$light")
-
-    @DrawableRes
-    fun emptyBed(wet: Boolean, light: String): Int = images.getValue("bed_empty_${wetness(wet)}_$light")
+    fun emptyBed(wet: Boolean): Int = images.getValue("bed_empty_${wetness(wet)}")
 
     /** The seed packet a crop is planted from. */
     @DrawableRes
@@ -132,24 +131,9 @@ IMAGE_MAP
 
 
 def kotlin(names: list[str]) -> str:
-    lights = list(style.LIGHTS)
-    hour_cases = []
-    wraps = None
-    for light, settings in style.LIGHTS.items():
-        start, end = settings["hours"]
-        if start < end:
-            hour_cases.append(f"        in {start} until {end} -> {light.upper()}")
-        else:
-            wraps = light
-    if wraps is None:
-        raise SystemExit("One light must run past midnight (its hours wrap, e.g. (20, 5)).")
-    hour_cases.append(f"        else -> {wraps.upper()}")
     quoted = lambda items: ", ".join(f'"{item}"' for item in items)  # noqa: E731
     pieces = {
-        "CONSTANTS": "\n".join(f'    const val {light.upper()} = "{light}"' for light in lights),
-        "LIGHT_LIST": ", ".join(light.upper() for light in lights),
         "STAGE_MAP": "\n".join(f'        "{crop}" to listOf({quoted(stages)}),' for crop, stages in STAGES.items()),
-        "HOUR_CASES": "\n".join(hour_cases),
         "IMAGE_MAP": "\n".join(f'        "{name}" to R.drawable.{name},' for name in names),
     }
     text = TEMPLATE
@@ -174,29 +158,26 @@ def harvest_stages() -> dict[str, list[str]]:
     return {crop: [s for s in ("ripe", "overripe") if s in stages] or [stages[-1]] for crop, stages in STAGES.items()}
 
 
-def motion_sequences() -> dict[str, tuple[str, list[Path]]]:
-    """Every animation the app can play, as name -> (light, its frame files in order).
+def motion_sequences() -> dict[str, list[Path]]:
+    """Every animation the app can play, as name -> its frame files in order (rendered as <name>_<LIGHT>_<nn>.png).
 
     Each must have exactly the frame count farmkit/anim.py renders, numbered from 00, so a missing or left-over
     frame can't shift the timing.
     """
     constants = _anim_constants()
-    counts = {}
-    for light in style.LIGHTS:
-        for kind in ("can", "rain"):
-            counts[f"water_{kind}_{light}"] = (light, constants["WATER_FRAMES"])
-        for crop in STAGES:
-            counts[f"plant_{crop}_{light}"] = (light, constants["PLANT_FRAMES"])
-        for crop, stages in harvest_stages().items():
-            for stage in stages:
-                counts[f"harvest_{crop}_{stage}_{light}"] = (light, constants["HARVEST_FRAMES"])
+    counts = {f"water_{kind}": constants["WATER_FRAMES"] for kind in ("can", "rain")}
+    for crop in STAGES:
+        counts[f"plant_{crop}"] = constants["PLANT_FRAMES"]
+    for crop, stages in harvest_stages().items():
+        for stage in stages:
+            counts[f"harvest_{crop}_{stage}"] = constants["HARVEST_FRAMES"]
     sequences, wrong = {}, []
-    for name, (light, count) in counts.items():
-        frames = [ANIM / f"{name}_{i:02d}.png" for i in range(count)]
-        found = set(ANIM.glob(f"{name}_[0-9][0-9].png"))
+    for name, count in counts.items():
+        frames = [ANIM / f"{name}_{LIGHT}_{i:02d}.png" for i in range(count)]
+        found = set(ANIM.glob(f"{name}_{LIGHT}_[0-9][0-9].png"))
         if found != set(frames):
             wrong.append(name)
-        sequences[name] = (light, frames)
+        sequences[name] = frames
     if wrong:
         raise SystemExit(f"{len(wrong)} animations in {ANIM} don't have the frames farmkit/anim.py renders, "
                          f"e.g. {wrong[:3]}: render them again")
@@ -206,14 +187,14 @@ def motion_sequences() -> dict[str, tuple[str, list[Path]]]:
 def export_motion() -> int:
     """The animation frames and CropMotion.kt. Returns the bytes written."""
     sequences = motion_sequences()
-    bases = {light: Image.open(ANIM / f"harvest_base_{light}.png").convert("RGBA") for light in style.LIGHTS}
+    base = Image.open(ANIM / f"harvest_base_{LIGHT}.png").convert("RGBA")
     written = set()
     total = 0
-    for name, (light, frames) in sequences.items():
+    for name, frames in sequences.items():
         for i, png in enumerate(frames):
             image = Image.open(png).convert("RGBA")
             if name.startswith("harvest_"):
-                image = _matte(image, bases[light])
+                image = _matte(image, base)
             out = DRAWABLES / f"anim_{name}_{i:02d}.webp"
             image.save(out, "WEBP", quality=MOTION_QUALITY, alpha_quality=100, method=4)
             total += out.stat().st_size
@@ -260,17 +241,16 @@ HARVEST_STAGE_MAP
     )
 
     /** The watering can pouring, played over any bed. */
-    fun water(light: String): List<Int> = sequences.getValue("water_can_$light")
+    fun water(): List<Int> = sequences.getValue("water_can")
 
     /** The rain cloud, played over any bed. */
-    fun rain(light: String): List<Int> = sequences.getValue("water_rain_$light")
+    fun rain(): List<Int> = sequences.getValue("water_rain")
 
     /** The crop's seed packet pouring seeds into the bed, played over any bed. */
-    fun plant(crop: String, light: String): List<Int> = sequences.getValue("plant_${crop}_$light")
+    fun plant(crop: String): List<Int> = sequences.getValue("plant_$crop")
 
     /** The crop flying out of its bed, played over the watered [CropArt.emptyBed]. */
-    fun harvest(crop: String, stage: String, light: String): List<Int> =
-        sequences.getValue("harvest_${crop}_${stage}_$light")
+    fun harvest(crop: String, stage: String): List<Int> = sequences.getValue("harvest_${crop}_$stage")
 
     /** The stage a crop at [stage] is harvested from: its own if it can be, otherwise it ripens to the usual one. */
     fun harvestedAs(crop: String, stage: String): String {
@@ -285,10 +265,10 @@ SEQUENCE_MAP
 """
 
 
-def motion_kotlin(sequences: dict[str, tuple[str, list[Path]]]) -> str:
+def motion_kotlin(sequences: dict[str, list[Path]]) -> str:
     quoted = lambda items: ", ".join(f'"{item}"' for item in items)  # noqa: E731
     lines = []
-    for name, (_, frames) in sequences.items():
+    for name, frames in sequences.items():
         ids = [f"R.drawable.anim_{name}_{i:02d}" for i in range(len(frames))]
         rows = [", ".join(ids[k:k + 4]) for k in range(0, len(ids), 4)]
         lines.append(f'        "{name}" to listOf(\n            ' + ",\n            ".join(rows) + ",\n        ),")

@@ -50,15 +50,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.projdiic.ui.theme.LeafContainer
 import com.example.projdiic.ui.theme.Water
-import java.util.Calendar
 import java.util.Date
 import java.util.TimeZone
 
-/** The field as it looks at one moment: the light, whether it is watered, and a rain frame while it rains. */
-class FieldLook(val light: String, val wet: Boolean, val rainFrame: Int? = null, val wetness: Float = if (wet) 1f else 0f)
-
-fun fieldLight(now: Long): String =
-    CropArt.lightAt(Calendar.getInstance().apply { timeInMillis = now }.get(Calendar.HOUR_OF_DAY))
+/** The field as it looks at one moment: whether it is watered, and a rain frame while it rains. */
+class FieldLook(val wet: Boolean, val rainFrame: Int? = null, val wetness: Float = if (wet) 1f else 0f)
 
 /**
  * The home screen's field: one plot per task, empty plots to plant in, up to [TaskRules.MAX_TASKS].
@@ -101,7 +97,7 @@ private fun PlotCard(task: Task, isNext: Boolean, now: Long, look: FieldLook, on
     ) {
         Column(Modifier.padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box {
-                Bed({ wet -> CropArt.bed(crop, stage, wet, look.light) }, look)
+                Bed({ wet -> CropArt.bed(crop, stage, wet) }, look)
                 if (isNext) {
                     Text(
                         text = "Next up",
@@ -145,7 +141,7 @@ private fun EmptyPlot(look: FieldLook, onPlant: () -> Unit, modifier: Modifier) 
         modifier = modifier.clickable(onClickLabel = "Plant a task", role = Role.Button, onClick = onPlant)
     ) {
         Column(Modifier.padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.alpha(0.55f)) { Bed({ wet -> CropArt.emptyBed(wet, look.light) }, look) }
+            Box(Modifier.alpha(0.55f)) { Bed({ wet -> CropArt.emptyBed(wet) }, look) }
             Text(
                 text = "+ Plant a task",
                 fontSize = 16.sp,
@@ -157,13 +153,13 @@ private fun EmptyPlot(look: FieldLook, onPlant: () -> Unit, modifier: Modifier) 
     }
 }
 
-/** A bed image in the field's light: dry fading into wet while it is watered, with the rain falling over it. */
+/** A bed image: dry fading into wet while it is watered, with the rain falling over it. */
 @Composable
 private fun Bed(image: (wet: Boolean) -> Int, look: FieldLook) {
     Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
         Layer(image(look.wetness >= 1f))
         if (look.wetness > 0f && look.wetness < 1f) Layer(image(true), look.wetness)
-        look.rainFrame?.let { Layer(CropMotion.rain(look.light)[it]) }
+        look.rainFrame?.let { Layer(CropMotion.rain()[it]) }
     }
 }
 
@@ -234,7 +230,7 @@ fun PlotSheet(task: Task, now: Long, look: FieldLook, onWhen: (TimeWindow?) -> U
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(112.dp)) { Layer(CropArt.bed(crop, stage, look.wet, look.light)) }
+                Box(Modifier.size(112.dp)) { Layer(CropArt.bed(crop, stage, look.wet)) }
                 Column(Modifier.padding(start = 12.dp)) {
                     Text(task.title, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                     Text(

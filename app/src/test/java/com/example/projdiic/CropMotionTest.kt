@@ -7,13 +7,10 @@ import org.junit.Test
 class CropMotionTest {
 
     @Test
-    fun wateringAndRainHaveTheSameFramesInEveryLight() {
-        val count = CropMotion.water(CropArt.DAY).size
+    fun wateringAndRainHaveTheSameFrames() {
+        val count = CropMotion.water().size
         assertTrue("watering must last past the wet fade", count > CropMotion.WET_TO)
-        for (light in CropArt.LIGHTS) {
-            assertEquals(light, count, CropMotion.water(light).size)
-            assertEquals(light, count, CropMotion.rain(light).size)
-        }
+        assertEquals(count, CropMotion.rain().size)
     }
 
     @Test
@@ -22,15 +19,13 @@ class CropMotionTest {
     }
 
     @Test
-    fun everyCropIsPlantedFromItsPacketInEveryLightWhileTheBedFadesToItsSeeds() {
-        val count = CropMotion.plant("radish", CropArt.DAY).size
+    fun everyCropIsPlantedFromItsPacketWhileTheBedFadesToItsSeeds() {
+        val count = CropMotion.plant("radish").size
         assertTrue("planting must last past the seed fade", count > CropMotion.SEED_TO)
         assertTrue(CropMotion.SEED_FROM in 0 until CropMotion.SEED_TO)
         for (crop in CropArt.STAGES.keys) {
             assertTrue(crop, "seed" in CropArt.STAGES.getValue(crop))
-            for (light in CropArt.LIGHTS) {
-                assertEquals("$crop $light", count, CropMotion.plant(crop, light).size)
-            }
+            assertEquals(crop, count, CropMotion.plant(crop).size)
         }
     }
 
@@ -44,14 +39,12 @@ class CropMotionTest {
     }
 
     @Test
-    fun hasAHarvestOfTheSameLengthForEveryCropStageAndLight() {
-        val count = CropMotion.harvest("radish", "ripe", CropArt.DAY).size
+    fun hasAHarvestOfTheSameLengthForEveryCropAndStage() {
+        val count = CropMotion.harvest("radish", "ripe").size
         assertTrue(count > 0)
         for ((crop, stages) in CropMotion.HARVEST_STAGES) {
             for (stage in stages) {
-                for (light in CropArt.LIGHTS) {
-                    assertEquals("$crop $stage $light", count, CropMotion.harvest(crop, stage, light).size)
-                }
+                assertEquals("$crop $stage", count, CropMotion.harvest(crop, stage).size)
             }
         }
     }

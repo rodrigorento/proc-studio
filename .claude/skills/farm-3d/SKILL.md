@@ -58,7 +58,7 @@ status, and `art/farmkit/style.py` holds the numbers (palette, bed, camera, ligh
 6. **Check.**
    - `python3 art/review.py check`: `art/assets.yaml` matches the files. Add or update the asset's entry.
    - `bash gradlew testDebugUnitTest installDebug`, then open the app, long-press the "Scroll Gate" title and use
-     the farm art preview (lights, watered, Water / Rain / Harvest / Plant) on a phone or emulator.
+     the farm art preview (watered, Water / Rain / Harvest / Plant) on a phone or emulator.
    - `git status`: only the asset you changed should differ. A single unrelated WebP changing is render noise:
      `git checkout` it.
 7. **Commit** the farmkit code, concepts, WebPs and generated Kotlin together. PNG and .blend files under `art/` go
@@ -71,10 +71,12 @@ status, and `art/farmkit/style.py` holds the numbers (palette, bed, camera, ligh
 - The smaller the crop, the more per bed: radish 9, lettuce 4, carrot 2, pumpkin 1, sunflower 1.
 - Stages: seed, sprout, growing, ripe, overripe (gone to seed); the sunflower stops at bloom. Every stage has a
   watered and a dry version: dry is pale cracked soil and drooping olive leaves, thirsty but never dead.
-- Four lights by the phone's clock (morning, day, dusk, night). At night the bed goes blue and crops keep colour.
-- File names: `crop_<crop>_<stage>_<wet|dry>_<light>`, `bed_empty_<wet|dry>_<light>`,
-  `anim_water_<can|rain>_<light>_<nn>`, `anim_plant_<crop>_<light>_<nn>`, `anim_harvest_<crop>_<stage>_<light>_<nn>`,
-  `prop_<name>`.
+- The app shows everything in the day light (`LIGHT` in `art/export_android.py`). farmkit still renders the four
+  lights in `style.LIGHTS` (morning, day, dusk, night) for the showroom and review sheets, so a render call can pass
+  `lights=["day"]` when only the app's art is needed.
+- App file names (no light in them): `crop_<crop>_<stage>_<wet|dry>`, `bed_empty_<wet|dry>`, `anim_water_<can|rain>_<nn>`,
+  `anim_plant_<crop>_<nn>`, `anim_harvest_<crop>_<stage>_<nn>`, `prop_<name>`. Renders keep the light:
+  `crop_<crop>_<stage>_<wet|dry>_<light>.png` and so on.
 
 ## Gotchas
 

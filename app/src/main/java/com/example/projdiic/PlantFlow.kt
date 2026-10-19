@@ -202,7 +202,7 @@ private fun NameStep(
     ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Image(
-                painterResource(CropArt.emptyBed(true, fieldLight(System.currentTimeMillis()))),
+                painterResource(CropArt.emptyBed(true)),
                 contentDescription = null,
                 modifier = Modifier.size(150.dp)
             )
@@ -434,7 +434,7 @@ private fun PlantedStep(task: Task, look: FieldLook, hasRoom: Boolean, onAnother
 /** The seeds pouring into an empty bed, which turns into the crop's seed bed as they land; played once. */
 @Composable
 private fun PlantingBed(crop: String, look: FieldLook, modifier: Modifier) {
-    val frames = remember(crop, look.light) { CropMotion.plant(crop, look.light) }
+    val frames = remember(crop) { CropMotion.plant(crop) }
     var frame by remember { mutableStateOf<Int?>(0) }
     LaunchedEffect(crop) {
         delay(200L) // the screen has just come in
@@ -447,8 +447,8 @@ private fun PlantingBed(crop: String, look: FieldLook, modifier: Modifier) {
     val shown = frame
     val seeded = if (shown == null) 1f else ((shown - CropMotion.SEED_FROM).toFloat() / (CropMotion.SEED_TO - CropMotion.SEED_FROM)).coerceIn(0f, 1f)
     Box(modifier.aspectRatio(1f).semantics { contentDescription = FarmViews.cropName(crop) + " seeds, just planted" }) {
-        if (seeded < 1f) Layer(CropArt.emptyBed(look.wet, look.light))
-        if (seeded > 0f) Layer(CropArt.bed(crop, "seed", look.wet, look.light), seeded)
+        if (seeded < 1f) Layer(CropArt.emptyBed(look.wet))
+        if (seeded > 0f) Layer(CropArt.bed(crop, "seed", look.wet), seeded)
         shown?.let { Layer(frames[it]) }
     }
 }

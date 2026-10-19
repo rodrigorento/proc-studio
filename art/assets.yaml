@@ -14,7 +14,7 @@ beds:
     model: art/farmkit/bed.py
     outputs: [app/src/main/res/drawable-nodpi/bed_empty_*.webp]
     status: exported
-    notes: chunky toy plank bed with tilled ridges; watered and dry, in the four lights
+    notes: chunky toy plank bed with tilled ridges; watered and dry; the app uses the day light
 
 crops:
   radish:

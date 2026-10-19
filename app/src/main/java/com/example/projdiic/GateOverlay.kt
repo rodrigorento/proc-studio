@@ -189,10 +189,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private fun buildGate(task: Task): View {
         val root = inflater.inflate(R.layout.overlay_gate, null)
         val now = System.currentTimeMillis()
-        val light = fieldLight(now)
         val bed = BedStack(root.findViewById(R.id.bed))
-        val dry = FarmViews.bed(task, now, wet = false, light)
-        val wet = FarmViews.bed(task, now, wet = true, light)
+        val dry = FarmViews.bed(task, now, wet = false)
+        val wet = FarmViews.bed(task, now, wet = true)
         val waterBlock = root.findViewById<View>(R.id.waterBlock)
         val taskBlock = root.findViewById<View>(R.id.taskBlock)
         root.findViewById<TextView>(R.id.tvEyebrow).text = eyebrow
@@ -227,10 +226,10 @@ class GateOverlay(service: Context, private val actions: Actions) {
                         .performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
                 }
             }
-            water.setOnClickListener { pour(BY_CAN, CropMotion.water(light)) }
-            rain.setOnClickListener { pour(BY_RAIN, CropMotion.rain(light)) }
+            water.setOnClickListener { pour(BY_CAN, CropMotion.water()) }
+            rain.setOnClickListener { pour(BY_RAIN, CropMotion.rain()) }
         } else if (FarmCache.takeRainToShow(context)) {
-            bed.water(dry, wet, CropMotion.rain(light)) {}
+            bed.water(dry, wet, CropMotion.rain()) {}
         } else {
             bed.show(wet)
         }
@@ -245,7 +244,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
             text = task.title
             val now = System.currentTimeMillis()
             val size = (36 * resources.displayMetrics.density).toInt()
-            val crop = context.getDrawable(FarmViews.bed(task, now, FarmCache.isWatered(context, now), fieldLight(now)))
+            val crop = context.getDrawable(FarmViews.bed(task, now, FarmCache.isWatered(context, now)))
             crop?.setBounds(0, 0, size, size)
             setCompoundDrawablesRelative(crop, null, null, null)
             compoundDrawablePadding = (8 * resources.displayMetrics.density).toInt()
@@ -278,10 +277,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
             actions.onBackToChoices(task, GateScreen.DoingNow(task.id, startedAt))
         }
         val now = System.currentTimeMillis()
-        val light = fieldLight(now)
         val bed = BedStack(root.findViewById(R.id.bed))
         val watered = FarmCache.isWatered(context, now)
-        bed.show(FarmViews.bed(task, now, watered, light))
+        bed.show(FarmViews.bed(task, now, watered))
         root.findViewById<View>(R.id.bed).contentDescription = FarmViews.describe(task, now)
         val done = root.findViewById<Button>(R.id.btnDone)
         val back = root.findViewById<Button>(R.id.btnBackToChoices)
@@ -292,8 +290,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
             val crop = FarmRules.crop(task)
             val stage = CropMotion.harvestedAs(crop, FarmRules.stage(task, System.currentTimeMillis()))
             harvest = { actions.onDone(task, startedAt) }
-            bed.fadeTo(CropArt.bed(crop, stage, watered, light), RIPEN_MS) {
-                bed.harvest(CropArt.emptyBed(watered, light), CropMotion.harvest(crop, stage, light)) { finishHarvest() }
+            bed.fadeTo(CropArt.bed(crop, stage, watered), RIPEN_MS) {
+                bed.harvest(CropArt.emptyBed(watered), CropMotion.harvest(crop, stage)) { finishHarvest() }
             }
         }
         close.setOnClickListener { actions.onCloseInstagram(task) }
@@ -491,11 +489,10 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private fun buildPlanted(task: Task): View {
         val root = inflater.inflate(R.layout.overlay_plant_done, null)
         val now = System.currentTimeMillis()
-        val light = fieldLight(now)
         val wet = FarmCache.isWatered(context, now)
         val crop = FarmRules.crop(task)
         root.findViewById<View>(R.id.bed).contentDescription = context.getString(R.string.planted_bed, FarmViews.cropName(crop))
-        BedStack(root.findViewById(R.id.bed)).plant(CropArt.emptyBed(wet, light), CropArt.bed(crop, "seed", wet, light), CropMotion.plant(crop, light)) {}
+        BedStack(root.findViewById(R.id.bed)).plant(CropArt.emptyBed(wet), CropArt.bed(crop, "seed", wet), CropMotion.plant(crop)) {}
         val due = WhenText.due(TaskRules.window(task), now, TimeZone.getDefault(), formats)
         root.findViewById<TextView>(R.id.tvPlantedLine).text = FarmViews.plantedLine(task.title, crop, due)
         root.findViewById<TextView>(R.id.tvPlantedWhen)
@@ -537,7 +534,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     ): View {
         val row = inflater.inflate(R.layout.item_task_row, parent, false)
         row.findViewById<ImageView>(R.id.ivRowBed).apply {
-            setImageResource(FarmViews.bed(task, now, FarmCache.isWatered(context, now), fieldLight(now)))
+            setImageResource(FarmViews.bed(task, now, FarmCache.isWatered(context, now)))
             alpha = if (isNext) 1f else 0.75f
         }
         row.findViewById<TextView>(R.id.tvRowTitle).text = task.title

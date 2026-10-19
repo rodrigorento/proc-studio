@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -39,7 +38,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import java.util.Calendar
 
 /** A crop growing in one of the field's beds. */
 private data class Plot(val crop: String, val stage: String)
@@ -57,12 +55,11 @@ private enum class Moment { WATER, RAIN, HARVEST, PLANT }
 
 /**
  * A look at the farm's rendered beds before the farm screens exist: a 2x2 field like the watering screen will
- * show, which can be watered (by can or rain), harvested and planted again, and every stage of each crop, in any
- * light, watered or dry.
+ * show, which can be watered (by can or rain), harvested and planted again, and every stage of each crop, watered
+ * or dry.
  */
 @Composable
 fun FarmArtPreview() {
-    var light by rememberSaveable { mutableStateOf(CropArt.lightAt(Calendar.getInstance().get(Calendar.HOUR_OF_DAY))) }
     var wet by rememberSaveable { mutableStateOf(true) }
     var harvested by rememberSaveable { mutableStateOf(false) }
     var planted by rememberSaveable { mutableStateOf(false) }
@@ -73,14 +70,14 @@ fun FarmArtPreview() {
     LaunchedEffect(moment) {
         val playing = moment ?: return@LaunchedEffect
         val frames = when (playing) {
-            Moment.WATER -> CropMotion.water(light).size
-            Moment.RAIN -> CropMotion.rain(light).size
+            Moment.WATER -> CropMotion.water().size
+            Moment.RAIN -> CropMotion.rain().size
             Moment.HARVEST -> {
                 animate(0f, 1f, animationSpec = tween(RIPEN_MILLIS)) { value, _ -> ripening = value }
                 wet = true  // harvests play on a watered bed, and leave it so
-                CropMotion.harvest("radish", "ripe", light).size
+                CropMotion.harvest("radish", "ripe").size
             }
-            Moment.PLANT -> CropMotion.plant("radish", light).size
+            Moment.PLANT -> CropMotion.plant("radish").size
         }
         for (f in 0 until frames) {
             frame = f
@@ -100,11 +97,6 @@ fun FarmArtPreview() {
     }
 
     Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CropArt.LIGHTS.forEach {
-                FilterChip(selected = it == light, onClick = { light = it }, label = { Text(it.label()) })
-            }
-        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Watered", fontSize = 16.sp, modifier = Modifier.weight(1f))
             Switch(checked = wet, onCheckedChange = { wet = it }, enabled = moment == null)
@@ -121,7 +113,7 @@ fun FarmArtPreview() {
         FIELD.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 row.forEach { plot ->
-                    PlotCard(if (planted) plot.copy(stage = "seed") else plot, light, wet, harvested, moment, frame, ripening, Modifier.weight(1f))
+                    PlotCard(if (planted) plot.copy(stage = "seed") else plot, wet, harvested, moment, frame, ripening, Modifier.weight(1f))
                 }
             }
         }
@@ -142,7 +134,7 @@ fun FarmArtPreview() {
             Text("Every ${crop} stage", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 stages.forEach { stage ->
-                    BedCard(Modifier.size(120.dp)) { Layer(CropArt.bed(crop, stage, wet, light), "${crop.label()}, $stage") }
+                    BedCard(Modifier.size(120.dp)) { Layer(CropArt.bed(crop, stage, wet), "${crop.label()}, $stage") }
                 }
             }
         }
@@ -161,7 +153,6 @@ private const val RIPEN_MILLIS = 300
 @Composable
 private fun PlotCard(
     plot: Plot,
-    light: String,
     wet: Boolean,
     harvested: Boolean,
     moment: Moment?,
@@ -171,31 +162,31 @@ private fun PlotCard(
 ) {
     val label = if (harvested) "Empty bed" else "${plot.crop.label()}, ${plot.stage}"
     fun card(watered: Boolean) =
-        if (harvested) CropArt.emptyBed(watered, light) else CropArt.bed(plot.crop, plot.stage, watered, light)
+        if (harvested) CropArt.emptyBed(watered) else CropArt.bed(plot.crop, plot.stage, watered)
     BedCard(modifier) {
         when {
             moment == Moment.WATER || moment == Moment.RAIN -> {
                 val wetness = (frame - CropMotion.WET_FROM).toFloat() / (CropMotion.WET_TO - CropMotion.WET_FROM)
                 Layer(card(false), label)
                 Layer(card(true), null, wetness.coerceIn(0f, 1f))
-                val frames = if (moment == Moment.WATER) CropMotion.water(light) else CropMotion.rain(light)
+                val frames = if (moment == Moment.WATER) CropMotion.water() else CropMotion.rain()
                 Layer(frames[frame], null)
             }
             moment == Moment.PLANT -> {
                 val seeded = (frame - CropMotion.SEED_FROM).toFloat() / (CropMotion.SEED_TO - CropMotion.SEED_FROM)
-                Layer(CropArt.emptyBed(wet, light), label)
-                Layer(CropArt.bed(plot.crop, "seed", wet, light), null, seeded.coerceIn(0f, 1f))
-                Layer(CropMotion.plant(plot.crop, light)[frame], null)
+                Layer(CropArt.emptyBed(wet), label)
+                Layer(CropArt.bed(plot.crop, "seed", wet), null, seeded.coerceIn(0f, 1f))
+                Layer(CropMotion.plant(plot.crop)[frame], null)
             }
             harvested -> Layer(card(wet), label)
             moment == Moment.HARVEST -> {
                 val stage = CropMotion.harvestedAs(plot.crop, plot.stage)
                 if (ripening < 1f) {
-                    Layer(CropArt.bed(plot.crop, plot.stage, wet, light), label)
-                    Layer(CropArt.bed(plot.crop, stage, true, light), null, ripening)
+                    Layer(CropArt.bed(plot.crop, plot.stage, wet), label)
+                    Layer(CropArt.bed(plot.crop, stage, true), null, ripening)
                 } else {
-                    Layer(CropArt.emptyBed(true, light), label)
-                    Layer(CropMotion.harvest(plot.crop, stage, light)[frame], null)
+                    Layer(CropArt.emptyBed(true), label)
+                    Layer(CropMotion.harvest(plot.crop, stage)[frame], null)
                 }
             }
             else -> Layer(card(wet), label)

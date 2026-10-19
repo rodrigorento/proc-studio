@@ -52,7 +52,7 @@ props:
   mailbox: rural mailbox on a post, door open with a letter, red flag up; the neighbour check-in
   app_icon: a watered bed with one big sprout, on green (#2B5E16)
 
-lights:  # by the phone's clock
+lights:  # rendered for review; the app shows the day light only (decided 2026-10-19)
   morning:
     hours: [5, 11]
     reference: lights/field_morning.png
