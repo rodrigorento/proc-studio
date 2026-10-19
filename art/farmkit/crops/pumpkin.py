@@ -90,7 +90,7 @@ def _plant(collection, name: str, growth: float, thirst: float, old: bool, rng: 
     if growth < 0.8:
         _young(collection, name, centre, vine)
         return
-    _fruit(collection, name, centre, RADIUS, HEIGHT, "pumpkin_old" if old else "pumpkin", vine_green,
+    fruit(collection, name, centre, RADIUS, HEIGHT, "pumpkin_old" if old else "pumpkin", vine_green,
            "pumpkin_old_groove" if old else "pumpkin_groove")
     if old:
         spots = bmesh.new()
@@ -104,7 +104,7 @@ def _plant(collection, name: str, growth: float, thirst: float, old: bool, rng: 
 
 def _young(collection, name: str, centre: Vector, vine: list[Vector]) -> None:
     """A small green pumpkin where the big one will be, and a yellow trumpet flower further along the vine."""
-    _fruit(collection, f"{name}.Young", centre, 0.09, 0.075, "pumpkin_young", "leaf_broad")
+    fruit(collection, f"{name}.Young", centre, 0.09, 0.075, "pumpkin_young", "leaf_broad")
     # Five pointed yellow petals facing the camera, on a short stalk.
     at = parts.along(vine, 0.5)
     stalk = bmesh.new()
@@ -115,7 +115,7 @@ def _young(collection, name: str, centre: Vector, vine: list[Vector]) -> None:
     parts.flat(parts.mesh_object(f"{name}.Flower", petals, collection, "yellow_flower"))
 
 
-def _fruit(collection, name: str, centre: Vector, radius: float, height: float, material: str, stem: str,
+def fruit(collection, name: str, centre: Vector, radius: float, height: float, material: str, stem: str,
            groove: str | None = None) -> None:
     """A ribbed, squashed ball sitting a little into the soil, with a curved stalk and, if given, groove lines."""
     bm = bmesh.new()

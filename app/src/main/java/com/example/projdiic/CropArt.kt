@@ -36,6 +36,10 @@ object CropArt {
     @DrawableRes
     fun emptyBed(wet: Boolean, light: String): Int = images.getValue("bed_empty_${wetness(wet)}_$light")
 
+    /** The seed packet a crop is planted from. */
+    @DrawableRes
+    fun seedPacket(crop: String): Int = images.getValue("prop_seed_$crop")
+
     private fun wetness(wet: Boolean) = if (wet) "wet" else "dry"
 
     private val images: Map<String, Int> = mapOf(
@@ -239,5 +243,10 @@ object CropArt {
         "crop_sunflower_sprout_dry_night" to R.drawable.crop_sunflower_sprout_dry_night,
         "crop_sunflower_growing_dry_night" to R.drawable.crop_sunflower_growing_dry_night,
         "crop_sunflower_bloom_dry_night" to R.drawable.crop_sunflower_bloom_dry_night,
+        "prop_seed_carrot" to R.drawable.prop_seed_carrot,
+        "prop_seed_lettuce" to R.drawable.prop_seed_lettuce,
+        "prop_seed_pumpkin" to R.drawable.prop_seed_pumpkin,
+        "prop_seed_radish" to R.drawable.prop_seed_radish,
+        "prop_seed_sunflower" to R.drawable.prop_seed_sunflower,
     )
 }

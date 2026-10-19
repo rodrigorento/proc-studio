@@ -3,16 +3,17 @@
     python3 art/export_android.py   # after farmkit.render.render_all("art/build/renders") and, for the
                                     # animations, farmkit.anim.render_water / render_harvest("art/build/anim")
 
-Writes WebPs (with transparency) to app/src/main/res/drawable-nodpi/, generates CropArt.kt (the still cards) and
-CropMotion.kt (the animation frames), checks that every image the app can ask for exists, and reports the total
-size. Harvest frames keep only what differs from the empty bed, so they play over its card. Needs Pillow.
+Writes WebPs (with transparency) to app/src/main/res/drawable-nodpi/, generates CropArt.kt (the still cards and
+seed packets) and CropMotion.kt (the animation frames), writes the launcher icon to the mipmap folders, checks that
+every image the app can ask for exists, and reports the total size. Harvest frames keep only what differs from the
+empty bed, so they play over its card. Props come from farmkit.stills.render_all("art/build/props"). Needs Pillow.
 """
 import re
 import sys
 from functools import reduce
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 ART = Path(__file__).resolve().parent
 REPO = ART.parent
@@ -28,6 +29,11 @@ MOTION_QUALITY = 72  # moving frames hide more compression; 72 looks the same as
 # more than MATTE_WEAK within MATTE_REACH pixels of one that does: render noise (up to ~16 at night) never
 # reaches MATTE_STRONG on its own, while soft shadow edges next to a crop are kept.
 MATTE_WEAK, MATTE_STRONG, MATTE_REACH = 10, 24, 7
+PROPS = ART / "build" / "props"
+RES = REPO / "app/src/main/res"
+PROP_QUALITY = 90
+ICON_BACKGROUND = "#2B5E16"  # the launcher icon's green, behind the rendered bed and sprout
+DENSITIES = {"mdpi": 1.0, "hdpi": 1.5, "xhdpi": 2.0, "xxhdpi": 3.0, "xxxhdpi": 4.0}
 
 sys.path.insert(0, str(ART))
 from farmkit import style  # noqa: E402  (style.py has no Blender imports)
@@ -58,7 +64,8 @@ def expected_images() -> list[str]:
 def export() -> None:
     cards = export_cards()
     motion = export_motion()
-    mb = (cards + motion) / 1_000_000
+    props = export_props()
+    mb = (cards + motion + props) / 1_000_000
     print(f"Total {mb:.1f} MB (budget {BUDGET_MB:.0f} MB)")
     if mb > BUDGET_MB:
         print("Over budget: lower QUALITY / MOTION_QUALITY, or the render sizes in farmkit.")
@@ -77,7 +84,7 @@ def export_cards() -> int:
         if not out.exists() or out.stat().st_mtime < png.stat().st_mtime:  # unchanged renders keep their WebP
             Image.open(png).convert("RGBA").save(out, "WEBP", quality=QUALITY, alpha_quality=100, method=6)
         total += out.stat().st_size
-    KOTLIN.write_text(kotlin(names))
+    KOTLIN.write_text(kotlin(names + seed_packets()))
     print(f"{len(names)} cards, {total / 1_000_000:.1f} MB -> {DRAWABLES.relative_to(REPO)}; generated {KOTLIN.name}")
     return total
 
@@ -109,6 +116,10 @@ HOUR_CASES
 
     @DrawableRes
     fun emptyBed(wet: Boolean, light: String): Int = images.getValue("bed_empty_${wetness(wet)}_$light")
+
+    /** The seed packet a crop is planted from. */
+    @DrawableRes
+    fun seedPacket(crop: String): Int = images.getValue("prop_seed_$crop")
 
     private fun wetness(wet: Boolean) = if (wet) "wet" else "dry"
 
@@ -282,6 +293,74 @@ def motion_kotlin(sequences: dict[str, tuple[str, list[Path]]]) -> str:
     for key, value in pieces.items():
         text = text.replace(key, value)
     return text
+
+
+def seed_packets() -> list[str]:
+    return [f"prop_seed_{crop}" for crop in STAGES]
+
+
+def export_props() -> int:
+    """The props as drawables, and the launcher icon. Returns the bytes written."""
+    names = ["prop_watering_can", "prop_basket", "prop_gate", "prop_mailbox"] + seed_packets()
+    missing = [name for name in names + ["icon_foreground"] if not (PROPS / f"{name}.png").exists()]
+    if missing:
+        raise SystemExit(f"{len(missing)} props missing from {PROPS}, e.g. {missing[:3]}")
+    total = 0
+    for name in names:
+        out = DRAWABLES / f"{name}.webp"
+        Image.open(PROPS / f"{name}.png").convert("RGBA").save(out, "WEBP", quality=PROP_QUALITY, alpha_quality=100,
+                                                               method=6)
+        total += out.stat().st_size
+    total += export_icon()
+    print(f"{len(names)} props and the launcher icon, {total / 1_000_000:.2f} MB")
+    return total
+
+
+def export_icon() -> int:
+    """The launcher icon at every density: the adaptive icon's foreground (the rendered bed, kept inside the 66 dp
+    safe circle, whose silhouette is also the themed monochrome icon) over a flat green, and composited square and
+    round icons for Android 7, which has no adaptive icons."""
+    art = Image.open(PROPS / "icon_foreground.png").convert("RGBA")
+    art = art.crop(art.getbbox())
+    total = 0
+    for density, scale in DENSITIES.items():
+        folder = RES / f"mipmap-{density}"
+        folder.mkdir(parents=True, exist_ok=True)
+        icons = {
+            "ic_launcher_foreground": _fit(art, round(108 * scale), round(60 * scale)),
+            "ic_launcher": _badge(art, round(48 * scale), round(36 * scale), round(1 * scale), corner=0.22),
+            "ic_launcher_round": _badge(art, round(48 * scale), round(34 * scale), round(1 * scale), corner=0.5),
+        }
+        for name, image in icons.items():
+            out = folder / f"{name}.webp"
+            image.save(out, "WEBP", lossless=True)
+            total += out.stat().st_size
+    (RES / "values/ic_launcher_background.xml").write_text(
+        '<?xml version="1.0" encoding="utf-8"?>\n<!-- Generated by art/export_android.py: the launcher icon\'s '
+        'background. -->\n<resources>\n    <color name="ic_launcher_background">'
+        f'{ICON_BACKGROUND}</color>\n</resources>\n')
+    return total
+
+
+def _fit(art: Image.Image, side: int, content: int) -> Image.Image:
+    """The art scaled to fit a content-sized box, centred on a transparent square."""
+    scale = content / max(art.size)
+    small = art.resize((max(1, round(art.width * scale)), max(1, round(art.height * scale))), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    canvas.alpha_composite(small, ((side - small.width) // 2, (side - small.height) // 2))
+    return canvas
+
+
+def _badge(art: Image.Image, side: int, content: int, inset: int, corner: float) -> Image.Image:
+    """A legacy icon: the green background as a rounded square (or a circle, corner=0.5) with the art on it."""
+    big = 4  # draw the shape large and shrink it, for smooth edges
+    shape = Image.new("L", (side * big, side * big), 0)
+    box = (inset * big, inset * big, (side - inset) * big - 1, (side - inset) * big - 1)
+    ImageDraw.Draw(shape).rounded_rectangle(box, radius=round((side - 2 * inset) * big * corner), fill=255)
+    badge = Image.new("RGBA", (side, side), ICON_BACKGROUND)
+    badge.putalpha(shape.resize((side, side), Image.Resampling.LANCZOS))
+    badge.alpha_composite(_fit(art, side, content))
+    return badge
 
 
 if __name__ == "__main__":

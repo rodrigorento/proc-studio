@@ -21,7 +21,7 @@ def build(collection: bpy.types.Collection, wet: bool = True) -> None:
         for level in range(2):
             z = B["plank_height"] * (level + 0.5)
             y = -(half - depth / 2)
-            plank = _box(f"Plank.{side}{level}", (run, depth, B["plank_height"] * 0.94), collection,
+            plank = box(f"Plank.{side}{level}", (run, depth, B["plank_height"] * 0.94), collection,
                          toon.material("wood"), bevel=B["plank_round"], segments=4)
             plank.location = _turn(0.0, y, angle) + (z,)
             plank.rotation_euler.z = angle
@@ -33,7 +33,7 @@ def build(collection: bpy.types.Collection, wet: bool = True) -> None:
     for corner in range(4):
         centre = half - post / 2 + B["post_out"]
         cx, cy = _turn(centre, -centre, corner * math.pi / 2)
-        post_obj = _box(f"Post.{corner}", (post, post, B["post_height"]), collection,
+        post_obj = box(f"Post.{corner}", (post, post, B["post_height"]), collection,
                         toon.material("wood"), bevel=B["post_round"], segments=5)
         post_obj.location = (cx, cy, B["post_height"] / 2)
     _soil(collection, wet)
@@ -68,7 +68,7 @@ def _soil(collection: bpy.types.Collection, wet: bool) -> None:
     soil = bpy.data.objects.new("Soil", mesh)
     collection.objects.link(soil)
     soil.data.materials.append(toon.material("soil_wet" if wet else "soil_dry"))
-    skirt = _box("SoilBody", (inner, inner, B["soil_top"]), collection, toon.material("soil_wet" if wet else "soil_dry"))
+    skirt = box("SoilBody", (inner, inner, B["soil_top"]), collection, toon.material("soil_wet" if wet else "soil_dry"))
     skirt.location = (0.0, 0.0, B["soil_top"] / 2 - 0.002)
     toon.outline(soil)
 
@@ -92,8 +92,10 @@ def _soil(collection: bpy.types.Collection, wet: bool) -> None:
         toon.outline(pebble, style.OUTLINE_WIDTH * 0.5)
 
 
-def _box(name: str, size: tuple[float, float, float], collection: bpy.types.Collection,
-         material: bpy.types.Material, bevel: float = 0.0, segments: int = 3) -> bpy.types.Object:
+def box(name: str, size: tuple[float, float, float], collection: bpy.types.Collection,
+         material: bpy.types.Material, bevel: float = 0.0, segments: int = 3,
+         outline: float = style.OUTLINE_WIDTH) -> bpy.types.Object:
+    """A box centred on the origin; with a bevel it is rounded and gets an ink outline `outline` wide."""
     mesh = bpy.data.meshes.new(name)
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=1.0)
@@ -111,7 +113,7 @@ def _box(name: str, size: tuple[float, float, float], collection: bpy.types.Coll
         mod.harden_normals = False
         for poly in mesh.polygons:
             poly.use_smooth = True
-        toon.outline(obj)
+        toon.outline(obj, outline)
     return obj
 
 

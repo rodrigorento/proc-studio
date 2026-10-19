@@ -78,7 +78,7 @@ def _plant(collection, name: str, growth: float, thirst: float) -> None:
             parts.tube(stems, [start, bend, top], 0.017 * (0.6 + 0.4 * growth), taper=0.7)
         facing = (TO_CAMERA * 0.85 + UP * (0.2 - 0.6 * thirst) + ACROSS * (across * 0.25)).normalized()
         if blooming:
-            _head(collection, f"{name}.Head{k}", top, facing, radius)
+            head(collection, f"{name}.Head{k}", top, facing, radius)
         else:
             _bud(collection, f"{name}.Bud{k}", top, facing, radius * 0.45 * growth / 0.55, green)
 
@@ -86,7 +86,7 @@ def _plant(collection, name: str, growth: float, thirst: float) -> None:
     parts.flat(parts.mesh_object(f"{name}.Leaves", leaves, collection, green))
 
 
-def _head(collection, name: str, centre: Vector, facing: Vector, radius: float) -> None:
+def head(collection, name: str, centre: Vector, facing: Vector, radius: float) -> None:
     """An open flower facing `facing`: a domed seed disc dotted with seeds, two rings of petals and a green back."""
     rotation = facing.to_track_quat("Z", "Y")
     disc_radius = radius * 0.48

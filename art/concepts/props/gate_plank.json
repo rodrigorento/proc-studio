@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image is a game asset for a mobile farming app, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, simple chunky toy-like shapes, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Make a new asset in exactly the same style, colours, outlines and lighting, centered with generous margin. No text, no letters, no numbers. The asset: a closed farm gate between two chunky posts, built from the same rounded planks and posts as the reference bed, with an iron latch and a small wooden plaque hanging on it painted with a crescent moon and stars, meaning closed until tomorrow.",
+  "refs": [
+    "art/style/references/bed.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T17:45:34"
+}

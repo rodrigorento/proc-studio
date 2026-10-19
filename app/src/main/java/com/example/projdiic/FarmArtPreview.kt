@@ -116,6 +116,18 @@ fun FarmArtPreview() {
             }
         }
 
+        Text("Props", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val props = listOf(R.drawable.prop_watering_can to "Watering can") +
+                CropArt.STAGES.keys.map { CropArt.seedPacket(it) to "${it.label()} seeds" } +
+                listOf(
+                    R.drawable.prop_basket to "Harvest basket",
+                    R.drawable.prop_gate to "Gate, closed until tomorrow",
+                    R.drawable.prop_mailbox to "Mailbox",
+                )
+            props.forEach { (image, label) -> BedCard(Modifier.size(96.dp)) { Layer(image, label) } }
+        }
+
         CropArt.STAGES.forEach { (crop, stages) ->
             Text("Every ${crop} stage", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -37,6 +37,18 @@ PALETTE = {
     "water": ("#D2F0FF", "#8CD0F7", "#4596D2"),
     "cloud": ("#FFFFFF", "#E4E9F6", "#A3ADD3"),
     "sparkle": ("#FFFBD6", "#FFF29A", "#FFE45C"),  # nearly flat: sparkles glow rather than shade
+    # Props
+    "packet_radish": ("#F9E6CB", "#EDCFA8", "#B8956A"),
+    "packet_lettuce": ("#C3E58A", "#A2CF5E", "#5E8E2A"),
+    "packet_carrot": ("#FFC77E", "#F7A64A", "#BE6A1C"),
+    "packet_pumpkin": ("#F8A688", "#E9805F", "#A84A32"),
+    "packet_sunflower": ("#FFE584", "#F7CC48", "#C08F12"),
+    "label": ("#FFFAEE", "#F3E7CE", "#C2B08E"),
+    "wicker": ("#EDB76A", "#CF8F41", "#8A5420"),
+    "metal": ("#E3E6EA", "#B2B8C1", "#646C78"),
+    "metal_dark": ("#6C7380", "#4A505B", "#2A2E36"),
+    "paper": ("#FFFFFF", "#F1ECE2", "#BDB4A4"),
+    "flag": ("#FF6A55", "#E23B2C", "#951B12"),
 }
 
 OUTLINE = "#251803"  # warm dark brown ink
