@@ -1,0 +1,64 @@
+# Art direction for the farm theme. The Blender scripts in art/farmkit read this file.
+# Images: references/ (approved look), lights/ (the four times of day). How each was made: sources.json.
+# Colours were sampled from the references; they get tuned in Blender when the first crop is modeled.
+
+look:
+  style: cel-shaded toon 3D
+  shading_bands: 3
+  outline:
+    color: "#251803"  # warm dark brown ink, not black
+  background: transparent  # the concept images use the app's dark #16171A
+  underground: never shown  # no cut-aways or cross-sections
+
+camera:
+  projection: orthographic
+  view: isometric  # the same framing for every bed, so the 2x2 cards line up
+  render_size_px: 640
+
+bed:
+  reference: references/bed.png
+  shape: square raised bed of chunky wooden planks with rounded edges and corner posts, filled with tilled soil
+  soil:
+    wet: darker soil, smooth ridges
+    dry: paler cracked soil, drooping leaves
+
+crops:  # the smaller the crop, the more of them in a bed
+  radish: {when: today, count: 9, layout: 3x3, reference: references/bed_radish.png}
+  lettuce: {when: tomorrow, count: 4, layout: 2x2, reference: references/bed_lettuce.png}
+  carrot: {when: this_week, count: 2, layout: side by side, reference: references/bed_carrot.png}
+  pumpkin: {when: this_month, count: 1, layout: centered, with vine and leaves, reference: references/bed_pumpkin.png}
+  sunflower: {when: anytime, count: 1, layout: centered, note: short variety so it fits the shared framing}
+
+stages:
+  timed: [seed, sprout, growing, ripe, overripe]  # seed shows one small mound per crop
+  sunflower: [seed, sprout, growing, bloom]
+  overripe: gone to seed  # bolting flower stalks; the pumpkin dulls with a few speckles
+  variants: [dry, wet]
+
+lights:  # by the phone's clock
+  morning:
+    hours: [5, 11]
+    reference: lights/field_morning.png
+    look: very low sun far left, long soft shadows, pale pink-gold light, lavender-blue shadows, lighter and less saturated
+  day:
+    hours: [11, 17]
+    reference: lights/field_day.png
+    look: bright neutral white sun from high above, short crisp shadows, full saturation
+  dusk:
+    hours: [17, 20]
+    reference: lights/field_dusk.png
+    look: low golden-orange sun from the right, long warm shadows, magenta-purple shadow tint
+  night:
+    hours: [20, 5]
+    reference: lights/field_night.png
+    look: cool blue moonlight from above left, blue-violet shadows, muted colours, pale rim light on top edges
+
+palette:  # [lit, base, shade] as sampled from the day-lit references
+  wood: ["#F0AA53", "#E49238", "#AF6223"]
+  soil: ["#7D4117", "#683513", "#4D260C"]
+  leaf: ["#92CF09", "#7FCA09", "#44820C"]
+  leaf_deep: "#246B01"
+  radish: "#CE1628"
+  carrot: "#E47F26"
+  pumpkin: "#EE6908"
+  rivets: grey
