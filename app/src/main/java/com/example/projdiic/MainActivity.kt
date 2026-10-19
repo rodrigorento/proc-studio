@@ -353,6 +353,10 @@ private fun FacilitatorPanel(settings: GateSettings, swipesSincePause: Int, logC
         )
     }
 
+    Section("Facilitator · farm art preview") {
+        FarmArtPreview()
+    }
+
     Section("Facilitator · log") {
         Text(
             text = "$logCount events on this phone",

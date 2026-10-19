@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Blender renders before export (the app gets the WebPs)
+/art/build/
+__pycache__/
