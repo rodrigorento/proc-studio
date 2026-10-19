@@ -1,7 +1,9 @@
 package com.example.projdiic
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -53,6 +55,17 @@ class WhenChoicesTest {
             listOf(null, WhenChoices.TODAY, WhenChoices.TONIGHT, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK),
             WhenChoices.chips(at(27, 10), utc).map { it?.key },
         )
+    }
+
+    @Test
+    fun thisMonthIsLeftOutOnItsLastDayAndKeptWhileTheMonthOutlastsTheWeek() {
+        val sunday30August = Calendar.getInstance(utc).apply {
+            clear()
+            set(2026, Calendar.AUGUST, 30, 10, 0)
+        }.timeInMillis
+
+        assertFalse(WhenChoices.chips(at(31, 10), utc).any { it?.key == WhenChoices.THIS_MONTH })
+        assertTrue(WhenChoices.chips(sunday30August, utc).any { it?.key == WhenChoices.THIS_MONTH })
     }
 
     @Test

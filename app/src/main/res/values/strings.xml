@@ -1,13 +1,13 @@
 <resources>
     <string name="app_name">Scroll Gate</string>
-    <string name="accessibility_description">Counts your swipes in Instagram and, after a stretch of scrolling, pauses it to show the next thing on your list. It notices which app is open; it does not save what is on screen.</string>
+    <string name="accessibility_description">Counts your swipes in Instagram and, after a stretch of scrolling, pauses it to show the next thing growing in your field. It notices which app is open; it does not save what is on screen.</string>
 
     <!-- Gate: one task, three ways out -->
     <string name="gate_feed_paused">Feed paused</string>
     <string-array name="gate_eyebrows">
         <item>A quick one before you keep going</item>
         <item>Before the next video</item>
-        <item>Still on your list</item>
+        <item>Still growing in your field</item>
         <item>One thing first</item>
     </string-array>
     <string name="gate_meta_added">From your field · planted %1$s</string>

@@ -69,6 +69,29 @@ class FarmRulesTest {
     }
 
     @Test
+    fun aCropIsRipeAtItsDueTime() {
+        val task = planted(WhenChoices.today(friday, utc))
+        val dueAsPlanted = Task(id = "n", title = "Now", createdAt = friday, dueAt = friday, dueHasTime = true)
+
+        assertEquals("ripe", FarmRules.stage(task, task.dueAt))
+        assertEquals("overripe", FarmRules.stage(task, task.dueAt + 1))
+        assertEquals("ripe", FarmRules.stage(dueAsPlanted, friday))
+    }
+
+    @Test
+    fun changingTheTimeReplantsTheCrop() {
+        val sunflower = planted(null, at = at(12, 9)) // planted on Monday for anytime
+
+        val lettuce = TaskRules.withWhen(sunflower, WhenChoices.tomorrow(friday, utc), friday)
+        val gym = TaskRules.withWhen(sunflower, WhenParser.parse("Gym on Monday", friday, utc).window, friday)
+
+        assertEquals("lettuce", FarmRules.crop(lettuce, utc))
+        assertEquals("seed", FarmRules.stage(lettuce, friday))
+        assertEquals("carrot", FarmRules.crop(gym, utc))
+        assertEquals(sunflower.createdAt, lettuce.createdAt)
+    }
+
+    @Test
     fun aSunflowerBloomsAfterAFewDaysAndStaysInBloom() {
         val task = planted(null)
 
@@ -92,7 +115,23 @@ class FarmRulesTest {
         val wateredYesterday = FarmRules.wateredOn(at(15, 12), utc)
 
         assertFalse(FarmRules.rainsOnHome(wateredYesterday, at(16, 15), utc))
+        assertFalse(FarmRules.rainsOnHome(wateredYesterday, at(16, 17, 59), utc))
         assertTrue(FarmRules.rainsOnHome(wateredYesterday, at(16, 18), utc))
         assertFalse(FarmRules.rainsOnHome(FarmRules.wateredOn(at(16, 9), utc), at(16, 20), utc))
+    }
+
+    @Test
+    fun theFieldDriesOutAtLocalMidnightAcrossAClockChange() {
+        val london = TimeZone.getTimeZone("Europe/London") // the clocks go back at 02:00 on Sunday 25 October
+        fun local(day: Int, hour: Int, minute: Int = 0) = Calendar.getInstance(london).apply {
+            clear()
+            set(2026, Calendar.OCTOBER, day, hour, minute)
+        }.timeInMillis
+        val wateredBeforeTheChange = FarmRules.wateredOn(local(25, 1, 30), london)
+
+        assertTrue(FarmRules.isWatered(wateredBeforeTheChange, local(25, 23, 59), london))
+        assertFalse(FarmRules.isWatered(wateredBeforeTheChange, local(26, 0, 1), london))
+        assertFalse(FarmRules.isWatered(FarmRules.wateredOn(local(24, 23), london), local(25, 0, 30), london))
+        assertTrue(FarmRules.rainsOnHome(FarmRules.wateredOn(local(24, 9), london), local(25, 18), london))
     }
 }

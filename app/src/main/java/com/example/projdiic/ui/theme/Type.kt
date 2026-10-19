@@ -27,7 +27,7 @@ val Typography = Typography().run {
         titleLarge = titleLarge.copy(fontFamily = Nunito),
         titleMedium = titleMedium.copy(fontFamily = Nunito),
         titleSmall = titleSmall.copy(fontFamily = Nunito),
-        bodyLarge = bodyLarge.copy(fontFamily = Nunito, letterSpacing = bodyLarge.letterSpacing),
+        bodyLarge = bodyLarge.copy(fontFamily = Nunito),
         bodyMedium = bodyMedium.copy(fontFamily = Nunito),
         bodySmall = bodySmall.copy(fontFamily = Nunito),
         labelLarge = labelLarge.copy(fontFamily = Nunito),

@@ -18,6 +18,8 @@ data class Task(
     val dueHasTime: Boolean = false,
     /** The chip it was given ([WhenChoices]), or empty for Anytime. */
     val whenKey: String = "",
+    /** When its crop was planted: when its time was last set, or 0 to count from [createdAt]. See [FarmRules]. */
+    val plantedAt: Long = 0L,
 ) {
     companion object {
         const val VIA_TEXT = "text"
@@ -63,10 +65,13 @@ object TaskRules {
         return TimeWindow(task.whenKey.ifEmpty { WhenChoices.CUSTOM }, start, task.dueAt, task.dueHasTime)
     }
 
-    /** Gives the task a time window (null: Anytime). A snooze or picked time still running is kept. */
+    /**
+     * Gives the task a time window (null: Anytime) and replants its crop at [now]. A snooze or picked time still
+     * running is kept.
+     */
     fun withWhen(task: Task, window: TimeWindow?, now: Long): Task {
         val putOff = task.deferredBy != Task.BY_WHEN && task.deferredUntil > now
-        val base = if (putOff) task else task.copy(deferredUntil = 0L, deferredBy = "")
+        val base = (if (putOff) task else task.copy(deferredUntil = 0L, deferredBy = "")).copy(plantedAt = now)
         if (window == null) return base.copy(dueAt = 0L, dueHasTime = false, whenKey = "")
         val waits = window.start > now && window.start > base.deferredUntil
         return base.copy(

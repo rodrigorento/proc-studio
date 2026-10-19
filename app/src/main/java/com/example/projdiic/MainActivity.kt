@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.speech.RecognizerIntent
-import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -16,10 +15,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,11 +39,12 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.projdiic.ui.theme.ProjDIICTheme
 import com.example.projdiic.ui.theme.Wood
 import kotlinx.coroutines.delay
-import java.util.Date
-import java.util.TimeZone
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,31 +86,38 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
     val plantFocus = remember { FocusRequester() }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            hasOverlayPermission = PermissionUtils.hasOverlayPermission(context)
-            hasMicPermission = PermissionUtils.hasMicPermission(context)
-            isAccessibilityRunning = InstagramReelsAccessibilityService.isServiceEnabled
-            swipesSincePause = InstagramReelsAccessibilityService.currentReelsCount
-            snoozedUntil = settings.snoozedUntil
-            tasks = TaskCache.getTasks(context)
-            logCount = EventLog.count(context)
-            now = System.currentTimeMillis()
-            // A field nobody watered gets rain in the evening; a rain from a skipped watering shows here too.
-            val rains = FarmRules.rainsOnHome(FarmCache.wateredOn(context), now)
-            if (rains) {
-                FarmCache.rain(context, now, show = false)
-                EventLog.log(context, "field_watered", "by" to "rain", "where" to "app")
-            }
-            if ((rains || FarmCache.takeRainToShow(context)) && rainFrame == null) {
-                for (frame in CropMotion.rain(fieldLight(now)).indices) {
-                    rainFrame = frame
-                    delay(1000L / CropMotion.FPS)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        // Only while the home screen is in view: from the background it would take the rain meant for the next pause.
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                hasOverlayPermission = PermissionUtils.hasOverlayPermission(context)
+                hasMicPermission = PermissionUtils.hasMicPermission(context)
+                isAccessibilityRunning = InstagramReelsAccessibilityService.isServiceEnabled
+                swipesSincePause = InstagramReelsAccessibilityService.currentReelsCount
+                snoozedUntil = settings.snoozedUntil
+                tasks = TaskCache.getTasks(context)
+                logCount = EventLog.count(context)
+                now = System.currentTimeMillis()
+                // A field nobody watered gets rain in the evening; a rain from a skipped watering shows here too.
+                val rains = FarmRules.rainsOnHome(FarmCache.wateredOn(context), now)
+                if (rains) {
+                    FarmCache.rain(context, now, show = false)
+                    EventLog.log(context, "field_watered", "by" to "rain", "where" to "app")
                 }
-                rainFrame = null
+                if (rains || FarmCache.takeRainToShow(context)) {
+                    try {
+                        for (frame in CropMotion.rain(fieldLight(now)).indices) {
+                            rainFrame = frame
+                            delay(1000L / CropMotion.FPS)
+                        }
+                    } finally {
+                        rainFrame = null
+                    }
+                }
+                watered = FarmCache.isWatered(context, now)
+                delay(1000L)
             }
-            watered = FarmCache.isWatered(context, now)
-            delay(1000L)
         }
     }
 

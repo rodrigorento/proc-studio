@@ -126,8 +126,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     private fun onLeftInstagram(pkg: String, className: String?, windowType: Int?) {
         val current = screen ?: return
         val task = current.taskId?.let { TaskCache.find(this, it) }
-        // Walking away from a gate counts as passing on its task.
-        if (task != null && current !is GateScreen.DoingNow) TaskCache.update(this, passOnce(task))
+        // Walking away from a gate counts as passing on its task, once the task was on screen.
+        if (task != null && current !is GateScreen.DoingNow && !overlay.thirsty) TaskCache.update(this, passOnce(task))
         EventLog.log(
             this, "left_instagram",
             "screen" to current.logName,

@@ -35,7 +35,7 @@ object FarmRules {
             WhenChoices.TOMORROW -> LETTUCE
             WhenChoices.THIS_WEEK -> CARROT
             WhenChoices.THIS_MONTH -> PUMPKIN
-            else -> when (DayMath.daysBetween(task.createdAt, task.dueAt, zone)) {
+            else -> when (DayMath.daysBetween(plantedAt(task), task.dueAt, zone)) {
                 in Int.MIN_VALUE..0 -> RADISH
                 1 -> LETTUCE
                 in 2..6 -> CARROT
@@ -47,9 +47,10 @@ object FarmRules {
     /** How grown the task's crop is at [now]: seed, sprout, growing, ripe, overripe once past due; a sunflower blooms. */
     fun stage(task: Task, now: Long): String {
         val sunflower = task.dueAt <= 0L
-        val end = if (sunflower) task.createdAt + SUNFLOWER_BLOOMS_AFTER_MS else task.dueAt
+        val planted = plantedAt(task)
+        val end = if (sunflower) planted + SUNFLOWER_BLOOMS_AFTER_MS else task.dueAt
         if (now > end) return if (sunflower) "bloom" else "overripe"
-        val progress = if (end > task.createdAt) (now - task.createdAt).toDouble() / (end - task.createdAt) else 1.0
+        val progress = if (end > planted) (now - planted).toDouble() / (end - planted) else 1.0
         return when {
             progress < SPROUT_FROM -> "seed"
             progress < GROWING_FROM -> "sprout"
@@ -58,6 +59,9 @@ object FarmRules {
             else -> "ripe"
         }
     }
+
+    /** When the crop was planted: changing the task's time replants it. Tasks saved without that grow from when they were added. */
+    private fun plantedAt(task: Task): Long = task.plantedAt.takeIf { it > 0L } ?: task.createdAt
 
     /** What to store when the field is watered at [now]: the start of that day. */
     fun wateredOn(now: Long, zone: TimeZone = TimeZone.getDefault()): Long = DayMath.midnight(now, zone)

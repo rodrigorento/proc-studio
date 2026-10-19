@@ -87,6 +87,7 @@ object TaskCache {
         .put("dueAt", task.dueAt)
         .put("dueHasTime", task.dueHasTime)
         .put("whenKey", task.whenKey)
+        .put("plantedAt", task.plantedAt)
 
     private fun fromJson(json: JSONObject) = Task(
         id = json.getString("id"),
@@ -100,6 +101,7 @@ object TaskCache {
         dueAt = json.optLong("dueAt"),
         dueHasTime = json.optBoolean("dueHasTime"),
         whenKey = json.optString("whenKey"),
+        plantedAt = json.optLong("plantedAt"),
     )
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

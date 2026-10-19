@@ -11,5 +11,15 @@ object FarmViews {
 
     /** For screen readers: "Radish bed, ripe". */
     fun describe(task: Task, now: Long): String =
-        FarmRules.crop(task).replaceFirstChar { it.uppercaseChar() } + " bed, " + FarmRules.stage(task, now)
+        FarmRules.crop(task).replaceFirstChar { it.uppercaseChar() } + " bed, " + stageWords(FarmRules.stage(task, now))
+
+    /** A [FarmRules.stage] in words, for the home screen and screen readers. */
+    fun stageWords(stage: String): String = when (stage) {
+        "seed" -> "just planted"
+        "sprout" -> "sprouting"
+        "growing" -> "growing"
+        "ripe" -> "ripe"
+        "bloom" -> "in bloom"
+        else -> "gone to seed"
+    }
 }

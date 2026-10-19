@@ -21,6 +21,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
@@ -87,9 +88,16 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
     /** A gate is up on a thirsty field that nobody has watered yet; if it goes away like that, it rains. */
     private var thirstyGate = false
+
+    /** Done was tapped and its harvest is still playing; the task is done as soon as it ends or the screen goes. */
+    private var harvest: (() -> Unit)? = null
     private var recognizer: SpeechRecognizer? = null
     private var focusRequest: AudioFocusRequest? = null
     private val focusListener = AudioManager.OnAudioFocusChangeListener { }
+
+    /** The gate's task is still hidden behind the thirsty field, so walking away isn't passing on it. */
+    val thirsty: Boolean
+        get() = thirstyGate
 
     /** Whether Android let us pause Instagram's sound for the screen that is up. */
     var holdsAudioFocus = false
@@ -123,6 +131,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show the ${screen.logName} overlay", e)
+            thirstyGate = false
             shown = null
             releaseAudioFocus()
             false
@@ -130,6 +139,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     }
 
     fun hide() {
+        finishHarvest()
         leaveThirstyField()
         removeView()
         shown = null
@@ -155,11 +165,21 @@ class GateOverlay(service: Context, private val actions: Actions) {
         actions.onFieldWatered(BY_RAIN, "left")
     }
 
-    /** The system Back gesture: a step back where the screen has one; the gate itself only closes through its choices. */
+    /** Done's harvest has played, or the screen is going before it could: the task is done either way. */
+    private fun finishHarvest() {
+        val done = harvest ?: return
+        harvest = null
+        done()
+    }
+
+    /**
+     * The system Back gesture: a step back where the screen has one, but not while a harvest plays; the gate itself
+     * only closes through its choices.
+     */
     private fun backActionFor(screen: GateScreen, task: Task?): (() -> Unit)? = when {
         screen == GateScreen.AddTasks -> actions::onAddTasksClosed
         task != null && (screen is GateScreen.PickTime || screen is GateScreen.DoingNow) ->
-            { -> actions.onBackToChoices(task, screen) }
+            { -> if (harvest == null) actions.onBackToChoices(task, screen) }
         else -> null
     }
 
@@ -199,6 +219,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
                 bed.water(dry, wet, frames) {
                     waterBlock.isVisible = false
                     taskBlock.isVisible = true
+                    // The button that had TalkBack's focus is gone; move it to the task.
+                    root.findViewById<View>(R.id.tvTaskTitle)
+                        .performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
                 }
             }
             water.setOnClickListener { pour(BY_CAN, CropMotion.water(light)) }
@@ -254,7 +277,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
         val now = System.currentTimeMillis()
         val light = fieldLight(now)
         val bed = BedStack(root.findViewById(R.id.bed))
-        bed.show(FarmViews.bed(task, now, FarmCache.isWatered(context, now), light))
+        val watered = FarmCache.isWatered(context, now)
+        bed.show(FarmViews.bed(task, now, watered, light))
         root.findViewById<View>(R.id.bed).contentDescription = FarmViews.describe(task, now)
         val done = root.findViewById<Button>(R.id.btnDone)
         val back = root.findViewById<Button>(R.id.btnBackToChoices)
@@ -264,12 +288,10 @@ class GateOverlay(service: Context, private val actions: Actions) {
             listOf(done, back, close).forEach { it.isEnabled = false }
             val crop = FarmRules.crop(task)
             val stage = CropMotion.harvestedAs(crop, FarmRules.stage(task, System.currentTimeMillis()))
-            val harvest = {
-                bed.harvest(CropArt.emptyBed(true, light), CropMotion.harvest(crop, stage, light)) {
-                    actions.onDone(task, startedAt)
-                }
+            harvest = { actions.onDone(task, startedAt) }
+            bed.fadeTo(CropArt.bed(crop, stage, watered, light), RIPEN_MS) {
+                bed.harvest(CropArt.emptyBed(watered, light), CropMotion.harvest(crop, stage, light)) { finishHarvest() }
             }
-            bed.fadeTo(CropArt.bed(crop, stage, true, light), RIPEN_MS) { harvest() }
         }
         close.setOnClickListener { actions.onCloseInstagram(task) }
         fitSystemBars(root, bottom = root)

@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- A rendered bed on an overlay screen: the bed, a second bed fading in over it (dry to wet, or ripening),
-     and the frames of a watering, rain or harvest on top. See BedStack. -->
+     and the frames of a watering, rain or harvest on top. See BedStack. Screen readers read the whole bed as one
+     image, from the content description the screen gives it. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:importantForAccessibility="noHideDescendants">
+    android:importantForAccessibility="yes">
 
     <ImageView
         android:id="@+id/bedBase"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:importantForAccessibility="no"
         android:scaleType="fitCenter" />
 
     <ImageView
@@ -17,11 +19,13 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:alpha="0"
+        android:importantForAccessibility="no"
         android:scaleType="fitCenter" />
 
     <ImageView
         android:id="@+id/bedEffect"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:importantForAccessibility="no"
         android:scaleType="fitCenter" />
 </FrameLayout>

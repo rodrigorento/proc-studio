@@ -108,7 +108,7 @@ private fun PlotCard(task: Task, isNext: Boolean, now: Long, look: FieldLook, on
         modifier = modifier
             .clickable(onClickLabel = "Change or remove", role = Role.Button, onClick = onClick)
             .semantics(mergeDescendants = true) {
-                contentDescription = "${task.title}, $label, $crop ${stageWords(stage)}" + if (isNext) ", next up" else ""
+                contentDescription = "${task.title}, $label, $crop ${FarmViews.stageWords(stage)}" + if (isNext) ", next up" else ""
             }
     ) {
         Column(Modifier.padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -323,13 +323,4 @@ private fun statusFor(context: Context, task: Task, now: Long): String? =
         "Back at " + DateFormat.getTimeFormat(context).format(Date(task.deferredUntil))
     } else null
 
-private fun stageWords(stage: String): String = when (stage) {
-    "seed" -> "just planted"
-    "sprout" -> "sprouting"
-    "growing" -> "growing"
-    "ripe" -> "ripe"
-    "bloom" -> "in bloom"
-    else -> "gone to seed"
-}
-
-private fun cropWords(crop: String, stage: String): String = crop.replaceFirstChar { it.uppercaseChar() } + ", " + stageWords(stage)
+private fun cropWords(crop: String, stage: String): String = crop.replaceFirstChar { it.uppercaseChar() } + ", " + FarmViews.stageWords(stage)

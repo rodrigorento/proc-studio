@@ -32,6 +32,8 @@
         <item name="android:background">@drawable/bg_button_primary</item>
         <item name="android:textColor">@color/sg_on_accent</item>
         <item name="android:fontFamily">@font/nunito_bold</item>
+        <!-- Bold for phones before Android 8, which skip the font; a bold font isn't made bolder. -->
+        <item name="android:textStyle">bold</item>
     </style>
 
     <style name="ScrollGate.Button.Secondary">
@@ -50,7 +52,7 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:background">@drawable/bg_button_text</item>
         <item name="android:textColor">@color/sg_text_soft</item>
-        <item name="android:minHeight">44dp</item>
+        <item name="android:minHeight">48dp</item>
         <item name="android:paddingStart">8dp</item>
         <item name="android:paddingEnd">12dp</item>
         <item name="android:textSize">15sp</item>
@@ -82,6 +84,7 @@
         <item name="android:textColor">@color/sg_text</item>
         <item name="android:textSize">30sp</item>
         <item name="android:fontFamily">@font/nunito_extrabold</item>
+        <item name="android:textStyle">bold</item>
         <item name="android:lineSpacingMultiplier">1.05</item>
     </style>
 
