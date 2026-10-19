@@ -27,7 +27,7 @@ crops:  # the smaller the crop, the more of them in a bed
   lettuce: {when: tomorrow, count: 4, layout: 2x2, reference: references/bed_lettuce.png}
   carrot: {when: this_week, count: 2, layout: side by side, reference: references/bed_carrot.png}
   pumpkin: {when: this_month, count: 1, layout: centered, with vine and leaves, reference: references/bed_pumpkin.png}
-  sunflower: {when: anytime, count: 1, layout: centered, note: short variety so it fits the shared framing}
+  sunflower: {when: anytime, count: 1, layout: centered, shape: one big head and two side blooms, reference: references/bed_sunflower.png}
 
 stages:
   timed: [seed, sprout, growing, ripe, overripe]  # seed shows one small mound per crop

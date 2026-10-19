@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image is a game asset for a mobile farming app: a chunky wooden raised garden bed with rounded planks and corner posts, filled with tilled soil, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Keep the same style, bed, colours, angle and lighting. Only the parts of crops above the soil are visible; nothing underground is shown. No text. Replace the carrot with one short sunflower growing from the middle of the bed, with one big golden flower head and two smaller blooms on side branches, and broad leaves. The whole plant fits in the image with margin; keep the bed the same size and position.",
+  "refs": [
+    "art/style/references/bed.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T12:00:48"
+}
