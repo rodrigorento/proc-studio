@@ -1,11 +1,16 @@
-"""Mesh pieces the crops are made of: tubes for stems, flat leaves, lathed roots, mounds."""
+"""Mesh pieces the crops are made of: tubes for stems, flat leaves, lathed roots, mounds, sprouts."""
 import math
 
 import bmesh
 import bpy
 from mathutils import Matrix, Vector
 
-from .. import toon
+from .. import style, toon
+
+TO_CAMERA = Vector(style.TO_CAMERA)
+UP = Vector((0.0, 0.0, 1.0))
+ACROSS = Vector((0.7071, 0.7071, 0.0))  # left to right in the picture
+DEPTH = Vector((-0.7071, 0.7071, 0.0))  # front to back
 
 
 def mesh_object(name: str, bm: bmesh.types.BMesh, collection: bpy.types.Collection, material: str,
@@ -90,3 +95,31 @@ def sphere(bm: bmesh.types.BMesh, centre: Vector, radius: float, squash: float =
     verts = geom["verts"]
     bmesh.ops.transform(bm, matrix=Matrix.Diagonal((1.0, 1.0, squash, 1.0)), verts=verts)
     bmesh.ops.translate(bm, vec=centre, verts=verts)
+
+
+def sprout(collection: bpy.types.Collection, name: str, base: Vector, thirst: float, scale: float = 1.0) -> None:
+    """Two round seed leaves on a short stem."""
+    stem_top = base + Vector((0, 0, (0.12 - 0.05 * thirst) * scale))
+    stems, leaves = bmesh.new(), bmesh.new()
+    tube(stems, [base, base.lerp(stem_top, 0.5), stem_top], 0.013 * scale)
+    for hand in (-1, 1):
+        direction = (ACROSS * hand + UP * (0.6 - 1.1 * thirst)).normalized()
+        leaf(leaves, stem_top, direction, TO_CAMERA, 0.11 * scale, 0.075 * scale)
+    material = "leaf" if thirst < 0.5 else "leaf_dry"
+    toon.outline(mesh_object(f"{name}.Stems", stems, collection, material), style.LEAF_OUTLINE_WIDTH)
+    flat(mesh_object(f"{name}.Leaves", leaves, collection, material))
+
+
+def along(points: list[Vector], t: float) -> Vector:
+    """The point a fraction t of the way along a polyline."""
+    position = t * (len(points) - 1)
+    i = min(int(position), len(points) - 2)
+    return points[i].lerp(points[i + 1], position - i)
+
+
+def flat(obj: bpy.types.Object) -> None:
+    """Give a flat leaf mesh a little thickness, then its outline."""
+    thickness = obj.modifiers.new("Thickness", "SOLIDIFY")
+    thickness.thickness = 0.008
+    thickness.offset = 0.0
+    toon.outline(obj, style.LEAF_OUTLINE_WIDTH)

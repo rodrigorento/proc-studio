@@ -13,6 +13,7 @@ from mathutils import Vector
 
 from .. import bed, style, toon
 from . import parts
+from .parts import ACROSS, DEPTH, TO_CAMERA, UP
 
 STAGES = {
     "seed": {"growth": 0.0},
@@ -28,8 +29,6 @@ POSITIONS = [(-0.17, -0.17), (0.17, 0.17)]
 ROOT_LENGTH = 0.36
 ROOT_RADIUS = 0.105
 FRONDS = 5
-TO_CAMERA = Vector(style.TO_CAMERA)
-UP = Vector((0.0, 0.0, 1.0))
 
 
 def build(collection: bpy.types.Collection, stage: str, wet: bool = True) -> None:
@@ -54,7 +53,7 @@ def _plant(collection, name: str, base: Vector, growth: float, thirst: float, bo
     if growth <= 0.0:
         return
     if growth < 0.3:
-        _sprout(collection, name, top, thirst)
+        parts.sprout(collection, name, top, thirst)
         return
 
     # Root: the shoulder pokes out of the soil once ripe; younger roots stay just under it.
@@ -80,21 +79,19 @@ def _fronds(collection, name: str, crown: Vector, growth: float, thirst: float, 
     """A fan of feathery fronds facing the camera: each stem carries pairs of small lobed leaflets."""
     stems, leaves, old_leaves = bmesh.new(), bmesh.new(), bmesh.new()
     size = 0.46 * growth
-    across = Vector((0.7071, 0.7071, 0.0))  # left to right in the picture
-    depth = Vector((-0.7071, 0.7071, 0.0))  # front to back
     for k in range(FRONDS):
         spread = (k - (FRONDS - 1) / 2) / ((FRONDS - 1) / 2)  # -1 at the left .. 1 at the right
         angle = math.radians(spread * (30 + 18 * thirst)) + rng.uniform(-0.06, 0.06)
-        direction = (UP * math.cos(angle) + across * math.sin(angle) + depth * rng.uniform(-0.25, 0.25)).normalized()
+        direction = (UP * math.cos(angle) + ACROSS * math.sin(angle) + DEPTH * rng.uniform(-0.25, 0.25)).normalized()
         # The stem arcs outwards, and droops when thirsty.
-        sideways = (across * math.copysign(1.0, spread or 1.0)) * abs(spread)
+        sideways = (ACROSS * math.copysign(1.0, spread or 1.0)) * abs(spread)
         points = [crown + direction * (t * size) + sideways * (0.15 * t * t * size) - UP * (0.5 * thirst * t * t * size)
                   for t in (i / 6 for i in range(7))]
         parts.tube(stems, points, 0.011 * (0.6 + 0.4 * growth))
         target = old_leaves if bolting and k % 2 == 0 else leaves
         for along_stem, scale in ((0.4, 1.0), (0.55, 0.9), (0.7, 0.8), (0.85, 0.65)):
-            at = _along(points, along_stem)
-            stem_dir = (_along(points, min(1.0, along_stem + 0.08)) - at).normalized()
+            at = parts.along(points, along_stem)
+            stem_dir = (parts.along(points, min(1.0, along_stem + 0.08)) - at).normalized()
             side = stem_dir.cross(TO_CAMERA).normalized()
             for hand in (-1, 1):
                 leaf_dir = (stem_dir * 0.8 + side * hand - UP * (0.5 * thirst)).normalized()
@@ -110,21 +107,7 @@ def _fronds(collection, name: str, crown: Vector, growth: float, thirst: float, 
         if not bm.faces:
             bm.free()
             continue
-        _flat(parts.mesh_object(f"{name}.{label}", bm, collection, material))
-
-
-def _sprout(collection, name: str, base: Vector, thirst: float) -> None:
-    """Two round seed leaves on a short stem."""
-    stem_top = base + Vector((0, 0, 0.12 - 0.05 * thirst))
-    stems, leaves = bmesh.new(), bmesh.new()
-    parts.tube(stems, [base, base.lerp(stem_top, 0.5), stem_top], 0.013)
-    across = Vector((0.7071, 0.7071, 0.0))
-    for hand in (-1, 1):
-        direction = (across * hand + UP * (0.6 - 1.1 * thirst)).normalized()
-        parts.leaf(leaves, stem_top, direction, TO_CAMERA, 0.11, 0.075)
-    material = "leaf" if thirst < 0.5 else "leaf_dry"
-    toon.outline(parts.mesh_object(f"{name}.Stems", stems, collection, material), style.LEAF_OUTLINE_WIDTH)
-    _flat(parts.mesh_object(f"{name}.Leaves", leaves, collection, material))
+        parts.flat(parts.mesh_object(f"{name}.{label}", bm, collection, material))
 
 
 def _flower_stalk(collection, name: str, crown: Vector, rng: random.Random) -> None:
@@ -140,19 +123,3 @@ def _flower_stalk(collection, name: str, crown: Vector, rng: random.Random) -> N
             centre = top + Vector((math.cos(a) * radius, math.sin(a) * radius, 0.015 - 0.3 * radius))
             parts.sphere(flowers, centre, 0.032, squash=0.75)
     toon.outline(parts.mesh_object(f"{name}.Flowers", flowers, collection, "flower"), style.LEAF_OUTLINE_WIDTH)
-
-
-def _along(points: list[Vector], t: float) -> Vector:
-    position = t * (len(points) - 1)
-    i = min(int(position), len(points) - 2)
-    return points[i].lerp(points[i + 1], position - i)
-
-
-def _flat(obj: bpy.types.Object) -> None:
-    """Give a flat leaf mesh a little thickness, then its outline."""
-    thickness = obj.modifiers.new("Thickness", "SOLIDIFY")
-    thickness.thickness = 0.008
-    thickness.offset = 0.0
-    toon.outline(obj, style.LEAF_OUTLINE_WIDTH)
-
-
