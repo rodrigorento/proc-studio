@@ -41,7 +41,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Draws the Scroll Gate screens over Instagram, one at a time, and reports
+ * Draws Task Farm's pause screens over Instagram, one at a time, and reports
  * every tap to [actions]. The service decides which screen to show and when.
  */
 class GateOverlay(service: Context, private val actions: Actions) {
@@ -193,7 +193,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         root.findViewById<TextView>(R.id.tvEyebrow).text = eyebrow
         root.findViewById<TextView>(R.id.tvTaskTitle).text = task.title
         root.findViewById<TextView>(R.id.tvTaskMeta).text = metaFor(task)
-        // Ripe: harvest it. Not yet: water it so it grows a stage, or harvest it early if it is already done.
+        // Ripe: harvest it. Not yet: water it, or harvest it early if it is already done.
         val where = GateScreen.Gate(task.id).logName
         val ready = FarmRules.isReady(task, now)
         val tend = root.findViewById<Button>(R.id.btnTend).apply { setText(if (ready) R.string.gate_harvest else R.string.gate_water_it) }
@@ -259,7 +259,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     }
 
     /**
-     * Water it: the can waters [bed] and the crop grows a stage, then the feed opens. The other [choices] are off
+     * Water it: the can waters [bed] (only time grows the crop), then the feed opens. The other [choices] are off
      * meanwhile. A field still dry (the check-in has no thirsty step) counts as watered by the can.
      */
     private fun waterOn(bed: BedStack, task: Task, where: String, choices: List<View>) {
@@ -267,12 +267,12 @@ class GateOverlay(service: Context, private val actions: Actions) {
         choices.forEach { it.isEnabled = false }
         val tappedAt = System.currentTimeMillis()
         val wet = FarmCache.isWatered(context, tappedAt)
-        val grown = CropArt.bed(FarmRules.crop(task), FarmRules.stage(TaskRules.water(task), tappedAt), true)
+        val watered = FarmViews.bed(task, tappedAt, true)
         pending = {
             if (!wet) actions.onFieldWatered(BY_CAN, "chose")
             actions.onWatered(task, where, tappedAt)
         }
-        bed.water(FarmViews.bed(task, tappedAt, wet), grown, CropMotion.water()) { finishPending() }
+        bed.water(FarmViews.bed(task, tappedAt, wet), watered, CropMotion.water()) { finishPending() }
     }
 
     private fun buildCheckIn(task: Task): View {
@@ -488,7 +488,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
         root.findViewById<View>(R.id.bed).contentDescription = context.getString(R.string.planted_bed, FarmViews.cropName(crop))
         BedStack(root.findViewById(R.id.bed)).plant(CropArt.emptyBed(wet), CropArt.bed(crop, "seed", wet), CropMotion.plant(crop)) {}
         val due = WhenText.due(TaskRules.window(task), now, TimeZone.getDefault(), formats)
-        root.findViewById<TextView>(R.id.tvPlantedLine).text = FarmViews.plantedLine(task.title, crop, due)
+        root.findViewById<TextView>(R.id.tvPlantedLine).text =
+            FarmViews.plantedLine(task.title, crop, due, FarmViews.bloomDays(task, now, TimeZone.getDefault()))
         root.findViewById<TextView>(R.id.tvPlantedWhen)
             .setText(if (task.deferredUntil > now) R.string.planted_waits else R.string.planted_now)
         root.findViewById<Button>(R.id.btnPlantedScroll).setOnClickListener { actions.onAddTasksClosed() }

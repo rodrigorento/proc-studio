@@ -14,7 +14,7 @@ beds:
     model: art/farmkit/bed.py
     outputs: [app/src/main/res/drawable-nodpi/bed_empty_*.webp]
     status: exported
-    notes: chunky toy plank bed with tilled ridges; watered and dry; the app uses the day light
+    notes: low edging of thin planks and short posts around tilled ridges; watered and dry; the app uses the day light
 
 crops:
   radish:
@@ -95,6 +95,26 @@ animations:
     status: exported
     notes: per crop, from ripe or overripe (sunflower from bloom); plays over the watered empty bed
 
+field:
+  meadow:
+    concepts: [art/concepts/field/meadow.png, art/concepts/field/field_mockup.png]
+    model: art/farmkit/field.py
+    outputs: [app/src/main/res/drawable-nodpi/field_meadow.webp]
+    status: in_app
+    notes: the home screen's lawn for the 2x2 field, rendered with the card camera at the cards' scale; FieldArt.kt places each plot's card on it
+  plot_marked:
+    concepts: [art/concepts/field/plot_marked.png]
+    options: [art/concepts/field/options/empty_lawn.png, art/concepts/field/options/empty_daisies.png, art/concepts/field/options/empty_tufts.png, art/concepts/field/options/empty_overgrown.png, art/concepts/field/options/empty_bed_on_turf.png, art/concepts/field/options/empty_turf.png, art/concepts/field/options/empty_turf_sign.png]
+    model: art/farmkit/field.py
+    outputs: [app/src/main/res/drawable-nodpi/field_plot_marked.webp]
+    status: in_app
+    notes: an empty plot, pegs and string on the grass (a card)
+  bed_shadow:
+    model: art/farmkit/field.py
+    outputs: [app/src/main/res/drawable-nodpi/field_bed_shadow.webp]
+    status: in_app
+    notes: a bed's shadow on the grass, drawn under every bed card on the field
+
 props:
   watering_can:
     concepts: [art/concepts/animations/water_can.png]
@@ -108,7 +128,7 @@ props:
     model: art/farmkit/stills.py
     outputs: [app/src/main/res/drawable-nodpi/prop_seed_*.webp]
     status: exported
-    notes: one per crop, for planting a task
+    notes: one per crop, for planting a task; a paper bag turned three-quarters to the day sun, its crop printed big on the front
   basket:
     concepts: [art/concepts/props/basket_wicker.png]
     options: [art/concepts/props/basket_crate.png]

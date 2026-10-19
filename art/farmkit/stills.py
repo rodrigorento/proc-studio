@@ -20,7 +20,12 @@ MARGIN = 0.08  # of the frame, on each side
 COLLECTION = "Prop"
 SEEDS = ("radish", "lettuce", "carrot", "pumpkin", "sunflower")
 FRONT = Matrix.Rotation(math.pi / 4, 4, "Z")  # turns a model's -Y front to face the camera
-TURNS = {"gate": -28.0}  # degrees about the vertical, for props that read better a little side on
+# Degrees about the vertical, for props that read better a little side on. Seed packets turn their printed front
+# towards the day sun, which comes from the camera's left: facing the camera square on, they would sit in shade.
+TURNS = {"gate": -28.0, **{f"seed_{crop}": -30.0 for crop in SEEDS}}
+# Each crop's picture on its packet: (scale, height of its base), so each fills the front below the fold.
+PACKET_PICTURES = {"radish": (1.55, 0.2), "lettuce": (1.65, 0.2), "carrot": (1.3, 0.11), "pumpkin": (1.9, 0.2),
+                   "sunflower": (1.5, 0.17)}
 
 
 def build(collection: bpy.types.Collection, name: str) -> None:
@@ -68,22 +73,34 @@ def _can(collection) -> None:
 
 
 def packet(collection, crop: str) -> None:
-    """A chunky paper seed packet in the crop's colour with a folded top, and a picture of the crop on a label."""
+    """A paper seed bag in the crop's colour, as in art/concepts/props/packets_paper.png: wider at the bottom, its
+    top rolled over, and a big picture of the crop printed on its front."""
     paper = toon.material(f"packet_{crop}")
-    face = Matrix.Rotation(math.pi / 4, 4, "Z")  # boxes are built along X (width) and Y (depth); turn X to ACROSS
-    body = bed.box(f"Packet.{crop}", (0.74, 0.2, 0.92), collection, paper, bevel=0.06, segments=4)
-    body.matrix_world = face @ Matrix.Translation((0, 0, 0.46))
-    fold = bed.box(f"Packet.{crop}.Fold", (0.78, 0.23, 0.11), collection, paper, bevel=0.04, segments=3)
-    fold.matrix_world = face @ Matrix.Translation((0, 0, 0.9)) @ Matrix.Rotation(math.radians(-8), 4, "X")
-    label = bmesh.new()
-    parts.lathe(label, [(0.25, 0.03), (0.27, 0.0), (0.25, -0.03)], sides=48)
-    label_obj = parts.mesh_object(f"Packet.{crop}.Label", label, collection, "label")
-    # The label lies flat on the packet's front: its Z turned to face the camera, centred low on the packet.
-    on_front = Matrix.Translation(-DEPTH * 0.105 + UP * 0.43) @ FRONT @ Matrix.Rotation(math.pi / 2, 4, "X")
-    label_obj.matrix_world = on_front
-    toon.outline(label_obj, style.LEAF_OUTLINE_WIDTH)
-    # The crop picture: a small model pressed flat against the label, like a printed relief.
-    _emblem(collection, crop, Matrix.Translation(-DEPTH * 0.14 + UP * 0.25) @ FRONT @ Matrix.Diagonal((0.9, 0.3, 0.9, 1)))
+    face = Matrix.Rotation(math.pi / 4, 4, "Z")  # built along X (width) and Y (depth); turns X to ACROSS
+    width, depth, height = 0.74, 0.3, 0.9
+    bag = bmesh.new()
+    bmesh.ops.create_cube(bag, size=1.0)
+    for v in bag.verts:
+        top = v.co.z > 0
+        # Paper bags narrow and flatten towards the top, where they are folded shut.
+        v.co.x *= width * (0.9 if top else 1.0)
+        v.co.y *= depth * (0.6 if top else 1.0)
+        v.co.z = height if top else 0.0
+    body = parts.mesh_object(f"Packet.{crop}", bag, collection, f"packet_{crop}", smooth=False)
+    body.matrix_world = face
+    round_off = body.modifiers.new("Round", "BEVEL")
+    round_off.width, round_off.segments = 0.05, 4
+    toon.outline(body)
+    fold = bed.box(f"Packet.{crop}.Fold", (width * 0.94, depth * 0.72, 0.13), collection, paper, bevel=0.045, segments=4)
+    fold.matrix_world = face @ Matrix.Translation((0, -0.02, height - 0.02)) @ Matrix.Rotation(math.radians(-14), 4, "X")
+    # The crop, big on the front: its model pressed flat against the paper, like a printed relief. Printed ink
+    # throws no shadow on the paper.
+    size, lift = PACKET_PICTURES[crop]
+    front = -DEPTH * (depth / 2 - 0.01) + UP * lift
+    _emblem(collection, crop, Matrix.Translation(front) @ FRONT @ Matrix.Diagonal((size, 0.35, size, 1)))
+    for obj in collection.objects:
+        if obj.name.startswith("Emblem"):
+            obj.visible_shadow = False
 
 
 def _basket(collection) -> None:
@@ -114,7 +131,7 @@ def _basket(collection) -> None:
 
 
 def _gate(collection) -> None:
-    """A closed farm gate of the beds' chunky rounded planks between two posts, with a moon plaque: closed until
+    """A closed farm gate of chunky rounded toy planks between two posts, with a moon plaque: closed until
     tomorrow."""
     wood = toon.material("wood")
     face = Matrix.Rotation(math.pi / 4, 4, "Z")  # the gate's width runs left to right in the picture

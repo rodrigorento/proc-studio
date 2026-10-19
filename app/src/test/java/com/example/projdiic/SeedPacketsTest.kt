@@ -134,16 +134,40 @@ class SeedPacketsTest {
     }
 
     @Test
+    fun theFieldSaysWhenToHarvestEachCrop() {
+        fun planted(window: TimeWindow?) = TaskRules.withWhen(Task(id = "t", title = "Gym", createdAt = friday), window, friday)
+        fun line(task: Task, now: Long = friday) = FarmViews.harvestLine(task, now, utc, formats)
+
+        val gym = planted(WhenChoices.thisWeek(friday, utc))
+        assertEquals("Harvest by Sunday", line(gym))
+        assertEquals("Harvest by 15:00 tomorrow", line(planted(said("Dentist tomorrow at 3pm"))))
+        assertEquals("Harvest now", line(gym, at(18, 9)))
+        assertEquals("Gone to seed", line(gym, at(19, 9)))
+
+        val book = planted(null)
+        assertEquals("Blooms in 2 days", line(book))
+        assertEquals("Blooms tomorrow", line(book, at(17, 20)))
+        assertEquals("Blooms today", line(book, at(18, 9)))
+        assertEquals("In bloom", line(book, at(18, 11)))
+        // Watering doesn't bring it sooner: only time grows a crop.
+        assertEquals("Blooms tomorrow", line(TaskRules.water(book), at(17, 9)))
+    }
+
+    @Test
     fun thePlantedLineSaysWhatItGrowsIntoAndWhen() {
         assertEquals(
             "Call the dentist grows into lettuce, ripe by 15:00 tomorrow.",
-            FarmViews.plantedLine("Call the dentist", "lettuce", "by 15:00 tomorrow"),
+            FarmViews.plantedLine("Call the dentist", "lettuce", "by 15:00 tomorrow", bloomDays = 0),
         )
-        assertEquals("Gym grows into carrots, ripe by Sunday.", FarmViews.plantedLine("Gym", "carrot", "by Sunday"))
-        assertEquals("Rent grows into a pumpkin, ripe by 31 Oct.", FarmViews.plantedLine("Rent", "pumpkin", "by 31 Oct"))
+        assertEquals("Gym grows into carrots, ripe by Sunday.", FarmViews.plantedLine("Gym", "carrot", "by Sunday", bloomDays = 0))
+        assertEquals("Rent grows into a pumpkin, ripe by 31 Oct.", FarmViews.plantedLine("Rent", "pumpkin", "by 31 Oct", bloomDays = 0))
         assertEquals(
-            "Read a book grows into a sunflower that blooms in 3 days.",
-            FarmViews.plantedLine("Read a book", "sunflower", null),
+            "Read a book grows into a sunflower that blooms in 2 days.",
+            FarmViews.plantedLine("Read a book", "sunflower", null, bloomDays = 2),
         )
+        // Planted in the small hours, it blooms the next evening: the same day its card names.
+        val book = TaskRules.withWhen(Task(id = "t", title = "Read a book", createdAt = at(17, 3)), null, at(17, 3))
+        assertEquals(1, FarmViews.bloomDays(book, at(17, 3), utc))
+        assertEquals("Read a book grows into a sunflower that blooms tomorrow.", FarmViews.plantedLine("Read a book", "sunflower", null, bloomDays = 1))
     }
 }

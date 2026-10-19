@@ -30,6 +30,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -38,6 +41,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.example.projdiic.ui.theme.ProjDIICTheme
 import com.example.projdiic.ui.theme.Wood
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +55,7 @@ class MainActivity : ComponentActivity() {
                     containerColor = MaterialTheme.colorScheme.background
                 ) { innerPadding ->
                     // Consumed, so the planting steps' keyboard padding doesn't count the navigation bar twice.
-                    ScrollGateScreen(modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding))
+                    TaskFarmScreen(modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding))
                 }
             }
         }
@@ -59,11 +63,11 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * The home screen: the field (one plot per task), its watering, and planting new tasks; setup while something is
- * missing. Long-pressing the title shows the facilitator panel: trigger settings, check-ins and the log.
+ * The home screen: the field (one plot per task), the task the next pause shows, and planting new tasks; setup while
+ * something is missing. Long-pressing the title shows the facilitator panel: trigger settings, check-ins and the log.
  */
 @Composable
-fun ScrollGateScreen(modifier: Modifier = Modifier) {
+fun TaskFarmScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val settings = remember { GateSettings(context) }
     var hasOverlayPermission by remember { mutableStateOf(PermissionUtils.hasOverlayPermission(context)) }
@@ -76,6 +80,8 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var watered by remember { mutableStateOf(FarmCache.isWatered(context)) }
     var rainFrame by remember { mutableStateOf<Int?>(null) }
+    var pour by remember { mutableStateOf<Pour?>(null) }
+    val scope = rememberCoroutineScope()
     var showFacilitator by rememberSaveable { mutableStateOf(false) }
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
     var planting by rememberSaveable { mutableStateOf(false) }
@@ -95,12 +101,13 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
                 now = System.currentTimeMillis()
                 // A field nobody watered gets rain in the evening; a rain from a skipped watering shows here too.
                 // Not while planting covers the field: it waits until the field is back in view.
-                val rains = !planting && FarmRules.rainsOnHome(FarmCache.wateredOn(context), now)
+                // Nor while the can pours: the rain would dry the field under it first.
+                val rains = !planting && pour == null && FarmRules.rainsOnHome(FarmCache.wateredOn(context), now)
                 if (rains) {
                     FarmCache.rain(context, now, show = false)
                     EventLog.log(context, "field_watered", "by" to "rain", "where" to "app")
                 }
-                if (rains || (!planting && FarmCache.takeRainToShow(context))) {
+                if (rains || (!planting && pour == null && FarmCache.takeRainToShow(context))) {
                     try {
                         for (frame in CropMotion.rain().indices) {
                             rainFrame = frame
@@ -131,6 +138,34 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
         return task
     }
 
+    // A tap on a bed: the can pours over it and a dry field is watered. Only time grows a crop; a ripe one just says so.
+    fun water(task: Task) {
+        val at = System.currentTimeMillis()
+        if (pour != null || rainFrame != null) return
+        if (FarmRules.isReady(task, at)) {
+            val atPause = if (TaskRules.next(tasks, at)?.id == task.id) " at your next pause" else ""
+            Toast.makeText(context, "${task.title} is ready to harvest$atPause.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val wasDry = !FarmCache.isWatered(context, at)
+        if (wasDry) {
+            FarmCache.water(context, at)
+            EventLog.log(context, "field_watered", "by" to "can", "where" to "app", "how" to "tapped", "task" to task.title)
+        }
+        pour = Pour(task.id, 0, wasDry)
+        scope.launch {
+            try {
+                for (frame in CropMotion.water().indices) {
+                    pour = Pour(task.id, frame, wasDry)
+                    delay(1000L / CropMotion.FPS)
+                }
+            } finally {
+                pour = null
+                watered = FarmCache.isWatered(context)
+            }
+        }
+    }
+
     fun changeWhen(task: Task, window: TimeWindow?) {
         val changed = TaskRules.withWhen(task, window, System.currentTimeMillis())
         TaskCache.update(context, changed)
@@ -149,8 +184,9 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasMicPermission = granted
     }
-    val rainWetness = rainFrame?.let { ((it - CropMotion.WET_FROM).toFloat() / (CropMotion.WET_TO - CropMotion.WET_FROM)).coerceIn(0f, 1f) }
-    val look = FieldLook(watered && rainFrame == null, rainFrame, rainWetness ?: if (watered) 1f else 0f)
+    fun wetnessAt(frame: Int) = ((frame - CropMotion.WET_FROM).toFloat() / (CropMotion.WET_TO - CropMotion.WET_FROM)).coerceIn(0f, 1f)
+    val wetness = rainFrame?.let(::wetnessAt) ?: pour?.takeIf { it.wasDry }?.let { wetnessAt(it.frame) } ?: if (watered) 1f else 0f
+    val look = FieldLook(wetness >= 1f, rainFrame, wetness, pour)
 
     if (planting) {
         Box(modifier.fillMaxSize()) {
@@ -159,122 +195,131 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
         return
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
             Text(
-                text = "Scroll Gate",
+                text = stringResource(R.string.app_name),
                 fontSize = 30.sp,
                 fontWeight = FontWeight.ExtraBold,
                 modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
                     .semantics { heading() }
                     .pointerInput(Unit) {
                         detectTapGestures(onLongPress = { showFacilitator = !showFacilitator })
                     }
             )
-            Text(
-                text = "After a stretch of scrolling in Instagram, it pauses the feed and shows you the next thing growing in your field.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
 
-        if (snoozedUntil > now) {
-            GateClosedCard(onOpen = {
-                settings.snoozedUntil = 0L
-                snoozedUntil = 0L
-                EventLog.log(context, "app_turned_back_on", "where" to "app")
-            })
-        }
+            if (snoozedUntil > now) {
+                GateClosedCard(onOpen = {
+                    settings.snoozedUntil = 0L
+                    snoozedUntil = 0L
+                    EventLog.log(context, "app_turned_back_on", "where" to "app")
+                })
+            }
 
-        val needsSetup = !isAccessibilityRunning || !hasOverlayPermission
-        if (needsSetup) {
-            Section("Setup") {
-                SetupRow(
-                    label = "Accessibility service",
-                    detail = "Lets the app count your swipes in Instagram.",
-                    isOn = isAccessibilityRunning,
-                    action = "Turn on",
-                    onAction = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                SetupRow(
-                    label = "Display over other apps",
-                    detail = "Needed to pause Instagram.",
-                    isOn = hasOverlayPermission,
-                    action = "Allow",
-                    onAction = {
-                        context.startActivity(
-                            Intent(
-                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                Uri.parse("package:${context.packageName}")
+            val needsSetup = !isAccessibilityRunning || !hasOverlayPermission
+            if (needsSetup) {
+                Section("Setup") {
+                    SetupRow(
+                        label = "Accessibility service",
+                        detail = "Lets the app count your swipes in Instagram.",
+                        isOn = isAccessibilityRunning,
+                        action = "Turn on",
+                        onAction = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                    SetupRow(
+                        label = "Display over other apps",
+                        detail = "Needed to pause Instagram.",
+                        isOn = hasOverlayPermission,
+                        action = "Allow",
+                        onAction = {
+                            context.startActivity(
+                                Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:${context.packageName}")
+                                )
                             )
-                        )
+                        }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                    MicRow(hasMicPermission) { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Field(
+                    tasks = tasks,
+                    now = now,
+                    look = look,
+                    onWater = ::water,
+                    onPlant = { planting = true },
+                    modifier = Modifier.bleed(20.dp),
+                )
+                CropCards(tasks = tasks, now = now, look = look, onOpen = { openId = it.id })
+                if (!needsSetup && !hasMicPermission) {
+                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
+                        Column(Modifier.padding(horizontal = 16.dp)) {
+                            MicRow(hasMicPermission) { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
+                        }
+                    }
+                }
+            }
+
+            tasks.firstOrNull { it.id == openId }?.let { task ->
+                PlotSheet(
+                    task = task,
+                    now = now,
+                    look = look,
+                    onWhen = { changeWhen(task, it) },
+                    onRemove = {
+                        TaskCache.remove(context, task.id)
+                        EventLog.log(context, "task_removed", "where" to "app", "task" to task.title)
+                        tasks = TaskCache.getTasks(context)
+                        openId = null
+                    },
+                    onDismiss = { openId = null },
+                )
+            }
+
+            if (showFacilitator) {
+                FacilitatorPanel(
+                    settings = settings,
+                    swipesSincePause = swipesSincePause,
+                    logCount = logCount,
+                    onReset = {
+                        TaskCache.clear(context)
+                        FarmCache.clear(context)
+                        EventLog.clear(context)
+                        EventLog.log(context, "data_reset")
+                        tasks = TaskCache.getTasks(context)
+                        logCount = EventLog.count(context)
+                        Toast.makeText(context, "Tasks and log cleared.", Toast.LENGTH_SHORT).show()
                     }
                 )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                MicRow(hasMicPermission) { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
             }
         }
-
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionTitle("Your field · ${tasks.size} of ${TaskRules.MAX_TASKS}")
-            Field(
-                tasks = tasks,
-                now = now,
-                look = look,
-                onOpen = { openId = it.id },
-                onPlant = { planting = true },
-            )
-            WateringRow(watered = watered || rainFrame != null)
-            PlantButton(full = tasks.size >= TaskRules.MAX_TASKS, onPlant = { planting = true })
-            if (!needsSetup && !hasMicPermission) {
-                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
-                    Column(Modifier.padding(horizontal = 16.dp)) {
-                        MicRow(hasMicPermission) { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
-                    }
-                }
-            }
-        }
-
-        tasks.firstOrNull { it.id == openId }?.let { task ->
-            PlotSheet(
-                task = task,
-                now = now,
-                look = look,
-                onWhen = { changeWhen(task, it) },
-                onRemove = {
-                    TaskCache.remove(context, task.id)
-                    EventLog.log(context, "task_removed", "where" to "app", "task" to task.title)
-                    tasks = TaskCache.getTasks(context)
-                    openId = null
-                },
-                onDismiss = { openId = null },
-            )
-        }
-
-        if (showFacilitator) {
-            FacilitatorPanel(
-                settings = settings,
-                swipesSincePause = swipesSincePause,
-                logCount = logCount,
-                onReset = {
-                    TaskCache.clear(context)
-                    FarmCache.clear(context)
-                    EventLog.clear(context)
-                    EventLog.log(context, "data_reset")
-                    tasks = TaskCache.getTasks(context)
-                    logCount = EventLog.count(context)
-                    Toast.makeText(context, "Tasks and log cleared.", Toast.LENGTH_SHORT).show()
-                }
-            )
-        }
+        // Always in reach at the foot of the screen, whatever is above it.
+        PlantButton(
+            full = tasks.size >= TaskRules.MAX_TASKS,
+            onPlant = { planting = true },
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        )
     }
+}
+
+/** Widens the content by [by] on each side, over the screen's side padding. */
+private fun Modifier.bleed(by: Dp): Modifier = layout { measurable, constraints ->
+    val extra = if (constraints.hasBoundedWidth) by.roundToPx() * 2 else 0
+    val placeable = measurable.measure(constraints.copy(minWidth = constraints.minWidth + extra, maxWidth = constraints.maxWidth + extra))
+    layout(placeable.width - extra, placeable.height) { placeable.place(-extra / 2, 0) }
 }
 
 /** Shown while the app is snoozed until tomorrow: the farm gate is closed. */

@@ -17,7 +17,7 @@ camera:
 
 bed:
   reference: references/bed.png
-  shape: square raised bed of chunky wooden planks with rounded edges and corner posts, filled with tilled soil
+  shape: square bed with a low edging of thin rounded wooden planks and short corner posts, filled with tilled soil (chunkier walls until 2026-10-19)
   soil:
     wet: darker soil, smooth ridges
     dry: paler cracked soil, drooping leaves
@@ -46,9 +46,9 @@ animations:  # 12 fps, rendered at 480 px
   harvest: the plants pop out with their whole roots, one after another, and fly out of the top of the card
 
 props:
-  seed_packets: paper packets in each crop's colour, the crop on a round label
+  seed_packets: paper bags in each crop's colour with a rolled top, the crop printed big on the front
   basket: round wicker harvest basket heaped with one of each crop
-  gate: the beds' chunky planks, with a moon-and-stars plaque; paused until tomorrow
+  gate: chunky rounded toy planks, with a moon-and-stars plaque; paused until tomorrow
   mailbox: rural mailbox on a post, door open with a letter, red flag up; the neighbour check-in
   app_icon: a watered bed with one big sprout, on green (#2B5E16)
 

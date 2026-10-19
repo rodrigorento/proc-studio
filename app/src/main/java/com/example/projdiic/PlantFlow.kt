@@ -344,7 +344,7 @@ private fun SeedsStep(
 }
 
 @Composable
-private fun PacketCard(packet: SeedPackets.Packet, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+internal fun PacketCard(packet: SeedPackets.Packet, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = if (selected) LeafContainer else MaterialTheme.colorScheme.surface,
@@ -410,7 +410,7 @@ private fun PlantedStep(task: Task, look: FieldLook, hasRoom: Boolean, onAnother
             modifier = Modifier.fillMaxWidth().semantics { heading() }
         )
         Text(
-            text = FarmViews.plantedLine(task.title, crop, due),
+            text = FarmViews.plantedLine(task.title, crop, due, FarmViews.bloomDays(task, System.currentTimeMillis(), TimeZone.getDefault())),
             fontSize = 17.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

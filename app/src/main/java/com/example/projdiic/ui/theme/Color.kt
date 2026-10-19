@@ -2,7 +2,7 @@ package com.example.projdiic.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Scroll Gate's night garden: a dark, calm palette where the rendered beds glow, one leaf-green accent, warm wood
+// Task Farm's night garden: a dark, calm palette where the rendered beds glow, one leaf-green accent, warm wood
 // for section headers, and no alarm colours. The same values as res/values/colors.xml, which the overlays use.
 val Ink = Color(0xFF0B0B0D)
 val Surface1 = Color(0xFF18191D)
@@ -14,5 +14,5 @@ val Faint = Color(0xFF8A8C92)
 val Leaf = Color(0xFF8FD06A)
 val LeafContainer = Color(0xFF1D3319)
 val Wood = Color(0xFFD79A5E)
-val Water = Color(0xFF6DBBFF)
 val Clay = Color(0xFFE8A06A)
+val Danger = Color(0xFFD9363E)  // removing something for good; white text on it is 4.6:1

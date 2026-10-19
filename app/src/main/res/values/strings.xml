@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Scroll Gate</string>
+    <string name="app_name">Task Farm</string>
     <string name="accessibility_description">Counts your swipes in Instagram and, after a stretch of scrolling, pauses it to show the next thing growing in your field. It notices which app is open; it does not save what is on screen.</string>
 
     <!-- Gate: one crop and its ways out -->
@@ -27,7 +27,7 @@
     <string name="day_yesterday">yesterday</string>
 
     <string name="toast_done">Harvested. It\'s off your field.</string>
-    <string name="toast_watered">Watered. It grew a stage.</string>
+    <string name="toast_watered">Watered.</string>
     <string name="back">Back</string>
 
     <!-- Trusted-person check-in -->

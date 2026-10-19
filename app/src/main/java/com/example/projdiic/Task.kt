@@ -20,7 +20,7 @@ data class Task(
     val whenKey: String = "",
     /** When its crop was planted: when its time was last set, or 0 to count from [createdAt]. See [FarmRules]. */
     val plantedAt: Long = 0L,
-    /** Times it was watered at a pause since it was planted: each grows its crop a stage. See [FarmRules.stage]. */
+    /** Times it was watered at a pause since it was planted. Watering doesn't grow it: see [FarmRules.stage]. */
     val waterings: Int = 0,
 ) {
     companion object {
@@ -88,8 +88,8 @@ object TaskRules {
         task.copy(deferredUntil = now + SNOOZE_MS, deferredBy = Task.BY_SNOOZE, snoozeUsed = true)
 
     /**
-     * Watered at a pause: the crop grows a stage (some of it got done). That isn't walking past it, so the passes
-     * start again; like a pass, it uses up a snooze that brought the task back, so it doesn't keep jumping the queue.
+     * Watered at a pause: tended, though only time grows the crop. That isn't walking past it, so the passes start
+     * again; like a pass, it uses up a snooze that brought the task back, so it doesn't keep jumping the queue.
      */
     fun water(task: Task): Task =
         task.copy(waterings = task.waterings + 1, passes = 0, deferredUntil = 0L, deferredBy = "")

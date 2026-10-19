@@ -51,8 +51,8 @@ SEED_FROM, SEED_TO = 8, 13  # the frames over which the app fades the empty card
 # the top left.
 PACKET_PATH = [(0, 1.25, 0.25, 1.5, 0), (3, 0.4, 0.14, 0.86, 20), (5, 0.34, 0.1, 0.84, 150),
                (10, -0.16, -0.04, 0.82, 160), (12, -0.24, -0.08, 0.92, 30), (15, -0.75, -0.2, 1.8, 0)]
-PACKET_SCALE = 0.48  # of the packet prop, whose body is 0.92 m tall
-PACKET_MIDDLE = Vector((0.0, 0.0, 0.46))  # in the prop: the middle of the packet, which it tips about
+PACKET_SCALE = 0.48  # of the packet prop, whose bag is 0.9 m tall
+PACKET_MIDDLE = Vector((0.0, 0.0, 0.45))  # in the prop: the middle of the packet, which it tips about
 PACKET_MOUTH = Vector((0.0, 0.0, 0.95))  # in the prop: the middle of its top, where the seeds come out
 POUR_FROM, POUR_TO = 5, 10  # the frames seeds leave the packet
 SEED_COUNT = 16  # seeds poured into a bed, shared out over its spots

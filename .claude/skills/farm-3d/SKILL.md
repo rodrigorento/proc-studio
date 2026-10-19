@@ -1,6 +1,6 @@
 ---
 name: farm-3d
-description: Make or change Scroll Gate's farm art, the pre-rendered toon beds, crops, animations, props and app icon, through the art/ pipeline (concept images, Blender models in art/farmkit, renders, Android export, review). Use when adding a crop, stage, light, animation or prop, retouching one, or re-rendering and exporting the art.
+description: Make or change Task Farm's farm art, the pre-rendered toon beds, crops, animations, props, home field and app icon, through the art/ pipeline (concept images, Blender models in art/farmkit, renders, Android export, review). Use when adding a crop, stage, light, animation or prop, retouching one, or re-rendering and exporting the art.
 compatibility: Needs Blender 5.2 with Blender Lab's MCP add-on and the `blender` MCP server, Python 3 with Pillow and PyYAML, and for concept images the imagegen skill with OPENAI_API_KEY.
 ---
 
@@ -43,7 +43,7 @@ status, and `art/farmkit/style.py` holds the numbers (palette, bed, camera, ligh
    - materials by palette name (`toon.material("leaf")`); a new colour goes in `style.PALETTE` and, for crops, in
      `style.TINT_STRENGTH` so it keeps its colour at night.
    Register it in `farmkit/__init__.py` (`_MODULES`) and `farmkit/render.py` (`CROPS`). Props go in
-   `farmkit/stills.py`; animation timing in `farmkit/anim.py`.
+   `farmkit/stills.py`, the home field in `farmkit/field.py`; animation timing in `farmkit/anim.py`.
 3. **Look.** Render a few states in day light into the scratchpad and compare with the concept; then
    `python3 art/review.py stages <crop>` and `lights <crop>` on the full renders. `farmkit.showroom` lays every crop
    and prop out in one scene (`build()`, `render(path)`, `save("art/blend/showroom.blend")`).
@@ -52,12 +52,13 @@ status, and `art/farmkit/style.py` holds the numbers (palette, bed, camera, ligh
    - animations: `anim.render_water("<repo>/art/build/anim")`, `anim.render_plant(..., crops=[...])` and
      `anim.render_harvest(..., crops=[...])`
    - props and icon: `stills.render_all("<repo>/art/build/props")`
+   - the home field (lawn, marked-out plot, bed shadow, field.json): `field.render_all("<repo>/art/build/field")`
 5. **Export.** `python3 -I art/export_android.py`. It checks every image the app can ask for exists, keeps harvest
    frames to what differs from the empty bed, writes the launcher icon at every density, and prints the size
    against the budget.
 6. **Check.**
    - `python3 art/review.py check`: `art/assets.yaml` matches the files. Add or update the asset's entry.
-   - `bash gradlew testDebugUnitTest installDebug`, then open the app, long-press the "Scroll Gate" title and use
+   - `bash gradlew testDebugUnitTest installDebug`, then open the app, long-press the "Task Farm" title and use
      the farm art preview (watered, Water / Rain / Harvest / Plant) on a phone or emulator.
    - `git status`: only the asset you changed should differ. A single unrelated WebP changing is render noise:
      `git checkout` it.

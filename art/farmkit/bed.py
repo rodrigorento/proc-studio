@@ -1,4 +1,4 @@
-"""The raised bed: chunky planks with rounded edges, corner posts, rivets, and tilled soil in ridges."""
+"""The bed: a low edging of thin rounded planks with short corner posts and rivets, round tilled soil in ridges."""
 import math
 import random
 

@@ -92,7 +92,7 @@ class TaskRulesTest {
     }
 
     @Test
-    fun wateringGrowsTheCropAndIsNotWalkingPastIt() {
+    fun wateringIsNotWalkingPastIt() {
         val back = task("a", 1, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE, passes = 2)
 
         val watered = TaskRules.water(TaskRules.water(back))

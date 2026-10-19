@@ -38,6 +38,10 @@ PALETTE = {
     "cloud": ("#FFFFFF", "#E4E9F6", "#A3ADD3"),
     "sparkle": ("#FFFBD6", "#FFF29A", "#FFE45C"),  # nearly flat: sparkles glow rather than shade
     "seed": ("#FBEBC4", "#E6C68A", "#A9824A"),
+    "grass": ("#82B83A", "#6CA22E", "#457A1E"),  # the home field's lawn
+    "grass_mark": ("#6FAA2E", "#5A9226", "#3C6E18"),  # tufts and the scalloped edge
+    "grass_patch": ("#76AE33", "#66992B", "#457A1E"),  # darker patches on the lawn
+    "grass_tuft": ("#B2D84E", "#86B834", "#4F8420"),  # tufts: light tips on the lit side
     # Props
     "packet_radish": ("#F9E6CB", "#EDCFA8", "#B8956A"),
     "packet_lettuce": ("#C3E58A", "#A2CF5E", "#5E8E2A"),
@@ -72,16 +76,18 @@ TO_CAMERA = (0.5774, -0.5774, 0.5774)
 SHADE_BELOW = 0.22
 LIT_ABOVE = 0.62
 
+# A low edging of two thin planks with short posts (picked 2026-10-19 over the first, chunkier walls: planks 0.11 m
+# thick and 0.155 high, posts 0.19 m and 0.37 high).
 BED = {
     "size": 1.0,  # outer width, metres
-    "plank_height": 0.155,
-    "plank_depth": 0.11,
-    "plank_round": 0.05,
-    "post_size": 0.19,
-    "post_height": 0.37,
-    "post_round": 0.08,
-    "post_out": 0.035,  # how far the posts stick out past the planks
-    "soil_top": 0.2,  # soil surface height at the bottom of the furrows
+    "plank_height": 0.105,
+    "plank_depth": 0.05,
+    "plank_round": 0.022,
+    "post_size": 0.1,
+    "post_height": 0.25,
+    "post_round": 0.035,
+    "post_out": 0.015,  # how far the posts stick out past the planks
+    "soil_top": 0.13,  # soil surface height at the bottom of the furrows
     "ridges": 3,
     "ridge_height": 0.085,
 }

@@ -13,13 +13,16 @@ object FarmRules {
     const val PUMPKIN = "pumpkin"
     const val SUNFLOWER = "sunflower"
 
-    /** How long a sunflower (Anytime, no due time) takes to bloom. */
-    const val SUNFLOWER_BLOOMS_AFTER_MS = 3 * 24 * 3_600_000L
+    /** The span a sunflower (Anytime, no due time) grows over, as planting to the due time is for the other crops. */
+    const val SUNFLOWER_GROWS_OVER_MS = 3 * 24 * 3_600_000L
 
     /** Share of the way from planting to the due time where each stage starts. */
     private const val SPROUT_FROM = 0.1
     private const val GROWING_FROM = 0.3
     private const val RIPE_FROM = 0.6
+
+    /** How long after planting a sunflower blooms: when it is as grown as a ripe crop. */
+    val SUNFLOWER_BLOOMS_AFTER_MS: Long = (SUNFLOWER_GROWS_OVER_MS * RIPE_FROM).toLong()
 
     /** From this hour, a field nobody watered today gets rain on the home screen. */
     const val EVENING_RAIN_HOUR = 18
@@ -49,12 +52,12 @@ object FarmRules {
 
     /**
      * How grown the task's crop is at [now]: seed, sprout, growing, ripe, overripe once past due; a sunflower blooms.
-     * It grows with time, and each watering takes it a stage further, up to ripe.
+     * Only time grows it: watering just keeps the field from drying out.
      */
     fun stage(task: Task, now: Long): String {
         val sunflower = task.dueAt <= 0L
         val planted = plantedAt(task)
-        val end = if (sunflower) planted + SUNFLOWER_BLOOMS_AFTER_MS else task.dueAt
+        val end = if (sunflower) planted + SUNFLOWER_GROWS_OVER_MS else task.dueAt
         if (now > end) return if (sunflower) "bloom" else "overripe"
         val progress = if (end > planted) (now - planted).toDouble() / (end - planted) else 1.0
         val grown = when {
@@ -62,12 +65,15 @@ object FarmRules {
             progress < GROWING_FROM -> 1
             progress < RIPE_FROM -> 2
             else -> 3
-        } + task.waterings
-        return listOf("seed", "sprout", "growing", if (sunflower) "bloom" else "ripe")[minOf(grown, 3)]
+        }
+        return listOf("seed", "sprout", "growing", if (sunflower) "bloom" else "ripe")[grown]
     }
 
     /** Ripe (or gone to seed, or in bloom): it can be harvested. Until then the pause offers to water it. */
     fun isReady(task: Task, now: Long): Boolean = stage(task, now) in setOf("ripe", "overripe", "bloom")
+
+    /** When an Anytime task's sunflower blooms. */
+    fun bloomsAt(task: Task): Long = plantedAt(task) + SUNFLOWER_BLOOMS_AFTER_MS
 
     /** When the crop was planted: changing the task's time replants it. Tasks saved without that grow from when they were added. */
     private fun plantedAt(task: Task): Long = task.plantedAt.takeIf { it > 0L } ?: task.createdAt

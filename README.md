@@ -1,8 +1,8 @@
-# Instagram Reels Blocker (ProjDIIC) · Scroll Gate
+# Instagram Reels Blocker (ProjDIIC) · Task Farm
 
 An Android app that pauses Instagram after a stretch of scrolling and shows **only your next pending task**, as a crop growing in a small field. To keep scrolling you either tend it, with **Harvest it** once its crop is ripe or **Water it** before that, or take **5 more minutes** (once). It is the working prototype for Session 3 of the study.
 
-The screens follow the Scroll Gate design (Gate A: a calm sheet over the dimmed feed). The gate has no close button; leaving Instagram hides it, and it comes back when Instagram does.
+The pause screens follow Gate A of the original Scroll Gate design (a calm sheet over the dimmed feed); the app is now called Task Farm. The gate has no close button; leaving Instagram hides it, and it comes back when Instagram does.
 
 ## Features
 
@@ -11,13 +11,13 @@ The screens follow the Scroll Gate design (Gate A: a calm sheet over the dimmed 
 - **Default trigger:** 3 swipes (change it in the facilitator panel).
 - **Close the gate until tomorrow:** a button on the ask-for-tasks screen turns every gate and question off until midnight. The app's main screen then shows "Gate closed until tomorrow" with **Open it**. Both are logged (`app_snoozed`, `app_turned_back_on`).
 - **Harvest it:** shown once the crop is ripe (or gone to seed, or a sunflower in bloom). The task is done: the crop flies out of the bed, then the feed opens. Logged as a `harvest` choice and `task_done`.
-- **Water it:** shown while the crop isn't ripe. The can waters the bed and the crop grows a stage (some of the task got done), then the feed opens. Logged as a `water` choice. A small **Already done? Harvest it** link under the buttons still finishes it early. Watering doesn't count as walking past the task. The check-in screen offers the same.
+- **Water it:** shown while the crop isn't ripe. The can waters the bed, then the feed opens; crops grow with time only, so watering just keeps the field from drying out. Logged as a `water` choice. A small **Already done? Harvest it** link under the buttons still finishes it early. Watering doesn't count as walking past the task. The check-in screen offers the same.
 - **5 more minutes:** once per task. The next gate for that task doesn't offer it.
 - **Rotating wording:** the line above the task changes every gate so it doesn't go stale.
 - **Trusted-person check-in (Wizard of Oz):** off by default. When the participant switches it on, the third gate for a task that was passed twice asks whether their trusted person may check in. The app logs `check_in` and a teammate sends the real message by hand.
-- **The field:** up to four tasks, one per plot. Each is planted in three steps, on the main screen or on the pause screen when nothing is due: name it (by voice or typing), pick its seed packet (when it's for), and watch it go in. The crop grows from planting to its due time, a stage faster for each Water it.
-- **When a task is for:** each task has a time pill. Tap it for fixed choices: Anytime, Today, Tonight, Tomorrow, This week, This month. Times said or typed with the task are read on the phone, with no network call: "dentist tomorrow at 3pm", "gym on Monday", "return the book by Wednesday", "next week", "in 2 hours", "on the 25th". The words are taken out of the title, and the chip they matched is pre-selected. A task only reaches the gate once its time has started; the one due soonest comes first. English only for now (`WhenParser`).
-- **Facilitator panel:** hidden on the main screen; **long-press the "Scroll Gate" title** to show it. Set N, T and the cooldown, switch check-ins on, trigger a gate on the next swipe, export the log, reset the data.
+- **The field:** up to four tasks, one per plot. Each is planted in three steps, on the main screen or on the pause screen when nothing is due: name it (by voice or typing), pick its seed packet (when it's for), and watch it go in. The crop grows from planting to its due time. The main screen shows the field as one lawn: each task's bed, and empty plots marked out with pegs and string. Tapping a bed waters it (the can pours; a dry field gets watered, logged as `field_watered` with `how: tapped`; a ripe crop just says it is ready to harvest at the next pause), and tapping an empty plot plants. Under the field, a card for every crop (the next one first, marked **Next up**) says when to harvest it and opens it. **Plant a task** stays at the foot of the screen.
+- **When a task is for:** each task has a time. On the main screen, tap its card, then **Change crop**, for fixed choices: Anytime, Today, Tonight, Tomorrow, This week, This month. Times said or typed with the task are read on the phone, with no network call: "dentist tomorrow at 3pm", "gym on Monday", "return the book by Wednesday", "next week", "in 2 hours", "on the 25th". The words are taken out of the title, and the chip they matched is pre-selected. A task only reaches the gate once its time has started; the one due soonest comes first. English only for now (`WhenParser`).
+- **Facilitator panel:** hidden on the main screen; **long-press the "Task Farm" title** to show it. Set N, T and the cooldown, switch check-ins on, trigger a gate on the next swipe, export the log, reset the data.
 - **Interaction log:** every event (swipe, gate shown, choice, time on the gate, task done, leaving Instagram) is kept on the phone with a timestamp and exported as JSON or CSV through the share sheet.
 - **Local only:** tasks, settings and the log stay on the device; no backend.
 
@@ -64,7 +64,7 @@ Accessibility access is powerful. Enable it only on a device where you understan
 
 ## Running Session 3
 
-1. Long-press the **Scroll Gate** title to open the facilitator panel. Lower **N** (for example to 5) so the gate fires at least twice in ten minutes.
+1. Long-press the **Task Farm** title to open the facilitator panel. Lower **N** (for example to 5) so the gate fires at least twice in ten minutes.
 2. Plant the participant's real tasks with them (up to four; **Plant a task** takes them by typing or by voice).
 3. Switch **Trusted-person check-in** on only if they agree, and enter the person's first name.
 4. Use **Pause at the next swipe** to show the gate on demand.
@@ -99,7 +99,7 @@ app/src/main/
 │   ├── BootReceiver.kt                        # Currently a no-op receiver class
 │   ├── FarmHome.kt / PlantFlow.kt             # The field on the main screen, and planting a task
 │   ├── FarmRules.kt / FarmCache.kt            # Crops and growth, and the field's watering
-│   ├── CropArt.kt / CropMotion.kt             # Farm images and animation frames (generated from art/)
+│   ├── CropArt.kt / CropMotion.kt / FieldArt.kt # Farm images, animation frames and the field's layout (generated from art/)
 │   └── FarmArtPreview.kt                      # Facilitator preview of the farm art
 └── res/
     ├── drawable-nodpi/                        # Rendered farm cards, animation frames and props (generated)
