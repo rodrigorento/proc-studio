@@ -26,6 +26,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.ViewCompat
@@ -63,6 +64,12 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
         /** "Snooze until tomorrow" on the ask-for-tasks screen: no gates until midnight. */
         fun onSnoozeAppUntilTomorrow()
+
+        /**
+         * The thirsty field was watered on the gate: [by] the can or rain; [how] "chose" (a button) or "left" (the
+         * gate went away first, so the rain still has to be shown).
+         */
+        fun onFieldWatered(by: String, how: String)
     }
 
     /** The line above the task. The service picks a new one for every gate. */
@@ -77,6 +84,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
     private var view: View? = null
     private var shown: GateScreen? = null
+
+    /** A gate is up on a thirsty field that nobody has watered yet; if it goes away like that, it rains. */
+    private var thirstyGate = false
     private var recognizer: SpeechRecognizer? = null
     private var focusRequest: AudioFocusRequest? = null
     private val focusListener = AudioManager.OnAudioFocusChangeListener { }
@@ -92,6 +102,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
             Log.e(TAG, "Overlay permission not granted!")
             return false
         }
+        leaveThirstyField()
         val next = when (screen) {
             is GateScreen.Gate -> task?.let(::buildGate)
             is GateScreen.PickTime -> task?.let(::buildPickTime)
@@ -119,6 +130,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     }
 
     fun hide() {
+        leaveThirstyField()
         removeView()
         shown = null
         releaseAudioFocus()
@@ -136,6 +148,13 @@ class GateOverlay(service: Context, private val actions: Actions) {
         view = null
     }
 
+    /** The gate on a thirsty field is going away before anyone watered it: it rains instead. */
+    private fun leaveThirstyField() {
+        if (!thirstyGate) return
+        thirstyGate = false
+        actions.onFieldWatered(BY_RAIN, "left")
+    }
+
     /** The system Back gesture: a step back where the screen has one; the gate itself only closes through its choices. */
     private fun backActionFor(screen: GateScreen, task: Task?): (() -> Unit)? = when {
         screen == GateScreen.AddTasks -> actions::onAddTasksClosed
@@ -146,6 +165,13 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
     private fun buildGate(task: Task): View {
         val root = inflater.inflate(R.layout.overlay_gate, null)
+        val now = System.currentTimeMillis()
+        val light = fieldLight(now)
+        val bed = BedStack(root.findViewById(R.id.bed))
+        val dry = FarmViews.bed(task, now, wet = false, light)
+        val wet = FarmViews.bed(task, now, wet = true, light)
+        val waterBlock = root.findViewById<View>(R.id.waterBlock)
+        val taskBlock = root.findViewById<View>(R.id.taskBlock)
         root.findViewById<TextView>(R.id.tvEyebrow).text = eyebrow
         root.findViewById<TextView>(R.id.tvTaskTitle).text = task.title
         root.findViewById<TextView>(R.id.tvTaskMeta).text = metaFor(task)
@@ -156,13 +182,48 @@ class GateOverlay(service: Context, private val actions: Actions) {
             setOnClickListener { actions.onSnooze(task) }
         }
         root.findViewById<TextView>(R.id.tvSnoozeUsed).isVisible = task.snoozeUsed
+
+        // The first pause of the day: water the field (or let it rain), then the task.
+        if (!FarmCache.isWatered(context, now)) {
+            thirstyGate = true
+            bed.show(dry)
+            waterBlock.isVisible = true
+            taskBlock.isVisible = false
+            val water = root.findViewById<Button>(R.id.btnWater)
+            val rain = root.findViewById<Button>(R.id.btnLetItRain)
+            fun pour(by: String, frames: List<Int>) {
+                thirstyGate = false
+                water.isEnabled = false
+                rain.isEnabled = false
+                actions.onFieldWatered(by, "chose")
+                bed.water(dry, wet, frames) {
+                    waterBlock.isVisible = false
+                    taskBlock.isVisible = true
+                }
+            }
+            water.setOnClickListener { pour(BY_CAN, CropMotion.water(light)) }
+            rain.setOnClickListener { pour(BY_RAIN, CropMotion.rain(light)) }
+        } else if (FarmCache.takeRainToShow(context)) {
+            bed.water(dry, wet, CropMotion.rain(light)) {}
+        } else {
+            bed.show(wet)
+        }
+        root.findViewById<View>(R.id.bed).contentDescription = FarmViews.describe(task, now)
         fitSystemBars(root, bottom = root.findViewById(R.id.sheet))
         return root
     }
 
     private fun buildPickTime(task: Task): View {
         val root = inflater.inflate(R.layout.overlay_pick_time, null)
-        root.findViewById<TextView>(R.id.tvPickTask).text = task.title
+        root.findViewById<TextView>(R.id.tvPickTask).apply {
+            text = task.title
+            val now = System.currentTimeMillis()
+            val size = (36 * resources.displayMetrics.density).toInt()
+            val crop = context.getDrawable(FarmViews.bed(task, now, FarmCache.isWatered(context, now), fieldLight(now)))
+            crop?.setBounds(0, 0, size, size)
+            setCompoundDrawablesRelative(crop, null, null, null)
+            compoundDrawablePadding = (8 * resources.displayMetrics.density).toInt()
+        }
         root.findViewById<Button>(R.id.btnPickBack).setOnClickListener {
             actions.onBackToChoices(task, GateScreen.PickTime(task.id))
         }
@@ -190,8 +251,27 @@ class GateOverlay(service: Context, private val actions: Actions) {
         root.findViewById<Button>(R.id.btnBackToChoices).setOnClickListener {
             actions.onBackToChoices(task, GateScreen.DoingNow(task.id, startedAt))
         }
-        root.findViewById<Button>(R.id.btnDone).setOnClickListener { actions.onDone(task, startedAt) }
-        root.findViewById<Button>(R.id.btnCloseInstagram).setOnClickListener { actions.onCloseInstagram(task) }
+        val now = System.currentTimeMillis()
+        val light = fieldLight(now)
+        val bed = BedStack(root.findViewById(R.id.bed))
+        bed.show(FarmViews.bed(task, now, FarmCache.isWatered(context, now), light))
+        root.findViewById<View>(R.id.bed).contentDescription = FarmViews.describe(task, now)
+        val done = root.findViewById<Button>(R.id.btnDone)
+        val back = root.findViewById<Button>(R.id.btnBackToChoices)
+        val close = root.findViewById<Button>(R.id.btnCloseInstagram)
+        done.setOnClickListener {
+            // Done harvests the crop; one that isn't ready ripens first.
+            listOf(done, back, close).forEach { it.isEnabled = false }
+            val crop = FarmRules.crop(task)
+            val stage = CropMotion.harvestedAs(crop, FarmRules.stage(task, System.currentTimeMillis()))
+            val harvest = {
+                bed.harvest(CropArt.emptyBed(true, light), CropMotion.harvest(crop, stage, light)) {
+                    actions.onDone(task, startedAt)
+                }
+            }
+            bed.fadeTo(CropArt.bed(crop, stage, true, light), RIPEN_MS) { harvest() }
+        }
+        close.setOnClickListener { actions.onCloseInstagram(task) }
         fitSystemBars(root, bottom = root)
         return root
     }
@@ -322,8 +402,10 @@ class GateOverlay(service: Context, private val actions: Actions) {
         onRemove: () -> Unit,
     ): View {
         val row = inflater.inflate(R.layout.item_task_row, parent, false)
-        row.findViewById<View>(R.id.dot)
-            .setBackgroundResource(if (isNext) R.drawable.bg_dot_accent else R.drawable.bg_dot_muted)
+        row.findViewById<ImageView>(R.id.ivRowBed).apply {
+            setImageResource(FarmViews.bed(task, now, FarmCache.isWatered(context, now), fieldLight(now)))
+            alpha = if (isNext) 1f else 0.75f
+        }
         row.findViewById<TextView>(R.id.tvRowTitle).text = task.title
         row.findViewById<TextView>(R.id.tvRowWhen).apply {
             text = pillText(task, now)
@@ -547,8 +629,14 @@ class GateOverlay(service: Context, private val actions: Actions) {
         holdsAudioFocus = false
     }
 
-    private companion object {
-        const val TAG = "ReelsBlocker"
-        const val BLUR_RADIUS = 40
+    companion object {
+        private const val TAG = "ReelsBlocker"
+        private const val BLUR_RADIUS = 40
+
+        /** How long a crop that isn't ready takes to ripen before its harvest. */
+        private const val RIPEN_MS = 300L
+
+        const val BY_CAN = "can"
+        const val BY_RAIN = "rain"
     }
 }

@@ -10,8 +10,8 @@
         <item>Still on your list</item>
         <item>One thing first</item>
     </string-array>
-    <string name="gate_meta_added">From your list · added %1$s</string>
-    <string name="gate_meta_said">From your list · said out loud %1$s</string>
+    <string name="gate_meta_added">From your field · planted %1$s</string>
+    <string name="gate_meta_said">From your field · said out loud %1$s</string>
     <string name="gate_meta_picked">You picked %1$s for this</string>
     <string name="gate_meta_snoozed">Back after your snooze</string>
     <string name="gate_do_it_now">Do it now</string>
@@ -19,6 +19,10 @@
     <string name="gate_snooze">Snooze 5 min · once</string>
     <string name="gate_snooze_used">You\'ve used your snooze for this one.</string>
     <string name="gate_hint">Pick one to get back to the feed.</string>
+    <string name="gate_water_title">Your field is thirsty</string>
+    <string name="gate_water_body">It dried out overnight. Water it, then see what\'s next.</string>
+    <string name="gate_water">Water the field</string>
+    <string name="gate_let_it_rain">Let it rain instead</string>
     <string name="day_today">today</string>
     <string name="day_yesterday">yesterday</string>
 
@@ -42,8 +46,8 @@
     <string name="doing_started">Started %1$s</string>
     <string name="doing_done">Done</string>
     <string name="doing_close_instagram">Close Instagram for now</string>
-    <string name="doing_footnote">Done takes it off your list and opens the feed again.</string>
-    <string name="toast_done">Done. It\'s off your list.</string>
+    <string name="doing_footnote">Done harvests it from your field and opens the feed again.</string>
+    <string name="toast_done">Harvested. It\'s off your field.</string>
 
     <!-- Trusted-person check-in -->
     <string name="check_in_title">This one keeps coming back</string>
@@ -60,20 +64,20 @@
     <!-- Add tasks -->
     <string name="add_title">What do you keep putting off?</string>
     <string name="add_subtitle">Say one thing at a time, with a time if it has one: “dentist tomorrow at 3”. You\'ll only ever see the next one.</string>
-    <string name="add_title_nothing_due">Nothing on your list is for now</string>
+    <string name="add_title_nothing_due">Nothing in your field is for now</string>
     <string name="add_subtitle_nothing_due">Anything else you keep putting off? Or tap a task\'s time to bring it forward.</string>
     <string name="add_mic">Say a task</string>
     <string name="add_mic_stop">Stop listening</string>
     <string name="add_mic_idle">Tap and say one thing</string>
     <string name="add_listening">Listening…</string>
     <string name="add_voice_retry">Didn\'t catch that. Try again, or type it.</string>
-    <string name="add_voice_added">Added. Say another, or start scrolling.</string>
+    <string name="add_voice_added">Planted. Say another, or start scrolling.</string>
     <string name="add_transcript">“%1$s”</string>
-    <string name="add_list_title">Your list · %1$d of %2$d</string>
+    <string name="add_list_title">Your field · %1$d of %2$d</string>
     <string name="add_type_label">Or type it</string>
     <string name="add_type_hint">Type a task</string>
-    <string name="add_button">Add</string>
-    <string name="add_list_full">Your list is full. Finish one to add another.</string>
+    <string name="add_button">Plant</string>
+    <string name="add_list_full">Your field is full. Finish one to plant another.</string>
     <string name="add_start_scrolling">Start scrolling</string>
     <string name="add_not_now">Not now</string>
     <string name="add_snooze_app">Snooze until tomorrow</string>

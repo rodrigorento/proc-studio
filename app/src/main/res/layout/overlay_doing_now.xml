@@ -61,8 +61,16 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:gravity="center_vertical"
+        android:gravity="center"
         android:orientation="vertical">
+
+        <!-- The crop being worked on; Done harvests it. -->
+        <include
+            android:id="@+id/bed"
+            layout="@layout/view_bed"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -80,16 +88,18 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:gravity="center"
             android:accessibilityHeading="true"
             android:ellipsize="end"
-            android:maxLines="5"
-            android:textSize="36sp" />
+            android:maxLines="4"
+            android:textSize="32sp" />
 
         <TextView
             style="@style/ScrollGate.Body"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:gravity="center"
             android:text="@string/doing_body" />
 
         <LinearLayout

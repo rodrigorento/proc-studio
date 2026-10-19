@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Gate A: a calm sheet over the dimmed feed. One task, three ways out, no close button. -->
+<!-- Gate A: a calm sheet over the dimmed feed. The task's crop, then one task and three ways out, no close
+     button. On the first pause of the day the field is thirsty: it is watered (or rained on) before the task. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -11,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="top|center_horizontal"
         android:layout_marginTop="28dp"
-        android:background="@drawable/bg_pill"
+        android:background="@drawable/bg_pill_leaf"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="14dp"
@@ -24,7 +25,7 @@
             android:layout_height="14dp"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_pause"
-            android:tint="@color/sg_text_soft" />
+            android:tint="@color/sg_accent" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -32,7 +33,7 @@
             android:layout_marginStart="8dp"
             android:fontFamily="@font/nunito_semibold"
             android:text="@string/gate_feed_paused"
-            android:textColor="@color/sg_text_soft"
+            android:textColor="@color/sg_accent"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -44,13 +45,14 @@
         android:background="@drawable/bg_sheet"
         android:orientation="vertical"
         android:paddingStart="24dp"
-        android:paddingTop="30dp"
+        android:paddingTop="22dp"
         android:paddingEnd="24dp"
         android:paddingBottom="28dp">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -69,13 +71,67 @@
                 android:layout_marginStart="8dp" />
         </LinearLayout>
 
+        <include
+            android:id="@+id/bed"
+            layout="@layout/view_bed"
+            android:layout_width="210dp"
+            android:layout_height="210dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="2dp" />
+
+        <!-- The first pause of the day: the field is thirsty. -->
+        <LinearLayout
+            android:id="@+id/waterBlock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/ScrollGate.Title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityHeading="true"
+                android:gravity="center"
+                android:text="@string/gate_water_title"
+                android:textSize="26sp" />
+
+            <TextView
+                style="@style/ScrollGate.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="@string/gate_water_body"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/btnWater"
+                style="@style/ScrollGate.Button.Primary"
+                android:layout_marginTop="22dp"
+                android:text="@string/gate_water" />
+
+            <Button
+                android:id="@+id/btnLetItRain"
+                style="@style/ScrollGate.Button.Text"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="6dp"
+                android:text="@string/gate_let_it_rain" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/taskBlock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
         <TextView
             android:id="@+id/tvTaskTitle"
             style="@style/ScrollGate.Title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
             android:accessibilityHeading="true"
+            android:gravity="center"
             android:ellipsize="end"
             android:maxLines="4" />
 
@@ -83,7 +139,8 @@
             android:id="@+id/tvTaskMeta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
             android:textColor="@color/sg_muted"
             android:textSize="15sp" />
 
@@ -123,5 +180,6 @@
             android:layout_marginTop="18dp"
             android:gravity="center"
             android:text="@string/gate_hint" />
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

@@ -361,13 +361,15 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             "task" to task.title,
             "when" to task.whenKey.ifEmpty { "anytime" },
             "due_ms" to task.dueAt.takeIf { it > 0 },
+            "crop" to FarmRules.crop(task),
         )
         return task
     }
 
     override fun onWhenChanged(task: Task, window: TimeWindow?) {
         val current = latest(task) ?: return
-        TaskCache.update(this, TaskRules.withWhen(current, window, System.currentTimeMillis()))
+        val changed = TaskRules.withWhen(current, window, System.currentTimeMillis())
+        TaskCache.update(this, changed)
         EventLog.log(
             this, "when_changed",
             "where" to "overlay",
@@ -375,6 +377,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             "from" to current.whenKey.ifEmpty { "anytime" },
             "to" to (window?.key ?: "anytime"),
             "due_ms" to window?.end,
+            "crop" to FarmRules.crop(changed),
         )
     }
 
@@ -389,6 +392,16 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         EventLog.log(this, "app_snoozed", "until_ms" to until, "tasks" to TaskCache.getTasks(this).size)
         Toast.makeText(this, R.string.toast_app_snoozed, Toast.LENGTH_LONG).show()
         backToFeed(withCooldown = false)
+    }
+
+    override fun onFieldWatered(by: String, how: String) {
+        if (by == GateOverlay.BY_CAN) {
+            FarmCache.water(this)
+        } else {
+            // Rain the player chose has played already; rain from leaving the gate shows the next time the field does.
+            FarmCache.rain(this, show = how != "chose")
+        }
+        EventLog.log(this, "field_watered", "by" to by, "where" to "gate", "how" to how)
     }
 
     override fun onAddTasksClosed() {
