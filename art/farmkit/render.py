@@ -1,7 +1,7 @@
 """Render every card the app needs: each crop's stages, watered and dry, in each light, plus the empty bed.
 
-File names are what the Android export uses: crop_<crop>_<stage>_<wet|dry>_<light>.png and
-bed_empty_<wet|dry>_<light>.png.
+File names: crop_<crop>_<stage>_<wet|dry>_<light>.png and bed_empty_<wet|dry>_<light>.png. The Android export takes
+the day light's and drops the light from the name (art/export_android.py, LIGHT).
 """
 import os
 

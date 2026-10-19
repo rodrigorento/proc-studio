@@ -8,7 +8,7 @@ data class Task(
     val addedVia: String = VIA_TEXT,
     /** The task stays off the gate until this time; 0 when it was never put off. */
     val deferredUntil: Long = 0L,
-    /** [BY_SNOOZE], [BY_TIME] or [BY_WHEN]: why the task is held back. */
+    /** [BY_SNOOZE] or [BY_WHEN]: why the task is held back. */
     val deferredBy: String = "",
     val snoozeUsed: Boolean = false,
     /** Gates for this task that ended without it being done. */
@@ -20,12 +20,13 @@ data class Task(
     val whenKey: String = "",
     /** When its crop was planted: when its time was last set, or 0 to count from [createdAt]. See [FarmRules]. */
     val plantedAt: Long = 0L,
+    /** Times it was watered at a pause since it was planted: each grows its crop a stage. See [FarmRules.stage]. */
+    val waterings: Int = 0,
 ) {
     companion object {
         const val VIA_TEXT = "text"
         const val VIA_VOICE = "voice"
         const val BY_SNOOZE = "snooze"
-        const val BY_TIME = "time"
 
         /** Waiting for the start of the time it was given when added ("tonight", "on Monday"). */
         const val BY_WHEN = "when"
@@ -40,7 +41,7 @@ object TaskRules {
 
     /**
      * The one task the gate shows, among those whose time has started: the one due
-     * soonest (a picked time that has come counts as due then), then the oldest.
+     * soonest (one back from its 5 more minutes counts as due then), then the oldest.
      */
     fun next(tasks: List<Task>, now: Long): Task? =
         tasks.filter { it.deferredUntil <= now }
@@ -66,12 +67,12 @@ object TaskRules {
     }
 
     /**
-     * Gives the task a time window (null: Anytime) and replants its crop at [now]. A snooze or picked time still
-     * running is kept.
+     * Gives the task a time window (null: Anytime) and replants its crop at [now]. 5 more minutes still running
+     * are kept.
      */
     fun withWhen(task: Task, window: TimeWindow?, now: Long): Task {
         val putOff = task.deferredBy != Task.BY_WHEN && task.deferredUntil > now
-        val base = (if (putOff) task else task.copy(deferredUntil = 0L, deferredBy = "")).copy(plantedAt = now)
+        val base = (if (putOff) task else task.copy(deferredUntil = 0L, deferredBy = "")).copy(plantedAt = now, waterings = 0)
         if (window == null) return base.copy(dueAt = 0L, dueHasTime = false, whenKey = "")
         val waits = window.start > now && window.start > base.deferredUntil
         return base.copy(
@@ -86,10 +87,14 @@ object TaskRules {
     fun snooze(task: Task, now: Long): Task =
         task.copy(deferredUntil = now + SNOOZE_MS, deferredBy = Task.BY_SNOOZE, snoozeUsed = true)
 
-    fun pickTime(task: Task, at: Long): Task =
-        task.copy(deferredUntil = at, deferredBy = Task.BY_TIME)
+    /**
+     * Watered at a pause: the crop grows a stage (some of it got done). That isn't walking past it, so the passes
+     * start again; like a pass, it uses up a snooze that brought the task back, so it doesn't keep jumping the queue.
+     */
+    fun water(task: Task): Task =
+        task.copy(waterings = task.waterings + 1, passes = 0, deferredUntil = 0L, deferredBy = "")
 
-    /** The gate ended without the task being done. A picked time only jumps the queue once. */
+    /** The gate ended without the task being done. */
     fun pass(task: Task): Task = task.copy(passes = task.passes + 1, deferredUntil = 0L, deferredBy = "")
 
     fun needsCheckIn(task: Task, checkInEnabled: Boolean): Boolean =

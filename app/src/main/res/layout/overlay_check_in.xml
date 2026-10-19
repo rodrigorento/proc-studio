@@ -27,9 +27,8 @@
         <include
             android:id="@+id/bed"
             layout="@layout/view_bed"
-            android:layout_width="180dp"
-            android:layout_height="180dp"
-            android:layout_gravity="center_horizontal"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
             android:visibility="gone" />
 
         <TextView
@@ -100,9 +99,16 @@
             android:minHeight="24dp" />
 
         <Button
-            android:id="@+id/btnCheckInHarvest"
+            android:id="@+id/btnCheckInTend"
             style="@style/ScrollGate.Button.Primary"
             android:text="@string/gate_harvest" />
+
+        <Button
+            android:id="@+id/btnCheckInHarvestEarly"
+            style="@style/ScrollGate.Button.Text"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/gate_harvest_early"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/btnCheckInOk"

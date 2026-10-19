@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Gate A: a calm sheet over the dimmed feed. The task's crop, then one task and three ways out, no close
+<!-- Gate A: a calm sheet over the dimmed feed. The task's crop, then one task and its ways out, no close
      button. On the first pause of the day the field is thirsty: it is watered (or rained on) before the task. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -145,16 +145,10 @@
             android:textSize="15sp" />
 
         <Button
-            android:id="@+id/btnHarvest"
+            android:id="@+id/btnTend"
             style="@style/ScrollGate.Button.Primary"
             android:layout_marginTop="24dp"
             android:text="@string/gate_harvest" />
-
-        <Button
-            android:id="@+id/btnPickTime"
-            style="@style/ScrollGate.Button.Secondary"
-            android:layout_marginTop="10dp"
-            android:text="@string/gate_pick_time" />
 
         <Button
             android:id="@+id/btnSnooze"
@@ -171,6 +165,15 @@
             android:text="@string/gate_snooze_used"
             android:textColor="@color/sg_muted"
             android:textSize="14sp"
+            android:visibility="gone" />
+
+        <!-- While the crop isn't ripe: finish it anyway. -->
+        <Button
+            android:id="@+id/btnHarvestEarly"
+            style="@style/ScrollGate.Button.Text"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:text="@string/gate_harvest_early"
             android:visibility="gone" />
 
         <TextView

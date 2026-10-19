@@ -76,9 +76,9 @@ def harvest_stages(module) -> list[str]:
 
 
 def render_water(out_dir: str, lights: list[str] | None = None) -> list[str]:
-    _clear(out_dir, "water_")
-    card = _card()
     lights = lights or list(style.LIGHTS)
+    _clear(out_dir, "water_", lights)
+    card = _card()
     bed.build(scene.collection(card, "Bed"), wet=False)
     layer = card.view_layers[0].layer_collection.children["Bed"]
     layer.holdout = True
@@ -98,10 +98,10 @@ def render_water(out_dir: str, lights: list[str] | None = None) -> list[str]:
 
 def render_plant(out_dir: str, crops: list[str] | None = None, lights: list[str] | None = None) -> list[str]:
     crops = crops or list(render.CROPS)
-    for crop in crops:
-        _clear(out_dir, f"plant_{crop}_")
-    card = _card()
     lights = lights or list(style.LIGHTS)
+    for crop in crops:
+        _clear(out_dir, f"plant_{crop}_", lights)
+    card = _card()
     written = []
     try:
         for crop in crops:
@@ -125,10 +125,10 @@ def render_plant(out_dir: str, crops: list[str] | None = None, lights: list[str]
 
 def render_harvest(out_dir: str, crops: list[str] | None = None, lights: list[str] | None = None) -> list[str]:
     crops = crops or list(render.CROPS)
-    for crop in crops:
-        _clear(out_dir, f"harvest_{crop}_")
-    card = _card()
     lights = lights or list(style.LIGHTS)
+    for crop in crops:
+        _clear(out_dir, f"harvest_{crop}_", lights)
+    card = _card()
     written = []
     try:
         render.build(card, None, None, True)
@@ -373,11 +373,12 @@ def _keyed(keys: list[tuple], f: int) -> tuple:
     return tuple(keys[-1][1:])
 
 
-def _clear(out_dir: str, prefix: str) -> None:
-    """Delete earlier frames this render replaces, so none are left over if the frame counts change."""
+def _clear(out_dir: str, prefix: str, lights: list[str]) -> None:
+    """Delete earlier frames this render replaces (those of [lights] only), so none are left over if the frame
+    counts change and the other lights' frames stay for the review sheets."""
     os.makedirs(out_dir, exist_ok=True)
     for name in os.listdir(out_dir):
-        if name.startswith(prefix) and name.endswith(".png"):
+        if name.startswith(prefix) and name.endswith(".png") and any(f"_{light}_" in name for light in lights):
             os.remove(os.path.join(out_dir, name))
 
 

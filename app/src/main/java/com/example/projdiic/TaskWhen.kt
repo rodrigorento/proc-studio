@@ -50,7 +50,7 @@ object WhenChoices {
     /** Until the last day of the month. */
     fun thisMonth(now: Long, zone: TimeZone) = TimeWindow(THIS_MONTH, now, DayMath.endOfMonth(now, zone))
 
-    /** Midnight tonight: when "Snooze until tomorrow" ends. */
+    /** Midnight tonight: when "Close the gate until tomorrow" ends. */
     fun startOfTomorrow(now: Long, zone: TimeZone = TimeZone.getDefault()): Long =
         DayMath.midnight(now, zone, plusDays = 1)
 

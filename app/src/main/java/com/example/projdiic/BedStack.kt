@@ -13,6 +13,9 @@ class BedStack(root: View) {
     private val top: ImageView = root.findViewById(R.id.bedTop)
     private val effect: ImageView = root.findViewById(R.id.bedEffect)
 
+    /** The frames playing over the bed, stopped before others start so two never play at once. */
+    private var playing: Runnable? = null
+
     fun show(@DrawableRes bed: Int) {
         base.setImageResource(bed)
         top.animate().cancel()
@@ -31,7 +34,7 @@ class BedStack(root: View) {
     private fun turn(@DrawableRes from: Int, @DrawableRes to: Int, frames: List<Int>, fadeFrom: Int, fadeTo: Int, onEnd: () -> Unit) {
         show(from)
         top.setImageResource(to)
-        effect.playFrames(frames, onFrame = { frame ->
+        play(frames, onFrame = { frame ->
             top.alpha = ((frame - fadeFrom) / (fadeTo - fadeFrom).toFloat()).coerceIn(0f, 1f)
         }) {
             show(to)
@@ -51,16 +54,22 @@ class BedStack(root: View) {
 
     /** The crop flies out ([frames]) and leaves [emptyBed]. */
     fun harvest(@DrawableRes emptyBed: Int, frames: List<Int>, onEnd: () -> Unit) {
-        effect.playFrames(frames, onEnd = onEnd) // first, so the empty bed never shows on its own
+        play(frames, onEnd = onEnd) // first, so the empty bed never shows on its own
         show(emptyBed)
+    }
+
+    private fun play(frames: List<Int>, onFrame: (Int) -> Unit = {}, onEnd: () -> Unit) {
+        playing?.let(effect::removeCallbacks)
+        playing = effect.playFrames(frames, onFrame, onEnd)
     }
 }
 
 /**
  * Plays [frames] on this view at [CropMotion.FPS], then clears it and calls [onEnd]. The first frame shows at once
- * when the view is on screen. Stops quietly if the view leaves the screen.
+ * when the view is on screen. Stops quietly if the view leaves the screen; removing the returned step from the view's
+ * callbacks stops it too.
  */
-fun ImageView.playFrames(frames: List<Int>, onFrame: (Int) -> Unit = {}, onEnd: () -> Unit = {}) {
+fun ImageView.playFrames(frames: List<Int>, onFrame: (Int) -> Unit = {}, onEnd: () -> Unit = {}): Runnable {
     var index = 0
     val step = object : Runnable {
         override fun run() {
@@ -77,4 +86,5 @@ fun ImageView.playFrames(frames: List<Int>, onFrame: (Int) -> Unit = {}, onEnd: 
         }
     }
     if (isAttachedToWindow) step.run() else post(step)
+    return step
 }

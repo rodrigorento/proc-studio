@@ -44,4 +44,11 @@ class DayMathTest {
             DayMath.endOfMonth(at(london, 2026, Calendar.OCTOBER, 3), london),
         )
     }
+
+    @Test
+    fun countsCalendarDaysNotHours() {
+        assertEquals(0, DayMath.daysBetween(at(utc, 2026, Calendar.OCTOBER, 16, 1), at(utc, 2026, Calendar.OCTOBER, 16, 23), utc))
+        assertEquals(1, DayMath.daysBetween(at(utc, 2026, Calendar.OCTOBER, 15, 23), at(utc, 2026, Calendar.OCTOBER, 16, 1), utc))
+        assertEquals(3, DayMath.daysBetween(at(utc, 2026, Calendar.OCTOBER, 13, 12), at(utc, 2026, Calendar.OCTOBER, 16, 9), utc))
+    }
 }

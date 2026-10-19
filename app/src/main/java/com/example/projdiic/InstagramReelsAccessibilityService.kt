@@ -1,9 +1,6 @@
 package com.example.projdiic
 
 import android.accessibilityservice.AccessibilityService
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.provider.CalendarContract
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -126,8 +123,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     private fun onLeftInstagram(pkg: String, className: String?, windowType: Int?) {
         val current = screen ?: return
         val task = current.taskId?.let { TaskCache.find(this, it) }
-        // Walking away from a gate counts as passing on its task, once the task was on screen (and isn't being harvested).
-        if (task != null && !overlay.thirsty && !overlay.harvesting) TaskCache.update(this, passOnce(task))
+        // Walking away from a gate counts as passing on its task, once the task was on screen (and isn't being harvested or watered).
+        if (task != null && !overlay.thirsty && !overlay.busy) TaskCache.update(this, passOnce(task))
         EventLog.log(
             this, "left_instagram",
             "screen" to current.logName,
@@ -266,17 +263,36 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
 
     // GateOverlay.Actions: what each tap does.
 
-    override fun onHarvested(task: Task, where: String) {
-        EventLog.log(this, "choice", "choice" to "harvest", "screen" to where, "task" to task.title, "ms_on_gate" to msOnGate())
+    override fun onHarvested(task: Task, where: String, tappedAt: Long) {
+        val ready = latest(task)?.let { FarmRules.isReady(it, tappedAt) }
+        EventLog.log(
+            this, "choice",
+            "choice" to "harvest",
+            "screen" to where,
+            "task" to task.title,
+            "ripe" to ready,
+            "ms_on_gate" to tappedAt - gateOpenedAt,
+        )
         TaskCache.remove(this, task.id)
         EventLog.log(this, "task_done", "task" to task.title, "screen" to where)
         Toast.makeText(this, R.string.toast_done, Toast.LENGTH_SHORT).show()
         backToFeed()
     }
 
-    override fun onPickTime(task: Task) {
-        EventLog.log(this, "choice", "choice" to "pick_a_time", "task" to task.title, "ms_on_gate" to msOnGate())
-        show(GateScreen.PickTime(task.id))
+    override fun onWatered(task: Task, where: String, tappedAt: Long) {
+        val current = latest(task) ?: return backToFeed()
+        val watered = TaskRules.water(current)
+        TaskCache.update(this, watered)
+        EventLog.log(
+            this, "choice",
+            "choice" to "water",
+            "screen" to where,
+            "task" to task.title,
+            "stage" to FarmRules.stage(watered, tappedAt),
+            "ms_on_gate" to tappedAt - gateOpenedAt,
+        )
+        Toast.makeText(this, R.string.toast_watered, Toast.LENGTH_SHORT).show()
+        backToFeed()
     }
 
     override fun onSnooze(task: Task) {
@@ -285,42 +301,6 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         TaskCache.update(this, TaskRules.snooze(passOnce(current), System.currentTimeMillis()))
         EventLog.log(this, "choice", "choice" to "snooze", "task" to task.title, "ms_on_gate" to msOnGate())
         backToFeed()
-    }
-
-    override fun onTimeChosen(task: Task, choice: TimeChoice) {
-        val current = latest(task) ?: return backToFeed()
-        TaskCache.update(this, TaskRules.pickTime(passOnce(current), choice.at))
-        EventLog.log(this, "time_picked", "option" to choice.key, "task" to task.title, "back_at_ms" to choice.at)
-        backToFeed()
-    }
-
-    override fun onAddToCalendar(task: Task) {
-        val current = latest(task) ?: return backToFeed()
-        val startTime = System.currentTimeMillis() + 15 * 60_000L
-        val endTime = startTime + 30 * 60_000L
-        TaskCache.update(this, TaskRules.pickTime(passOnce(current), startTime))
-        EventLog.log(this, "time_picked", "option" to "calendar", "task" to task.title, "back_at_ms" to startTime)
-        backToFeed()
-
-        val calendarIntent = Intent(Intent.ACTION_INSERT).apply {
-            data = CalendarContract.Events.CONTENT_URI
-            putExtra(CalendarContract.Events.TITLE, task.title)
-            putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startTime)
-            putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endTime)
-            putExtra(CalendarContract.Events.DESCRIPTION, getString(R.string.calendar_description))
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        try {
-            startActivity(calendarIntent)
-        } catch (e: ActivityNotFoundException) {
-            Log.e(TAG, "No calendar app", e)
-            Toast.makeText(this, R.string.calendar_missing, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    override fun onBackToChoices(task: Task, from: GateScreen) {
-        EventLog.log(this, "back_to_choices", "from" to from.logName, "task" to task.title)
-        show(GateScreen.Gate(task.id))
     }
 
     override fun onCheckInAccepted(task: Task) {

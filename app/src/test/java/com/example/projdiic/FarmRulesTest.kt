@@ -92,6 +92,34 @@ class FarmRulesTest {
     }
 
     @Test
+    fun eachWateringGrowsACropAStageUntilItIsRipe() {
+        val carrot = planted(WhenChoices.thisWeek(friday, utc))
+        val sunflower = planted(null)
+
+        assertEquals(
+            listOf("seed", "sprout", "growing", "ripe", "ripe"),
+            (0..4).map { FarmRules.stage(carrot.copy(waterings = it), friday) },
+        )
+        assertEquals(
+            listOf("seed", "sprout", "growing", "bloom"),
+            (0..3).map { FarmRules.stage(sunflower.copy(waterings = it), friday) },
+        )
+        assertEquals("ripe", FarmRules.stage(carrot.copy(waterings = 1), at(17, 12))) // growing by itself, then watered
+        assertEquals("overripe", FarmRules.stage(carrot.copy(waterings = 3), at(19, 9)))
+    }
+
+    @Test
+    fun aCropIsReadyToHarvestOnceItIsRipe() {
+        val carrot = planted(WhenChoices.thisWeek(friday, utc))
+
+        assertFalse(FarmRules.isReady(carrot, friday))
+        assertFalse(FarmRules.isReady(carrot.copy(waterings = 2), friday))
+        assertTrue(FarmRules.isReady(carrot.copy(waterings = 3), friday))
+        assertTrue(FarmRules.isReady(carrot, at(19, 9))) // gone to seed: still harvested
+        assertTrue(FarmRules.isReady(planted(null), at(19, 15)))
+    }
+
+    @Test
     fun aSunflowerBloomsAfterAFewDaysAndStaysInBloom() {
         val task = planted(null)
 

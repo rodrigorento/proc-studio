@@ -90,9 +90,9 @@ private fun PlotCard(task: Task, isNext: Boolean, now: Long, look: FieldLook, on
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
         modifier = modifier
-            .clickable(onClickLabel = "Change or remove", role = Role.Button, onClick = onClick)
+            .clickable(onClickLabel = "Change it or pull it up", role = Role.Button, onClick = onClick)
             .semantics(mergeDescendants = true) {
-                contentDescription = "${task.title}, $label, $crop ${FarmViews.stageWords(stage)}" + if (isNext) ", tend next" else ""
+                contentDescription = "${task.title}, $label, ${FarmViews.cropAndStage(crop, stage)}" + if (isNext) ", tend next" else ""
             }
     ) {
         Column(Modifier.padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {

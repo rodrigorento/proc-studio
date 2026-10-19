@@ -27,7 +27,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="-8dp"
                 android:drawableStart="@drawable/ic_back"
-                android:text="@string/pick_back" />
+                android:text="@string/back" />
 
             <TextView
                 android:id="@+id/tvSeedsTask"

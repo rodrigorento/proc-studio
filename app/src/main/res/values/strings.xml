@@ -2,7 +2,7 @@
     <string name="app_name">Scroll Gate</string>
     <string name="accessibility_description">Counts your swipes in Instagram and, after a stretch of scrolling, pauses it to show the next thing growing in your field. It notices which app is open; it does not save what is on screen.</string>
 
-    <!-- Gate: one crop, three ways out -->
+    <!-- Gate: one crop and its ways out -->
     <string name="gate_feed_paused">Field break</string>
     <string-array name="gate_eyebrows">
         <item>Your field needs a hand</item>
@@ -12,10 +12,10 @@
     </string-array>
     <string name="gate_meta_added">Planted %1$s · %2$s</string>
     <string name="gate_meta_said">Said out loud %1$s · %2$s</string>
-    <string name="gate_meta_picked">You picked %1$s for this</string>
     <string name="gate_meta_snoozed">Back after its 5 minutes</string>
     <string name="gate_harvest">Harvest it</string>
-    <string name="gate_pick_time">Let it grow</string>
+    <string name="gate_water_it">Water it</string>
+    <string name="gate_harvest_early">Already done? Harvest it</string>
     <string name="gate_snooze">5 more minutes · once</string>
     <string name="gate_snooze_used">You\'ve had your 5 minutes for this one.</string>
     <string name="gate_hint">Pick one and the feed opens again.</string>
@@ -26,19 +26,9 @@
     <string name="day_today">today</string>
     <string name="day_yesterday">yesterday</string>
 
-    <!-- Pick a time -->
-    <string name="pick_back">Back</string>
-    <string name="pick_title">When will you come back for it?</string>
-    <string name="time_in_15">In 15 minutes</string>
-    <string name="time_in_60">In 1 hour</string>
-    <string name="time_tonight">Tonight</string>
-    <string name="time_tomorrow">Tomorrow morning</string>
-    <string name="pick_calendar">Put it on your calendar instead</string>
-    <string name="pick_footnote">It rests in your field and comes back at the first pause after that time.</string>
-    <string name="calendar_description">Scheduled via Instagram Reels Blocker</string>
-    <string name="calendar_missing">No calendar app found.</string>
-
     <string name="toast_done">Harvested. It\'s off your field.</string>
+    <string name="toast_watered">Watered. It grew a stage.</string>
+    <string name="back">Back</string>
 
     <!-- Trusted-person check-in -->
     <string name="check_in_title">This crop keeps waiting</string>

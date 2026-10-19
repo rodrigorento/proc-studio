@@ -28,7 +28,7 @@ class GateSettings(context: Context) {
         get() = prefs.getString(KEY_TRUSTED_PERSON, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_TRUSTED_PERSON, value.trim()).apply()
 
-    /** No gates and no asking for tasks until this time ("Snooze until tomorrow"); 0 when on. */
+    /** No gates and no asking for tasks until this time ("Close the gate until tomorrow"); 0 when on. */
     var snoozedUntil: Long
         get() = prefs.getLong(KEY_SNOOZED_UNTIL, 0L)
         set(value) = prefs.edit().putLong(KEY_SNOOZED_UNTIL, value).apply()

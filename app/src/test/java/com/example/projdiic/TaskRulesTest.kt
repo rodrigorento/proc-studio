@@ -31,8 +31,8 @@ class TaskRulesTest {
     }
 
     @Test
-    fun aTaskWhosePickedTimeHasComeGoesFirst() {
-        val next = TaskRules.next(listOf(task("a", 1), task("b", 2, deferredUntil = 40)), now = 50)
+    fun aTaskBackFromItsSnoozeGoesFirst() {
+        val next = TaskRules.next(listOf(task("a", 1), task("b", 2, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE)), now = 50)
 
         assertEquals("b", next?.id)
     }
@@ -92,12 +92,22 @@ class TaskRulesTest {
     }
 
     @Test
-    fun pickTimeDefersWithoutUsingTheSnooze() {
-        val picked = TaskRules.pickTime(task("a", 1), at = 9_000)
+    fun wateringGrowsTheCropAndIsNotWalkingPastIt() {
+        val back = task("a", 1, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE, passes = 2)
 
-        assertEquals(9_000, picked.deferredUntil)
-        assertEquals(Task.BY_TIME, picked.deferredBy)
-        assertFalse(picked.snoozeUsed)
+        val watered = TaskRules.water(TaskRules.water(back))
+
+        assertEquals(2, watered.waterings)
+        assertEquals(0, watered.passes)
+        assertEquals(0L, watered.deferredUntil)
+        assertEquals("", watered.deferredBy)
+    }
+
+    @Test
+    fun replantingStartsTheWateringAgain() {
+        val watered = TaskRules.water(task("a", 1))
+
+        assertEquals(0, TaskRules.withWhen(watered, null, now = 50).waterings)
     }
 
     @Test
@@ -111,8 +121,8 @@ class TaskRulesTest {
     }
 
     @Test
-    fun aPassUsesUpThePickedTimeSoOlderTasksGetTheirTurn() {
-        val returned = task("c", 3, deferredUntil = 40).copy(deferredBy = Task.BY_TIME)
+    fun aPassUsesUpTheSnoozeSoOlderTasksGetTheirTurn() {
+        val returned = task("c", 3, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE)
 
         val passed = TaskRules.pass(returned)
 

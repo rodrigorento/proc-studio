@@ -1,21 +1,21 @@
 # Instagram Reels Blocker (ProjDIIC) · Scroll Gate
 
-An Android app that pauses Instagram after a stretch of scrolling and shows **only your next pending task**, as a crop growing in a small field. To keep scrolling you pick one of three ways out: **Harvest it** (it's done), **Let it grow** (pick a time) or **5 more minutes** (once). It is the working prototype for Session 3 of the study.
+An Android app that pauses Instagram after a stretch of scrolling and shows **only your next pending task**, as a crop growing in a small field. To keep scrolling you either tend it, with **Harvest it** once its crop is ripe or **Water it** before that, or take **5 more minutes** (once). It is the working prototype for Session 3 of the study.
 
 The screens follow the Scroll Gate design (Gate A: a calm sheet over the dimmed feed). The gate has no close button; leaving Instagram hides it, and it comes back when Instagram does.
 
 ## Features
 
-- **Gate over Instagram:** after **N swipes or T minutes** of continuous scrolling (whichever comes first), the feed is dimmed (blurred on Android 12+) and a sheet shows one task with three choices. A cooldown follows every gate.
+- **Gate over Instagram:** after **N swipes or T minutes** of continuous scrolling (whichever comes first), the feed is dimmed (blurred on Android 12+) and a sheet shows one task and its crop: Harvest it or Water it, 5 more minutes (once), and Already done? Harvest it while it isn't ripe. A cooldown follows every gate.
 - **Nothing due:** with an empty list, or with every task planned for later ("tomorrow", "on Monday"), opening Instagram asks for tasks straight away instead of waiting for swipes; the screen then says "Nothing's ripe right now". After "Not now" it asks again every 3 swipes (the swipe setting), with no cooldown. A full list of tasks all planned for later lets him scroll.
 - **Default trigger:** 3 swipes (change it in the facilitator panel).
 - **Close the gate until tomorrow:** a button on the ask-for-tasks screen turns every gate and question off until midnight. The app's main screen then shows "Gate closed until tomorrow" with **Open it**. Both are logged (`app_snoozed`, `app_turned_back_on`).
-- **Harvest it:** the task is done. Its crop ripens if it isn't ready yet and flies out of the bed, then the feed opens. Logged as a `harvest` choice and `task_done`. The check-in screen has the same button.
-- **Let it grow:** pick a time from quick choices (in 15 minutes, in 1 hour, tonight, tomorrow morning). The task comes back at the first gate after that time. **Put it on your calendar instead** keeps the calendar flow: it opens a new Calendar event 15 minutes from now.
+- **Harvest it:** shown once the crop is ripe (or gone to seed, or a sunflower in bloom). The task is done: the crop flies out of the bed, then the feed opens. Logged as a `harvest` choice and `task_done`.
+- **Water it:** shown while the crop isn't ripe. The can waters the bed and the crop grows a stage (some of the task got done), then the feed opens. Logged as a `water` choice. A small **Already done? Harvest it** link under the buttons still finishes it early. Watering doesn't count as walking past the task. The check-in screen offers the same.
 - **5 more minutes:** once per task. The next gate for that task doesn't offer it.
 - **Rotating wording:** the line above the task changes every gate so it doesn't go stale.
 - **Trusted-person check-in (Wizard of Oz):** off by default. When the participant switches it on, the third gate for a task that was passed twice asks whether their trusted person may check in. The app logs `check_in` and a teammate sends the real message by hand.
-- **The field:** up to four tasks, one per plot. Each is planted in three steps, on the main screen or on the pause screen when nothing is due: name it (by voice or typing), pick its seed packet (when it's for), and watch it go in. The crop grows from planting to its due time.
+- **The field:** up to four tasks, one per plot. Each is planted in three steps, on the main screen or on the pause screen when nothing is due: name it (by voice or typing), pick its seed packet (when it's for), and watch it go in. The crop grows from planting to its due time, a stage faster for each Water it.
 - **When a task is for:** each task has a time pill. Tap it for fixed choices: Anytime, Today, Tonight, Tomorrow, This week, This month. Times said or typed with the task are read on the phone, with no network call: "dentist tomorrow at 3pm", "gym on Monday", "return the book by Wednesday", "next week", "in 2 hours", "on the 25th". The words are taken out of the title, and the chip they matched is pre-selected. A task only reaches the gate once its time has started; the one due soonest comes first. English only for now (`WhenParser`).
 - **Facilitator panel:** hidden on the main screen; **long-press the "Scroll Gate" title** to show it. Set N, T and the cooldown, switch check-ins on, trigger a gate on the next swipe, export the log, reset the data.
 - **Interaction log:** every event (swipe, gate shown, choice, time on the gate, task done, leaving Instagram) is kept on the phone with a timestamp and exported as JSON or CSV through the share sheet.
@@ -74,8 +74,8 @@ Accessibility access is powerful. Enable it only on a device where you understan
 ## How it works
 
 1. `InstagramReelsAccessibilityService` receives scroll events and window changes. It counts only `TYPE_VIEW_SCROLLED` from `com.instagram.android`, at most one every 800 ms (`GateTrigger`).
-2. When the swipe count or the minutes of continuous scrolling reach the threshold, it picks the next task (`TaskRules.next`: a task whose picked time has come first, then the oldest) and asks `GateOverlay` to draw the gate.
-3. Each choice updates the task in `TaskCache` (snooze, picked time, passes) and is written to `EventLog`. Harvest it removes the task.
+2. When the swipe count or the minutes of continuous scrolling reach the threshold, it picks the next task (`TaskRules.next`: the one due soonest, where one back from its 5 more minutes counts as due when they end, then the oldest) and asks `GateOverlay` to draw the gate.
+3. Each choice updates the task in `TaskCache` (snooze, waterings, passes) and is written to `EventLog`. Harvest it removes the task.
 4. A full-screen window from another app means Instagram left the screen: the overlay is hidden and shown again when Instagram returns. The keyboard (any keyboard app, recognised by its window), the system UI and windows that don't fill the screen, such as pop-ups, overlays and the navigation bar that Samsung's launcher draws, don't count (`WindowRules`). Each `left_instagram` event records the package and window that replaced Instagram, and each `window_ignored` event a window that opened over a screen without hiding it. Walking away from a gate counts as a pass on its task, and a gate left for more than 10 minutes is dropped. A gate only opens while Instagram is the active app, so late scroll events never draw it over another app.
 5. After two passes on the same task, and only if check-ins are on, the next gate for it is the check-in screen.
 
@@ -90,7 +90,6 @@ app/src/main/
 │   ├── GateScreen.kt                          # Which screen is showing
 │   ├── GateTrigger.kt                         # N swipes or T minutes, debounce, cooldown
 │   ├── Task.kt                                # Task model and rules (next task, snooze, passes)
-│   ├── TimeChoices.kt                         # Pick a time quick choices
 │   ├── TaskWhen.kt / WhenParser.kt            # Time chips, their labels, reading times from speech or text
 │   ├── TaskCache.kt                           # Task storage (JSON in SharedPreferences)
 │   ├── GateSettings.kt                        # Facilitator settings
@@ -104,7 +103,7 @@ app/src/main/
 │   └── FarmArtPreview.kt                      # Facilitator preview of the farm art
 └── res/
     ├── drawable-nodpi/                        # Rendered farm cards, animation frames and props (generated)
-    ├── layout/overlay_*.xml                   # Gate, Pick a time, Check-in, Add tasks and its planting steps
+    ├── layout/overlay_*.xml                   # Gate, Check-in, Add tasks and its planting steps
     └── xml/accessibility_service_config.xml   # Accessibility event configuration
 ```
 
@@ -119,7 +118,7 @@ title and scroll to the farm art preview.
 ## Build and test
 
 ```bash
-# Unit tests: gate trigger, task rules, time choices, log export
+# Unit tests: gate trigger, task rules, farm rules, seed packets, log export
 bash gradlew testDebugUnitTest
 
 # Android instrumented tests (requires a connected device or emulator)

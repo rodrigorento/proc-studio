@@ -47,21 +47,27 @@ object FarmRules {
         }
     }
 
-    /** How grown the task's crop is at [now]: seed, sprout, growing, ripe, overripe once past due; a sunflower blooms. */
+    /**
+     * How grown the task's crop is at [now]: seed, sprout, growing, ripe, overripe once past due; a sunflower blooms.
+     * It grows with time, and each watering takes it a stage further, up to ripe.
+     */
     fun stage(task: Task, now: Long): String {
         val sunflower = task.dueAt <= 0L
         val planted = plantedAt(task)
         val end = if (sunflower) planted + SUNFLOWER_BLOOMS_AFTER_MS else task.dueAt
         if (now > end) return if (sunflower) "bloom" else "overripe"
         val progress = if (end > planted) (now - planted).toDouble() / (end - planted) else 1.0
-        return when {
-            progress < SPROUT_FROM -> "seed"
-            progress < GROWING_FROM -> "sprout"
-            progress < RIPE_FROM -> "growing"
-            sunflower -> "bloom"
-            else -> "ripe"
-        }
+        val grown = when {
+            progress < SPROUT_FROM -> 0
+            progress < GROWING_FROM -> 1
+            progress < RIPE_FROM -> 2
+            else -> 3
+        } + task.waterings
+        return listOf("seed", "sprout", "growing", if (sunflower) "bloom" else "ripe")[minOf(grown, 3)]
     }
+
+    /** Ripe (or gone to seed, or in bloom): it can be harvested. Until then the pause offers to water it. */
+    fun isReady(task: Task, now: Long): Boolean = stage(task, now) in setOf("ripe", "overripe", "bloom")
 
     /** When the crop was planted: changing the task's time replants it. Tasks saved without that grow from when they were added. */
     private fun plantedAt(task: Task): Long = task.plantedAt.takeIf { it > 0L } ?: task.createdAt
