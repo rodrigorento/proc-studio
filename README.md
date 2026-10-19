@@ -1,17 +1,17 @@
 # Instagram Reels Blocker (ProjDIIC) · Task Farm
 
-An Android app that pauses Instagram after a stretch of scrolling and shows **only your next pending task**, as a crop growing in a small field. To keep scrolling you either tend it, with **Harvest it** once its crop is ripe or **Water it** before that, or take **5 more minutes** (once). It is the working prototype for Session 3 of the study.
+An Android app that pauses Instagram after a stretch of scrolling and shows **only your next pending task**, as a crop growing in a small field. To keep scrolling you either tend it, with **Harvest it** (first once its crop is due) or **Water it**, or take **5 more minutes** (once). It is the working prototype for Session 3 of the study.
 
 The pause screens follow Gate A of the original Scroll Gate design (a calm sheet over the dimmed feed); the app is now called Task Farm. The gate has no close button; leaving Instagram hides it, and it comes back when Instagram does.
 
 ## Features
 
-- **Gate over Instagram:** after **N swipes or T minutes** of continuous scrolling (whichever comes first), the feed is dimmed (blurred on Android 12+) and a sheet shows one task and its crop: Harvest it or Water it, 5 more minutes (once), and Already done? Harvest it while it isn't ripe. A cooldown follows every gate.
+- **Gate over Instagram:** after **N swipes or T minutes** of continuous scrolling (whichever comes first), the feed is dimmed (blurred on Android 12+) and a sheet shows one task and its crop: Harvest it (once the crop is due) and Water it, 5 more minutes (once), and Already done? Harvest it before the crop is due. A cooldown follows every gate.
 - **Nothing due:** with an empty list, or with every task planned for later ("tomorrow", "on Monday"), opening Instagram asks for tasks straight away instead of waiting for swipes; the screen then says "Nothing's ripe right now". After "Not now" it asks again every 3 swipes (the swipe setting), with no cooldown. A full list of tasks all planned for later lets him scroll.
 - **Default trigger:** 3 swipes (change it in the facilitator panel).
 - **Close the gate until tomorrow:** a button on the ask-for-tasks screen turns every gate and question off until midnight. The app's main screen then shows "Gate closed until tomorrow" with **Open it**. Both are logged (`app_snoozed`, `app_turned_back_on`).
-- **Harvest it:** shown once the crop is ripe (or gone to seed, or a sunflower in bloom). The task is done: the crop flies out of the bed, then the feed opens. Logged as a `harvest` choice and `task_done`.
-- **Water it:** shown while the crop isn't ripe. The can waters the bed, then the feed opens; crops grow with time only, so watering just keeps the field from drying out. Logged as a `water` choice. A small **Already done? Harvest it** link under the buttons still finishes it early. Watering doesn't count as walking past the task. The check-in screen offers the same.
+- **Harvest it** (green, with the basket): first once the crop is due, that is ripe (or gone to seed, or a sunflower in bloom) or its task is due today. The task is done: the crop flies out of the bed, then the feed opens. Logged as a `harvest` choice (`via` the button or the link) and `task_done`.
+- **Water it** (blue, with the can): always offered, under Harvest it once the crop is due. The can waters the bed, then the feed opens; crops grow with time only, so watering just keeps the field from drying out. Logged as a `water` choice. Before the crop is due, a small **Already done? Harvest it** link under the buttons finishes it early. Watering leaves the task undone, so it counts as a pass (towards the check-in). The check-in screen offers the same.
 - **5 more minutes:** once per task. The next gate for that task doesn't offer it.
 - **Rotating wording:** the line above the task changes every gate so it doesn't go stale.
 - **Trusted-person check-in (Wizard of Oz):** off by default. When the participant switches it on, the third gate for a task that was passed twice asks whether their trusted person may check in. The app logs `check_in` and a teammate sends the real message by hand.

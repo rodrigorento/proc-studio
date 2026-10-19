@@ -69,8 +69,12 @@ object FarmRules {
         return listOf("seed", "sprout", "growing", if (sunflower) "bloom" else "ripe")[grown]
     }
 
-    /** Ripe (or gone to seed, or in bloom): it can be harvested. Until then the pause offers to water it. */
+    /** Ripe (or gone to seed, or in bloom): it can be harvested. */
     fun isReady(task: Task, now: Long): Boolean = stage(task, now) in setOf("ripe", "overripe", "bloom")
+
+    /** Ripe, or its task is due by the end of today: the pause offers Harvest it first, then Water it. */
+    fun isDue(task: Task, now: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
+        isReady(task, now) || (task.dueAt > 0L && DayMath.daysBetween(now, task.dueAt, zone) <= 0)
 
     /** When an Anytime task's sunflower blooms. */
     fun bloomsAt(task: Task): Long = plantedAt(task) + SUNFLOWER_BLOOMS_AFTER_MS

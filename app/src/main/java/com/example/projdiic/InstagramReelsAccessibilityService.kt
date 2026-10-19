@@ -263,7 +263,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
 
     // GateOverlay.Actions: what each tap does.
 
-    override fun onHarvested(task: Task, where: String, tappedAt: Long) {
+    override fun onHarvested(task: Task, where: String, tappedAt: Long, via: String) {
         val ready = latest(task)?.let { FarmRules.isReady(it, tappedAt) }
         EventLog.log(
             this, "choice",
@@ -271,6 +271,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             "screen" to where,
             "task" to task.title,
             "ripe" to ready,
+            "via" to via,
             "ms_on_gate" to tappedAt - gateOpenedAt,
         )
         TaskCache.remove(this, task.id)

@@ -301,7 +301,7 @@ def seed_packets() -> list[str]:
 
 def export_props() -> int:
     """The props as drawables, and the launcher icon. Returns the bytes written."""
-    names = ["prop_watering_can", "prop_basket", "prop_gate", "prop_mailbox"] + seed_packets()
+    names = ["prop_watering_can", "prop_basket", "prop_gate", "prop_mailbox", "prop_pulled"] + seed_packets()
     missing = [name for name in names + ["icon_foreground"] if not (PROPS / f"{name}.png").exists()]
     if missing:
         raise SystemExit(f"{len(missing)} props missing from {PROPS}, e.g. {missing[:3]}")

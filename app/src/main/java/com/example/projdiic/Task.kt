@@ -87,12 +87,8 @@ object TaskRules {
     fun snooze(task: Task, now: Long): Task =
         task.copy(deferredUntil = now + SNOOZE_MS, deferredBy = Task.BY_SNOOZE, snoozeUsed = true)
 
-    /**
-     * Watered at a pause: tended, though only time grows the crop. That isn't walking past it, so the passes start
-     * again; like a pass, it uses up a snooze that brought the task back, so it doesn't keep jumping the queue.
-     */
-    fun water(task: Task): Task =
-        task.copy(waterings = task.waterings + 1, passes = 0, deferredUntil = 0L, deferredBy = "")
+    /** Watered at a pause: only time grows the crop, so the task is still undone and it counts as a [pass]. */
+    fun water(task: Task): Task = pass(task).copy(waterings = task.waterings + 1)
 
     /** The gate ended without the task being done. */
     fun pass(task: Task): Task = task.copy(passes = task.passes + 1, deferredUntil = 0L, deferredBy = "")

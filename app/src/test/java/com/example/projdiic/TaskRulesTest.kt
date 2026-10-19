@@ -92,13 +92,13 @@ class TaskRulesTest {
     }
 
     @Test
-    fun wateringIsNotWalkingPastIt() {
+    fun wateringLeavesTheTaskUndoneSoItCountsAsAPass() {
         val back = task("a", 1, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE, passes = 2)
 
         val watered = TaskRules.water(TaskRules.water(back))
 
         assertEquals(2, watered.waterings)
-        assertEquals(0, watered.passes)
+        assertEquals(4, watered.passes)
         assertEquals(0L, watered.deferredUntil)
         assertEquals("", watered.deferredBy)
     }

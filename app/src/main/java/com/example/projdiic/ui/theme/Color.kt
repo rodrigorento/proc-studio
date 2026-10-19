@@ -15,4 +15,4 @@ val Leaf = Color(0xFF8FD06A)
 val LeafContainer = Color(0xFF1D3319)
 val Wood = Color(0xFFD79A5E)
 val Clay = Color(0xFFE8A06A)
-val Danger = Color(0xFFD9363E)  // removing something for good; white text on it is 4.6:1
+val Danger = Color(0xFFFF6B6B)  // removing something for good: outline and text, 6.3:1 on the sheet's surface

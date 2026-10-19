@@ -29,6 +29,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -305,13 +306,22 @@ fun PlotSheet(task: Task, now: Long, look: FieldLook, onWhen: (TimeWindow?) -> U
                     onClick = { changing = true },
                     shape = RoundedCornerShape(50),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                ) { Text("Change crop", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp) }
-                Button(
+                ) {
+                    Image(painterResource(CropArt.seedPacket(crop)), contentDescription = null, modifier = Modifier.size(30.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Change crop", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                }
+                OutlinedButton(
                     onClick = onRemove,
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = Danger, contentColor = Color.White),
+                    border = BorderStroke(2.dp, Danger),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                ) { Text("Pull it up", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp) }
+                ) {
+                    Image(painterResource(R.drawable.prop_pulled), contentDescription = null, modifier = Modifier.size(30.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Pull it up", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                }
             }
         }
     }

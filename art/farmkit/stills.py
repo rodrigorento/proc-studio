@@ -1,5 +1,6 @@
 """The farm's still props, rendered once in daylight: the watering-can button, a seed packet per crop, the
-harvest basket, the gate (paused until tomorrow), the mailbox (neighbour check-in) and the app icon.
+harvest basket, the gate (paused until tomorrow), the mailbox (neighbour check-in), a pulled-up sprout (Pull it
+up) and the app icon.
 
 Each prop is built in its own collection and the camera is fitted to it, so props of any size render to the same
 square with the same margin. File names: prop_<name>.png, and icon_foreground.png for the launcher icon.
@@ -218,6 +219,21 @@ def _mailbox(collection) -> None:
     shelf.matrix_world = turn @ Matrix.Translation((0.31, 0, -0.025))
 
 
+def _pulled(collection) -> None:
+    """A sprout pulled up for good (the Pull it up button): a clod of soil and its roots hanging under the leaves."""
+    base = Vector((0.0, 0.0, 0.28))
+    parts.sprout(collection, "Pulled", base, 0.0, scale=2.4)
+    clod = bmesh.new()
+    parts.sphere(clod, base + Vector((0, 0, -0.03)), 0.085, squash=0.75)
+    toon.outline(parts.mesh_object("Pulled.Clod", clod, collection, "soil_wet"), style.LEAF_OUTLINE_WIDTH)
+    roots = bmesh.new()
+    for k, (side, length) in enumerate([(-0.06, 0.2), (-0.02, 0.26), (0.03, 0.23), (0.07, 0.17)]):
+        top = base + ACROSS * side * 0.6 + Vector((0, 0, -0.06))
+        sway = ACROSS * side * 0.6 + ACROSS * (0.02 if k % 2 else -0.02)
+        parts.tube(roots, [top, top + sway * 0.5 + UP * (-length * 0.5), top + sway + UP * -length], 0.02, taper=0.3)
+    toon.outline(parts.mesh_object("Pulled.Roots", roots, collection, "radish_tail"), style.LEAF_OUTLINE_WIDTH)
+
+
 def _icon(collection) -> None:
     """The launcher icon's picture: a watered bed with one big sprout. The background colour is the icon's own."""
     bed.build(collection, wet=True)
@@ -286,8 +302,8 @@ def _sunflower(collection) -> None:
 
 
 EMBLEMS = {"radish": _radish, "lettuce": _lettuce, "carrot": _carrot, "pumpkin": _pumpkin, "sunflower": _sunflower}
-BUILDERS = {"watering_can": _can, "basket": _basket, "gate": _gate, "mailbox": _mailbox, "icon": _icon}
-NAMES = ["watering_can"] + [f"seed_{crop}" for crop in SEEDS] + ["basket", "gate", "mailbox", "icon"]
+BUILDERS = {"watering_can": _can, "basket": _basket, "gate": _gate, "mailbox": _mailbox, "pulled": _pulled, "icon": _icon}
+NAMES = ["watering_can"] + [f"seed_{crop}" for crop in SEEDS] + ["basket", "gate", "mailbox", "pulled", "icon"]
 
 
 def _leaf_fan(collection, base: Vector, count: int, length: float, width: float, spread: float, lobes: int = 0) -> None:

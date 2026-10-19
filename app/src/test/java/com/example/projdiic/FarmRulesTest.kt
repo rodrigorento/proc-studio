@@ -114,6 +114,16 @@ class FarmRulesTest {
     }
 
     @Test
+    fun aCropIsDueOnceItIsRipeOrItsTaskIsDueToday() {
+        assertTrue(FarmRules.isDue(planted(WhenChoices.today(friday, utc)), friday, utc))
+        val carrot = planted(WhenChoices.thisWeek(friday, utc))
+        assertFalse(FarmRules.isDue(carrot, friday, utc))
+        assertTrue(FarmRules.isDue(carrot, at(18, 9), utc)) // ripe on Sunday morning, due that night
+        assertFalse(FarmRules.isDue(planted(null), friday, utc))
+        assertTrue(FarmRules.isDue(planted(null), at(19, 15), utc)) // in bloom
+    }
+
+    @Test
     fun aSunflowerBloomsAfterAFewDaysAndStaysInBloom() {
         val task = planted(null)
 

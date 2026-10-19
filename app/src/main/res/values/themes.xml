@@ -36,6 +36,13 @@
         <item name="android:textStyle">bold</item>
     </style>
 
+    <style name="ScrollGate.Button.Water">
+        <item name="android:background">@drawable/bg_button_water</item>
+        <item name="android:textColor">@color/sg_water</item>
+        <item name="android:fontFamily">@font/nunito_bold</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
     <style name="ScrollGate.Button.Secondary">
         <item name="android:background">@drawable/bg_button_secondary</item>
         <item name="android:textColor">@color/sg_text</item>

@@ -144,11 +144,25 @@
             android:textColor="@color/sg_muted"
             android:textSize="15sp" />
 
-        <Button
-            android:id="@+id/btnTend"
-            style="@style/ScrollGate.Button.Primary"
+        <!-- Harvest it first once the crop is due, then Water it; before that, Water it alone. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="@string/gate_harvest" />
+            android:divider="@drawable/space_10dp"
+            android:orientation="vertical"
+            android:showDividers="middle">
+
+            <Button
+                android:id="@+id/btnHarvest"
+                style="@style/ScrollGate.Button.Primary"
+                android:text="@string/gate_harvest" />
+
+            <Button
+                android:id="@+id/btnWaterIt"
+                style="@style/ScrollGate.Button.Water"
+                android:text="@string/gate_water_it" />
+        </LinearLayout>
 
         <Button
             android:id="@+id/btnSnooze"
@@ -167,7 +181,7 @@
             android:textSize="14sp"
             android:visibility="gone" />
 
-        <!-- While the crop isn't ripe: finish it anyway. -->
+        <!-- Before the crop is due: finish it anyway. -->
         <Button
             android:id="@+id/btnHarvestEarly"
             style="@style/ScrollGate.Button.Text"
