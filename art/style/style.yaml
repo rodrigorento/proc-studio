@@ -51,7 +51,7 @@ lights:  # by the phone's clock
   night:
     hours: [20, 5]
     reference: lights/field_night.png
-    look: cool blue moonlight from above left, blue-violet shadows, muted colours, pale rim light on top edges
+    look: cool blue moonlight from above left, blue-violet shadows; the bed and soil go blue, the crops keep most of their colour
 
 palette:  # [lit, base, shade] as sampled from the day-lit references
   wood: ["#F0AA53", "#E49238", "#AF6223"]
