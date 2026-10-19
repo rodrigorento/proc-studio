@@ -76,7 +76,7 @@ Accessibility access is powerful. Enable it only on a device where you understan
 1. `InstagramReelsAccessibilityService` receives scroll events and window changes. It counts only `TYPE_VIEW_SCROLLED` from `com.instagram.android`, at most one every 800 ms (`GateTrigger`).
 2. When the swipe count or the minutes of continuous scrolling reach the threshold, it picks the next task (`TaskRules.next`: a task whose picked time has come first, then the oldest) and asks `GateOverlay` to draw the gate.
 3. Each choice updates the task in `TaskCache` (snooze, picked time, passes) and is written to `EventLog`. Done removes the task.
-4. Window changes from other apps (not the keyboard or the system UI) mean Instagram left the screen: the overlay is hidden and shown again when Instagram returns. Walking away from a gate counts as a pass on its task, and a gate left for more than 10 minutes is dropped (the "Feed closed" screen of Do it now is kept). A gate only opens while Instagram is the active app, so late scroll events never draw it over another app.
+4. Window changes from other apps mean Instagram left the screen: the overlay is hidden and shown again when Instagram returns. The keyboard (any keyboard app, recognised by its window), the system UI and windows that aren't app screens, such as pop-ups, don't count (`WindowRules`). Each `left_instagram` event records the package and window that replaced Instagram. Walking away from a gate counts as a pass on its task, and a gate left for more than 10 minutes is dropped (the "Feed closed" screen of Do it now is kept). A gate only opens while Instagram is the active app, so late scroll events never draw it over another app.
 5. After two passes on the same task, and only if check-ins are on, the next gate for it is the check-in screen.
 
 ## Project structure
@@ -122,7 +122,7 @@ bash gradlew assembleDebug
 - The minutes threshold is checked on each counted swipe, so watching one long video without scrolling doesn't trigger it.
 - Voice capture on the pause screen uses Android's speech recognizer from the background service. Some phones may refuse microphone access there; the pause screen then says it didn't catch that, and typing still works. The main screen's mic uses the phone's own voice input and always works where voice input is installed.
 - Pausing Instagram's sound uses audio focus and is best effort: Android 15 and later may refuse it to a background service. Each `gate_shown` event records `sound_paused` so the pilot shows whether it works on the test phone.
-- Any app window that opens over Instagram (the Assistant, chat heads) counts as leaving it, so it can record a pass the participant didn't choose.
+- An app screen that opens over Instagram (the Assistant, a chat head that opens a conversation) counts as leaving it, so it can record a pass the participant didn't choose. Floating windows usually don't, but a window that has only just opened may not be listed yet and then counts as leaving too; the log's `to_package` shows which one it was.
 - The trusted-person message is not sent by the app (Wizard of Oz).
 - Some permission declarations and helper classes are not used by the current flow, for example `BootReceiver`, `PopupWarningActivity` and the empty `InstagramMonitorService.kt`.
 
