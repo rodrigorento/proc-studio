@@ -97,11 +97,22 @@ app/src/main/
 │   ├── EventLog.kt / LogFormat.kt             # On-device log and JSON/CSV export
 │   ├── PermissionUtils.kt                     # Permission checks
 │   ├── PopupWarningActivity.kt                # Additional warning UI (unused)
-│   └── BootReceiver.kt                        # Currently a no-op receiver class
+│   ├── BootReceiver.kt                        # Currently a no-op receiver class
+│   ├── CropArt.kt / CropMotion.kt             # Farm images and animation frames (generated from art/)
+│   └── FarmArtPreview.kt                      # Facilitator preview of the farm art
 └── res/
+    ├── drawable-nodpi/                        # Rendered farm cards, animation frames and props (generated)
     ├── layout/overlay_*.xml                   # Gate, Pick a time, Do it now, Check-in, Add tasks
     └── xml/accessibility_service_config.xml   # Accessibility event configuration
 ```
+
+## Farm art
+
+The farm theme's beds, crops, animations, props and app icon are pre-rendered in Blender from code in `art/`:
+`art/farmkit` builds them, `art/export_android.py` writes the images and the Kotlin that looks them up, and
+`art/review.py` makes review sheets and checks `art/assets.yaml`, the list of every asset and its status. The
+`farm-3d` skill in `.claude/skills` walks through the whole pipeline. To see the art in the app, long-press the
+title and scroll to the farm art preview.
 
 ## Build and test
 

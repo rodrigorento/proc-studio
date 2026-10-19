@@ -1,6 +1,6 @@
-# Art direction for the farm theme. The Blender scripts in art/farmkit read this file.
+# Art direction for the farm theme: what was decided, for people. The numbers the Blender scripts use (palette,
+# bed, camera, lights) live in art/farmkit/style.py; every asset and its status is in art/assets.yaml.
 # Images: references/ (approved look), lights/ (the four times of day). How each was made: sources.json.
-# Colours were sampled from the references; they get tuned in Blender when the first crop is modeled.
 
 look:
   style: cel-shaded toon 3D
@@ -32,8 +32,25 @@ crops:  # the smaller the crop, the more of them in a bed
 stages:
   timed: [seed, sprout, growing, ripe, overripe]  # seed shows one small mound per crop
   sunflower: [seed, sprout, growing, bloom]
-  overripe: gone to seed  # bolting flower stalks; the pumpkin dulls with a few speckles
-  variants: [dry, wet]
+  overripe:  # gone to seed: late, but never dead
+    radish: leaves yellow; 5 of the 9 (corners and centre) bolt with pink four-petal flowers
+    lettuce: each head stretches into a tall cone of pointed leaves with yellow flowers
+    carrot: leaves yellow; a tall stalk with a white umbrella of flowers
+    pumpkin: the orange dulls with pale speckles, some leaves yellow, the vine dries
+  variants: [dry, wet]  # dry: pale cracked soil, drooping olive leaves; crops keep their colour
+  early: a task done before its crop is ripe ripens it quickly, then the normal harvest plays
+
+animations:  # 12 fps, rendered at 480 px
+  watering: the player watered; a blue toy watering can swings in, pours across the bed and leaves
+  rain: the field watered itself (gate closed, or a day without Instagram); a rain cloud drifts over
+  harvest: the plants pop out with their whole roots, one after another, and fly out of the top of the card
+
+props:
+  seed_packets: paper packets in each crop's colour, the crop on a round label
+  basket: round wicker harvest basket heaped with one of each crop
+  gate: the beds' chunky planks, with a moon-and-stars plaque; paused until tomorrow
+  mailbox: rural mailbox on a post, door open with a letter, red flag up; the neighbour check-in
+  app_icon: a watered bed with one big sprout, on green (#2B5E16)
 
 lights:  # by the phone's clock
   morning:
@@ -53,12 +70,4 @@ lights:  # by the phone's clock
     reference: lights/field_night.png
     look: cool blue moonlight from above left, blue-violet shadows; the bed and soil go blue, the crops keep most of their colour
 
-palette:  # [lit, base, shade] as sampled from the day-lit references
-  wood: ["#F0AA53", "#E49238", "#AF6223"]
-  soil: ["#7D4117", "#683513", "#4D260C"]
-  leaf: ["#92CF09", "#7FCA09", "#44820C"]
-  leaf_deep: "#246B01"
-  radish: "#CE1628"
-  carrot: "#E47F26"
-  pumpkin: "#EE6908"
-  rivets: grey
+palette: tuned in Blender; see PALETTE in art/farmkit/style.py ([lit, base, shade] per material)
