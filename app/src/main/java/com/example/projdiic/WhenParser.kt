@@ -48,7 +48,7 @@ object WhenParser {
     private val dayOfMonth = pattern("\\b${LEAD}the\\s+(\\d{1,2})$ORDINAL\\b")
     private val weekdayName = pattern("\\b$LEAD(?:(this|next|coming)\\s+)?($weekday)$PART\\b")
     private val dayWord = pattern(
-        "\\b$DAY_WORD_LEAD(today|tonight|tomorrow|this\\s+(?:morning|afternoon|evening|weekend|week)|next\\s+week|(?:on\\s+)?(?:the\\s+)?weekend)$PART\\b"
+        "\\b$DAY_WORD_LEAD(today|tonight|tomorrow|this\\s+(?:morning|afternoon|evening|weekend|week|month)|next\\s+week|(?:on\\s+)?(?:the\\s+)?weekend)$PART\\b"
     )
     private val clockAmPm = pattern("\\b(?:(?:at|by)\\s+)?(\\d{1,2})(?:[:.]([0-5]\\d))?\\s*([ap])\\.?\\s?m\\b\\.?")
     private val clock24 = pattern("\\b(?:(?:at|by)\\s+)?([01]?\\d|2[0-3])[:h]([0-5]\\d)\\b")
@@ -139,6 +139,7 @@ object WhenParser {
                     deadline, partOrNull,
                 )
                 "this week" -> WhenChoices.thisWeek(now, zone).let { DayMatch(m.range, DayMath.midnight(it.end, zone), it.key, deadline, null, it) }
+                "this month" -> WhenChoices.thisMonth(now, zone).let { DayMatch(m.range, DayMath.midnight(it.end, zone), it.key, deadline, null, it) }
                 "next week" -> {
                     val monday = DayMath.midnight(now, zone, DayMath.daysUntil(Calendar.MONDAY, now, zone).let { if (it == 0) 7 else it })
                     val start = if (deadline) now else DayMath.at(monday, zone, WhenChoices.MORNING_HOUR)

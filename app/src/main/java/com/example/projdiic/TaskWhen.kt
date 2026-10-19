@@ -20,6 +20,7 @@ object WhenChoices {
     const val TONIGHT = "tonight"
     const val TOMORROW = "tomorrow"
     const val THIS_WEEK = "this_week"
+    const val THIS_MONTH = "this_month"
 
     /** Anything said that isn't one of the chips: "on Monday", "at 3pm", "on the 25th". */
     const val CUSTOM = "custom"
@@ -46,17 +47,24 @@ object WhenChoices {
         return TimeWindow(THIS_WEEK, now, DayMath.endOfDay(sunday, zone))
     }
 
+    /** Until the last day of the month. */
+    fun thisMonth(now: Long, zone: TimeZone) = TimeWindow(THIS_MONTH, now, DayMath.endOfMonth(now, zone))
+
     /** Midnight tonight: when "Snooze until tomorrow" ends. */
     fun startOfTomorrow(now: Long, zone: TimeZone = TimeZone.getDefault()): Long =
         DayMath.midnight(now, zone, plusDays = 1)
 
-    /** Anytime (null) first; Tonight drops off late at night and This week on Sundays. */
+    /**
+     * Anytime (null) first; Tonight drops off late at night, This week on Sundays, and This month once the week
+     * reaches as far.
+     */
     fun chips(now: Long, zone: TimeZone = TimeZone.getDefault()): List<TimeWindow?> = buildList {
         add(null)
         add(today(now, zone))
         if (DayMath.hourOf(now, zone) < LAST_EVENING_HOUR) add(tonight(now, zone))
         add(tomorrow(now, zone))
         if (DayMath.dayOfWeek(now, zone) != Calendar.SUNDAY) add(thisWeek(now, zone))
+        thisMonth(now, zone).takeIf { it.end > thisWeek(now, zone).end }?.let { add(it) }
     }
 }
 
@@ -68,7 +76,7 @@ object WhenText {
         val date: (Long) -> String,
     )
 
-    private val relativeWords = setOf("Today", "Tonight", "Tomorrow", "Yesterday", "This week")
+    private val relativeWords = setOf("Today", "Tonight", "Tomorrow", "Yesterday", "This week", "This month")
 
     /** "Anytime", "Today", "Tomorrow 15:00", "Monday", "From 16:50", "Was for yesterday". */
     fun label(window: TimeWindow?, now: Long, zone: TimeZone, formats: Formats): String {
@@ -90,6 +98,7 @@ object WhenText {
             WhenChoices.TODAY -> "Today"
             WhenChoices.TONIGHT -> "Tonight"
             WhenChoices.THIS_WEEK -> "This week"
+            WhenChoices.THIS_MONTH -> "This month"
             else -> day(if (waiting) window.start else window.end, now, zone, formats) + time
         }
     }

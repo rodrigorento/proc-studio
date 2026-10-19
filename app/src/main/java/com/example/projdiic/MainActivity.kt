@@ -258,6 +258,7 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
                 logCount = logCount,
                 onReset = {
                     TaskCache.clear(context)
+                    FarmCache.clear(context)
                     EventLog.clear(context)
                     EventLog.log(context, "data_reset")
                     tasks = TaskCache.getTasks(context)

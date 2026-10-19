@@ -35,19 +35,34 @@ class WhenChoicesTest {
         val chips = WhenChoices.chips(friday, utc)
 
         assertEquals(
-            listOf(null, WhenChoices.TODAY, WhenChoices.TONIGHT, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK),
+            listOf(
+                null, WhenChoices.TODAY, WhenChoices.TONIGHT, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK,
+                WhenChoices.THIS_MONTH,
+            ),
             chips.map { it?.key },
+        )
+    }
+
+    @Test
+    fun thisMonthRunsToTheLastDayAndIsLeftOutWhenTheWeekReachesAsFar() {
+        val month = WhenChoices.thisMonth(friday, utc)
+
+        assertEquals(friday, month.start)
+        assertEquals(at(31, 23, 59) + 59_999, month.end)
+        assertEquals(
+            listOf(null, WhenChoices.TODAY, WhenChoices.TONIGHT, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK),
+            WhenChoices.chips(at(27, 10), utc).map { it?.key },
         )
     }
 
     @Test
     fun lateAtNightAndOnSundaysThereAreFewerChips() {
         assertEquals(
-            listOf(null, WhenChoices.TODAY, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK),
+            listOf(null, WhenChoices.TODAY, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK, WhenChoices.THIS_MONTH),
             WhenChoices.chips(at(16, 23, 30), utc).map { it?.key },
         )
         assertEquals(
-            listOf(null, WhenChoices.TODAY, WhenChoices.TONIGHT, WhenChoices.TOMORROW),
+            listOf(null, WhenChoices.TODAY, WhenChoices.TONIGHT, WhenChoices.TOMORROW, WhenChoices.THIS_MONTH),
             WhenChoices.chips(at(18, 10), utc).map { it?.key },
         )
     }
@@ -59,6 +74,8 @@ class WhenChoicesTest {
         assertEquals("Tonight", label(WhenChoices.tonight(friday, utc)))
         assertEquals("Tomorrow", label(WhenChoices.tomorrow(friday, utc)))
         assertEquals("This week", label(WhenChoices.thisWeek(friday, utc)))
+        assertEquals("This month", label(WhenChoices.thisMonth(friday, utc)))
+        assertEquals("For this month", WhenText.gateLine(WhenChoices.thisMonth(friday, utc), friday, utc, formats))
     }
 
     @Test

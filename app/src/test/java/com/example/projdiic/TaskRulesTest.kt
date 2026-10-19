@@ -8,6 +8,11 @@ import org.junit.Test
 
 class TaskRulesTest {
 
+    @Test
+    fun theListHoldsAsManyTasksAsTheFieldHasPlots() {
+        assertEquals(4, TaskRules.MAX_TASKS)
+    }
+
     private fun task(id: String, createdAt: Long, deferredUntil: Long = 0L) =
         Task(id = id, title = id, createdAt = createdAt, deferredUntil = deferredUntil)
 

@@ -28,6 +28,12 @@ internal object DayMath {
     /** The last millisecond of the day of [time]. */
     fun endOfDay(time: Long, zone: TimeZone): Long = midnight(time, zone, plusDays = 1) - 1
 
+    /** The last millisecond of the month of [time]. */
+    fun endOfMonth(time: Long, zone: TimeZone): Long {
+        val day = calendar(time, zone)
+        return endOfDay(midnight(time, zone, day.getActualMaximum(Calendar.DAY_OF_MONTH) - day.get(Calendar.DAY_OF_MONTH)), zone)
+    }
+
     fun dayOfWeek(time: Long, zone: TimeZone): Int = calendar(time, zone).get(Calendar.DAY_OF_WEEK)
 
     fun hourOf(time: Long, zone: TimeZone): Int = calendar(time, zone).get(Calendar.HOUR_OF_DAY)

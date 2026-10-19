@@ -31,7 +31,7 @@ data class Task(
 }
 
 object TaskRules {
-    const val MAX_TASKS = 3
+    const val MAX_TASKS = 4  // one per plot of the field
     const val SNOOZE_MS = 5 * 60_000L
     const val CHECK_IN_AFTER_PASSES = 2
     const val MAX_TITLE_LENGTH = 120
