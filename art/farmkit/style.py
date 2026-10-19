@@ -19,6 +19,9 @@ PALETTE = {
     "radish": ("#F5394F", "#D3172D", "#8C0A1E"),
     "radish_tail": ("#FBEFEF", "#E8CDD0", "#B38D93"),
     "blossom": ("#FFD0E2", "#F59DC0", "#B9628A"),
+    "lettuce_heart": ("#D4F25C", "#AEDB2C", "#62960F"),
+    "lettuce_heart_dry": ("#CDD266", "#AAAE40", "#676E20"),
+    "yellow_flower": ("#FFEB5C", "#F7C81B", "#B5820B"),
 }
 
 OUTLINE = "#251803"  # warm dark brown ink
@@ -28,7 +31,8 @@ LEAF_OUTLINE_WIDTH = 0.007  # thin parts (leaves, stems, flowers)
 # How strongly a material takes the time-of-day tint (1 when not listed). The crops keep more of their own colour,
 # so they stand out from the bed at dusk and night instead of turning the same blue-grey.
 TINT_STRENGTH = {name: 0.35 for name in ("carrot", "radish", "radish_tail", "leaf", "leaf_dry", "leaf_old",
-                                         "flower", "blossom")}
+                                         "lettuce_heart", "lettuce_heart_dry", "flower", "blossom",
+                                         "yellow_flower")}
 
 # Direction from the scene towards the isometric camera: leaves are turned to face it so they read.
 TO_CAMERA = (0.5774, -0.5774, 0.5774)
