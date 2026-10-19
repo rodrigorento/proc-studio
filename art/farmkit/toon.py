@@ -37,6 +37,7 @@ def material(name: str) -> bpy.types.Material:
     group.inputs["Lit"].default_value = linear(lit)
     group.inputs["Base"].default_value = linear(base)
     group.inputs["Shade"].default_value = linear(shade)
+    group.inputs["Tint"].default_value = style.TINT_STRENGTH.get(name, 1.0)
     output = nodes.new("ShaderNodeOutputMaterial")
     links.new(group.outputs["Shader"], output.inputs["Surface"])
     return mat
@@ -125,6 +126,7 @@ def _toon_group() -> bpy.types.ShaderNodeTree:
     group = bpy.data.node_groups.new(TOON_GROUP, "ShaderNodeTree")
     for name in ("Lit", "Base", "Shade"):
         group.interface.new_socket(name, in_out="INPUT", socket_type="NodeSocketColor")
+    group.interface.new_socket("Tint", in_out="INPUT", socket_type="NodeSocketFloat")
     group.interface.new_socket("Shader", in_out="OUTPUT", socket_type="NodeSocketShader")
     nodes, links = group.nodes, group.links
     inputs = nodes.new("NodeGroupInput")
@@ -162,8 +164,24 @@ def _toon_group() -> bpy.types.ShaderNodeTree:
     links.new(_socket(tinted.outputs, "Result_Color"), _socket(lifted.inputs, "A_Color"))
     _socket(lifted.inputs, "B_Color").default_value = (1.0, 1.0, 1.0, 1.0)
 
+    # Materials with a Tint below 1 (the crops) keep more of their colour: they only darken by as much as the
+    # tint does, then take the rest of the tint in proportion.
+    darkness = nodes.new("ShaderNodeRGBToBW")
+    links.new(tint, darkness.inputs["Color"])
+    gray = nodes.new("ShaderNodeCombineColor")
+    for channel in ("Red", "Green", "Blue"):
+        links.new(darkness.outputs["Val"], gray.inputs[channel])
+    darkened = nodes.new("ShaderNodeMix")
+    darkened.data_type = "RGBA"
+    darkened.blend_type = "MULTIPLY"
+    _socket(darkened.inputs, "Factor_Float").default_value = 1.0
+    links.new(banded, _socket(darkened.inputs, "A_Color"))
+    links.new(gray.outputs["Color"], _socket(darkened.inputs, "B_Color"))
+    final = _mix(group, inputs.outputs["Tint"], _socket(darkened.outputs, "Result_Color"),
+                 _socket(lifted.outputs, "Result_Color"))
+
     emit = nodes.new("ShaderNodeEmission")
-    links.new(_socket(lifted.outputs, "Result_Color"), emit.inputs["Color"])
+    links.new(final, emit.inputs["Color"])
     links.new(emit.outputs["Emission"], outputs.inputs["Shader"])
     return group
 

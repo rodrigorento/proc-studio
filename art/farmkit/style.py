@@ -14,13 +14,17 @@ PALETTE = {
     "leaf": ("#A6DC1E", "#7FC00F", "#44820C"),
     "leaf_dry": ("#B4C24A", "#93A12E", "#5B6A18"),
     "leaf_old": ("#DAE008", "#B8B20A", "#6E7404"),
-    "carrot": ("#FCB235", "#FA6E07", "#B73908"),
+    "carrot": ("#FF8F2E", "#F26B0A", "#B23A08"),
     "flower": ("#F1F0D9", "#D8D6B4", "#9E9C78"),
 }
 
 OUTLINE = "#251803"  # warm dark brown ink
 OUTLINE_WIDTH = 0.018  # metres; the bed is 1 m wide
 LEAF_OUTLINE_WIDTH = 0.007  # thin parts (leaves, stems, flowers)
+
+# How strongly a material takes the time-of-day tint (1 when not listed). The crops keep more of their own colour,
+# so they stand out from the bed at dusk and night instead of turning the same blue-grey.
+TINT_STRENGTH = {"carrot": 0.35, "leaf": 0.35, "leaf_dry": 0.35, "leaf_old": 0.35, "flower": 0.35}
 
 # Direction from the scene towards the isometric camera: leaves are turned to face it so they read.
 TO_CAMERA = (0.5774, -0.5774, 0.5774)
@@ -53,7 +57,8 @@ CAMERA = {
 # Where each light comes from: elevation above the ground and azimuth in degrees (0 = +X, 90 = +Y).
 # The camera looks from +X/-Y, so 270 lights the left face of the bed and 0-45 comes from the right.
 # Colours are first desaturated to `saturation`, then key_tint multiplies the lit and base bands and
-# shadow_tint the shade band, then `lift` mixes towards white.
+# shadow_tint the shade band, then `lift` mixes towards white. Night keeps most of the colour (saturation 0.75)
+# so crops still read on the dark screen; only the wood and soil go blue.
 LIGHTS = {
     "morning": {
         "hours": (5, 11),
@@ -72,7 +77,7 @@ LIGHTS = {
     },
     "night": {
         "hours": (20, 5),
-        "elevation": 55, "azimuth": 240, "ambient": 0.16,
-        "key_tint": "#7C8CD2", "shadow_tint": "#3C3D7A", "saturation": 0.3, "lift": 0.0,
+        "elevation": 55, "azimuth": 240, "ambient": 0.2,
+        "key_tint": "#A3B2EC", "shadow_tint": "#50529A", "saturation": 0.75, "lift": 0.0,
     },
 }
