@@ -15,7 +15,8 @@ class WindowRulesTest {
         className: String? = null,
         windowType: Int? = AccessibilityWindowInfo.TYPE_APPLICATION,
         keyboard: String? = "com.google.android.inputmethod.latin",
-    ) = WindowRules.opensOverInstagram(pkg, className, windowType, own, mainScreen, keyboard)
+        fullScreen: Boolean = true,
+    ) = WindowRules.opensOverInstagram(pkg, className, windowType, fullScreen, own, mainScreen, keyboard)
 
     @Test
     fun theGatesOwnScreensOpenOverInstagram() {
@@ -67,5 +68,22 @@ class WindowRulesTest {
     @Test
     fun anotherAppIsAssumedToReplaceInstagramWhenTheWindowIsUnknown() {
         assertFalse(opensOver("com.whatsapp", "com.whatsapp.HomeActivity", windowType = null))
+    }
+
+    @Test
+    fun samsungsNavigationBarOpensOverInstagram() {
+        // One UI Home draws the navigation bar, which changes when the keyboard opens and closes.
+        // Seen on a tester's phone: the window isn't listed yet and isn't full-screen.
+        assertTrue(opensOver("com.sec.android.app.launcher", "android.widget.FrameLayout", null, fullScreen = false))
+    }
+
+    @Test
+    fun theHomeScreenMeansInstagramLeft() {
+        assertFalse(opensOver("com.sec.android.app.launcher", "com.sec.android.app.launcher.activities.LauncherActivity", null))
+    }
+
+    @Test
+    fun aWindowThatDoesNotFillTheScreenOpensOverInstagram() {
+        assertTrue(opensOver("com.facebook.orca", "android.widget.FrameLayout", null, fullScreen = false))
     }
 }
