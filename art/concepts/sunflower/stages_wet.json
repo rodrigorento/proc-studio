@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image is a game asset for a mobile farming app: a chunky wooden raised garden bed with rounded planks and corner posts, filled with tilled soil, holding one sunflower plant with a big head and two smaller side blooms, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Keep the same style, bed, colours, angle and lighting. Only the parts of the plant above the soil are visible; nothing underground is shown. No text. Show four copies of this bed side by side in one row, evenly spaced and the same size, left to right showing the growth stages of the single sunflower plant in the middle of the bed: 1) seed: one soil mound in the middle where the seed was planted, nothing growing yet; 2) sprout: one sprout with two oval pale-green seed leaves; 3) growing: a young sunflower about half as tall as in the reference, a thick green stem with four broad heart-shaped leaves and a closed green bud at the top, two tiny side buds; 4) bloom: the full sunflower exactly like the reference, the big head and the two side blooms open. The soil is dark and freshly watered in all four.",
+  "refs": [
+    "art/style/references/bed_sunflower.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T16:37:27"
+}

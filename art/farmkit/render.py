@@ -6,9 +6,10 @@ bed_empty_<wet|dry>_<light>.png.
 import os
 
 from . import bed, scene, style, toon
-from .crops import carrot, lettuce, pumpkin, radish
+from .crops import carrot, lettuce, pumpkin, radish, sunflower
 
-CROPS = {"radish": radish, "lettuce": lettuce, "carrot": carrot, "pumpkin": pumpkin}
+CROPS = {"radish": radish, "lettuce": lettuce, "carrot": carrot, "pumpkin": pumpkin,
+         "sunflower": sunflower}
 
 
 def card_name(crop: str, stage: str, wet: bool, light: str) -> str:

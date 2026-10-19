@@ -126,11 +126,12 @@ def flat(obj: bpy.types.Object) -> None:
 
 
 def palmate(bm: bmesh.types.BMesh, base: Vector, along: Vector, up: Vector, size: float, lobes: int = 5,
-            cup: float = 0.12, sag: float = 0.0) -> None:
+            cup: float = 0.12, sag: float = 0.0, tip: float = 0.0) -> None:
     """A broad hand-shaped leaf (pumpkin, squash) whose stalk joins at `base`, reaching `along`, facing `up`.
 
     The lobes spread from the middle of the blade, and the notch between the two back lobes holds the stalk.
-    Cup lifts the middle above the edges; sag drops the edges towards the ground.
+    Cup lifts the middle above the edges; sag drops the edges towards the ground. With one lobe it is a heart,
+    and tip draws its point out.
     """
     along = along.normalized()
     side = along.cross(up).normalized()
@@ -143,7 +144,7 @@ def palmate(bm: bmesh.types.BMesh, base: Vector, along: Vector, up: Vector, size
     for k in range(steps):
         a = -math.pi + 2 * math.pi * k / steps  # 0 points along, +-pi is the notch
         r = radius * (0.74 + 0.26 * abs(math.cos(lobes * a / 2)) ** 0.7) * (1 + 0.04 * math.sin(14 * a))
-        r *= 1 - 0.5 * math.exp(-((abs(a) - math.pi) / 0.3) ** 2)
+        r *= (1 - 0.5 * math.exp(-((abs(a) - math.pi) / 0.3) ** 2)) * (1 + tip * math.exp(-(a / 0.3) ** 2))
         ring.append(bm.verts.new(centre + (along * math.cos(a) + side * math.sin(a)) * r - UP * (sag * r)))
     for k in range(steps):
         bm.faces.new((middle, ring[k], ring[(k + 1) % steps]))

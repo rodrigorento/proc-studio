@@ -28,6 +28,10 @@ PALETTE = {
     "pumpkin_groove": ("#B5470C", "#9A3A08", "#6E2604"),
     "pumpkin_old_groove": ("#B8723A", "#9A5C2A", "#6A3A16"),
     "leaf_broad": ("#8ED14A", "#5FAE2C", "#2F6E14"),
+    "petal": ("#FFE14A", "#FFC414", "#C98306"),
+    "petal_back": ("#FFC93A", "#F2A30F", "#B06A05"),
+    "seed_disc": ("#8A4A1E", "#6A3412", "#401E08"),
+    "seed_dot": ("#E8892A", "#C96A18", "#8A440A"),
 }
 
 OUTLINE = "#251803"  # warm dark brown ink
@@ -39,7 +43,8 @@ LEAF_OUTLINE_WIDTH = 0.007  # thin parts (leaves, stems, flowers)
 TINT_STRENGTH = {name: 0.35 for name in ("carrot", "radish", "radish_tail", "leaf", "leaf_dry", "leaf_old",
                                          "lettuce_heart", "lettuce_heart_dry", "flower", "blossom",
                                          "yellow_flower", "pumpkin", "pumpkin_old", "pumpkin_young",
-                                         "pumpkin_groove", "pumpkin_old_groove", "leaf_broad")}
+                                         "pumpkin_groove", "pumpkin_old_groove", "leaf_broad", "petal",
+                                         "petal_back", "seed_disc", "seed_dot")}
 
 # Direction from the scene towards the isometric camera: leaves are turned to face it so they read.
 TO_CAMERA = (0.5774, -0.5774, 0.5774)
