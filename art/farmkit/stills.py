@@ -26,7 +26,7 @@ TURNS = {"gate": -28.0}  # degrees about the vertical, for props that read bette
 def build(collection: bpy.types.Collection, name: str) -> None:
     """Build one prop (a name from NAMES) standing at the origin, turned the way it is rendered."""
     if name.startswith("seed_"):
-        _packet(collection, name[len("seed_"):])
+        packet(collection, name[len("seed_"):])
     else:
         BUILDERS[name](collection)
     if TURNS.get(name):
@@ -67,7 +67,7 @@ def _can(collection) -> None:
                                       rose + Vector((0, 0, -0.18)) - ACROSS * 0.08], radius=0.03)
 
 
-def _packet(collection, crop: str) -> None:
+def packet(collection, crop: str) -> None:
     """A chunky paper seed packet in the crop's colour with a folded top, and a picture of the crop on a label."""
     paper = toon.material(f"packet_{crop}")
     face = Matrix.Rotation(math.pi / 4, 4, "Z")  # boxes are built along X (width) and Y (depth); turn X to ACROSS

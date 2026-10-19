@@ -11,7 +11,23 @@ object FarmViews {
 
     /** For screen readers: "Radish bed, ripe". */
     fun describe(task: Task, now: Long): String =
-        FarmRules.crop(task).replaceFirstChar { it.uppercaseChar() } + " bed, " + stageWords(FarmRules.stage(task, now))
+        cropName(FarmRules.crop(task)) + " bed, " + stageWords(FarmRules.stage(task, now))
+
+    /** "Radish", "Sunflower": a crop as a seed packet names it. */
+    fun cropName(crop: String): String = crop.replaceFirstChar { it.uppercaseChar() }
+
+    /** "Gym grows into carrots, ripe by Sunday.", for the Planted screen; [due] is [WhenText.due], null for Anytime. */
+    fun plantedLine(title: String, crop: String, due: String?): String {
+        val into = when (crop) {
+            FarmRules.RADISH -> "radishes"
+            FarmRules.LETTUCE -> "lettuce"
+            FarmRules.CARROT -> "carrots"
+            FarmRules.PUMPKIN -> "a pumpkin"
+            else -> "a sunflower"
+        }
+        val days = FarmRules.SUNFLOWER_BLOOMS_AFTER_MS / (24 * 3_600_000L)
+        return if (due == null) "$title grows into $into that blooms in $days days." else "$title grows into $into, ripe $due."
+    }
 
     /** A [FarmRules.stage] in words, for the home screen and screen readers. */
     fun stageWords(stage: String): String = when (stage) {

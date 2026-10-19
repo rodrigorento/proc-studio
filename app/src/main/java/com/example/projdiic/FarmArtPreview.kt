@@ -53,18 +53,19 @@ private val FIELD = listOf(
 )
 
 /** What is playing on the field. */
-private enum class Moment { WATER, RAIN, HARVEST }
+private enum class Moment { WATER, RAIN, HARVEST, PLANT }
 
 /**
  * A look at the farm's rendered beds before the farm screens exist: a 2x2 field like the watering screen will
- * show, which can be watered (by can or rain) and harvested, and every stage of each crop, in any light,
- * watered or dry.
+ * show, which can be watered (by can or rain), harvested and planted again, and every stage of each crop, in any
+ * light, watered or dry.
  */
 @Composable
 fun FarmArtPreview() {
     var light by rememberSaveable { mutableStateOf(CropArt.lightAt(Calendar.getInstance().get(Calendar.HOUR_OF_DAY))) }
     var wet by rememberSaveable { mutableStateOf(true) }
     var harvested by rememberSaveable { mutableStateOf(false) }
+    var planted by rememberSaveable { mutableStateOf(false) }
     var moment by remember { mutableStateOf<Moment?>(null) }
     var frame by remember { mutableIntStateOf(0) }
     var ripening by remember { mutableFloatStateOf(0f) }
@@ -79,12 +80,20 @@ fun FarmArtPreview() {
                 wet = true  // harvests play on a watered bed, and leave it so
                 CropMotion.harvest("radish", "ripe", light).size
             }
+            Moment.PLANT -> CropMotion.plant("radish", light).size
         }
         for (f in 0 until frames) {
             frame = f
             delay(1000L / CropMotion.FPS)
         }
-        if (playing == Moment.HARVEST) harvested = true else wet = true
+        when (playing) {
+            Moment.HARVEST -> harvested = true
+            Moment.PLANT -> {
+                harvested = false
+                planted = true
+            }
+            else -> wet = true
+        }
         moment = null
         frame = 0
         ripening = 0f
@@ -105,13 +114,14 @@ fun FarmArtPreview() {
             OutlinedButton(onClick = { wet = false; moment = Moment.WATER }, enabled = idle) { Text("Water") }
             OutlinedButton(onClick = { wet = false; moment = Moment.RAIN }, enabled = idle) { Text("Rain") }
             OutlinedButton(onClick = { moment = Moment.HARVEST }, enabled = idle && !harvested) { Text("Harvest") }
-            OutlinedButton(onClick = { harvested = false; wet = false }, enabled = idle) { Text("Reset") }
+            OutlinedButton(onClick = { moment = Moment.PLANT }, enabled = idle && harvested) { Text("Plant") }
+            OutlinedButton(onClick = { harvested = false; planted = false; wet = false }, enabled = idle) { Text("Reset") }
         }
 
         FIELD.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 row.forEach { plot ->
-                    PlotCard(plot, light, wet, harvested, moment, frame, ripening, Modifier.weight(1f))
+                    PlotCard(if (planted) plot.copy(stage = "seed") else plot, light, wet, harvested, moment, frame, ripening, Modifier.weight(1f))
                 }
             }
         }
@@ -145,7 +155,8 @@ private const val RIPEN_MILLIS = 300
 /**
  * One bed of the field, at rest or in the middle of a moment. Watering fades the dry card into the wet one under
  * the can or the rain; a harvest first ripens a crop that isn't ready (on a watered bed), then plays the crop
- * flying out over the empty bed.
+ * flying out over the empty bed; planting pours the crop's seed packet into the empty bed as it fades into the
+ * seed card.
  */
 @Composable
 private fun PlotCard(
@@ -169,6 +180,12 @@ private fun PlotCard(
                 Layer(card(true), null, wetness.coerceIn(0f, 1f))
                 val frames = if (moment == Moment.WATER) CropMotion.water(light) else CropMotion.rain(light)
                 Layer(frames[frame], null)
+            }
+            moment == Moment.PLANT -> {
+                val seeded = (frame - CropMotion.SEED_FROM).toFloat() / (CropMotion.SEED_TO - CropMotion.SEED_FROM)
+                Layer(CropArt.emptyBed(wet, light), label)
+                Layer(CropArt.bed(plot.crop, "seed", wet, light), null, seeded.coerceIn(0f, 1f))
+                Layer(CropMotion.plant(plot.crop, light)[frame], null)
             }
             harvested -> Layer(card(wet), label)
             moment == Moment.HARVEST -> {

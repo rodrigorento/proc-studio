@@ -49,7 +49,8 @@ status, and `art/farmkit/style.py` holds the numbers (palette, bed, camera, ligh
    and prop out in one scene (`build()`, `render(path)`, `save("art/blend/showroom.blend")`).
 4. **Render.**
    - cards: `render.render_all("<repo>/art/build/renders")` (all crops, about 2 min)
-   - animations: `anim.render_water("<repo>/art/build/anim")` and `anim.render_harvest(..., crops=[...])`
+   - animations: `anim.render_water("<repo>/art/build/anim")`, `anim.render_plant(..., crops=[...])` and
+     `anim.render_harvest(..., crops=[...])`
    - props and icon: `stills.render_all("<repo>/art/build/props")`
 5. **Export.** `python3 -I art/export_android.py`. It checks every image the app can ask for exists, keeps harvest
    frames to what differs from the empty bed, writes the launcher icon at every density, and prints the size
@@ -57,7 +58,7 @@ status, and `art/farmkit/style.py` holds the numbers (palette, bed, camera, ligh
 6. **Check.**
    - `python3 art/review.py check`: `art/assets.yaml` matches the files. Add or update the asset's entry.
    - `bash gradlew testDebugUnitTest installDebug`, then open the app, long-press the "Scroll Gate" title and use
-     the farm art preview (lights, watered, Water / Rain / Harvest) on a phone or emulator.
+     the farm art preview (lights, watered, Water / Rain / Harvest / Plant) on a phone or emulator.
    - `git status`: only the asset you changed should differ. A single unrelated WebP changing is render noise:
      `git checkout` it.
 7. **Commit** the farmkit code, concepts, WebPs and generated Kotlin together. PNG and .blend files under `art/` go
@@ -72,7 +73,8 @@ status, and `art/farmkit/style.py` holds the numbers (palette, bed, camera, ligh
   watered and a dry version: dry is pale cracked soil and drooping olive leaves, thirsty but never dead.
 - Four lights by the phone's clock (morning, day, dusk, night). At night the bed goes blue and crops keep colour.
 - File names: `crop_<crop>_<stage>_<wet|dry>_<light>`, `bed_empty_<wet|dry>_<light>`,
-  `anim_water_<can|rain>_<light>_<nn>`, `anim_harvest_<crop>_<stage>_<light>_<nn>`, `prop_<name>`.
+  `anim_water_<can|rain>_<light>_<nn>`, `anim_plant_<crop>_<light>_<nn>`, `anim_harvest_<crop>_<stage>_<light>_<nn>`,
+  `prop_<name>`.
 
 ## Gotchas
 

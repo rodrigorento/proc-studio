@@ -1,7 +1,8 @@
 """Turn the Blender renders into the app's images and the Kotlin that looks them up.
 
     python3 art/export_android.py   # after farmkit.render.render_all("art/build/renders") and, for the
-                                    # animations, farmkit.anim.render_water / render_harvest("art/build/anim")
+                                    # animations, farmkit.anim.render_water / render_plant / render_harvest
+                                    # ("art/build/anim")
 
 Writes WebPs (with transparency) to app/src/main/res/drawable-nodpi/, generates CropArt.kt (the still cards and
 seed packets) and CropMotion.kt (the animation frames), writes the launcher icon to the mipmap folders, checks that
@@ -161,9 +162,11 @@ def _anim_constants() -> dict[str, int]:
     """Timing from farmkit/anim.py (it needs Blender, so read the text)."""
     text = (ART / "farmkit/anim.py").read_text()
     wet = re.search(r"^WET_FROM, WET_TO = (\d+), (\d+)", text, re.M)
+    seed = re.search(r"^SEED_FROM, SEED_TO = (\d+), (\d+)", text, re.M)
     number = lambda name: int(re.search(rf"^{name} = (\d+)", text, re.M).group(1))  # noqa: E731
-    return {"FPS": number("FPS"), "WATER_FRAMES": number("WATER_FRAMES"), "HARVEST_FRAMES": number("HARVEST_FRAMES"),
-            "WET_FROM": int(wet.group(1)), "WET_TO": int(wet.group(2))}
+    return {"FPS": number("FPS"), "WATER_FRAMES": number("WATER_FRAMES"), "PLANT_FRAMES": number("PLANT_FRAMES"),
+            "HARVEST_FRAMES": number("HARVEST_FRAMES"), "WET_FROM": int(wet.group(1)), "WET_TO": int(wet.group(2)),
+            "SEED_FROM": int(seed.group(1)), "SEED_TO": int(seed.group(2))}
 
 
 def harvest_stages() -> dict[str, list[str]]:
@@ -182,6 +185,8 @@ def motion_sequences() -> dict[str, tuple[str, list[Path]]]:
     for light in style.LIGHTS:
         for kind in ("can", "rain"):
             counts[f"water_{kind}_{light}"] = (light, constants["WATER_FRAMES"])
+        for crop in STAGES:
+            counts[f"plant_{crop}_{light}"] = (light, constants["PLANT_FRAMES"])
         for crop, stages in harvest_stages().items():
             for stage in stages:
                 counts[f"harvest_{crop}_{stage}_{light}"] = (light, constants["HARVEST_FRAMES"])
@@ -236,7 +241,7 @@ package com.example.projdiic
 
 /**
  * The farm's rendered moments, as frames to play over a bed card at [FPS]: the watering can, the rain cloud that
- * waters the field when the player didn't, and each crop's harvest.
+ * waters the field when the player didn't, each crop's seed packet planting it, and each crop's harvest.
  */
 object CropMotion {
     const val FPS = FPS_VALUE
@@ -244,6 +249,10 @@ object CropMotion {
     /** While watering plays, the card under it fades from dry to wet between these frames. */
     const val WET_FROM = WET_FROM_VALUE
     const val WET_TO = WET_TO_VALUE
+
+    /** While planting plays, the card under it fades from the empty bed to the crop's seed stage between these frames. */
+    const val SEED_FROM = SEED_FROM_VALUE
+    const val SEED_TO = SEED_TO_VALUE
 
     /** The stages each crop is harvested from, the usual one first. */
     val HARVEST_STAGES: Map<String, List<String>> = mapOf(
@@ -255,6 +264,9 @@ HARVEST_STAGE_MAP
 
     /** The rain cloud, played over any bed. */
     fun rain(light: String): List<Int> = sequences.getValue("water_rain_$light")
+
+    /** The crop's seed packet pouring seeds into the bed, played over any bed. */
+    fun plant(crop: String, light: String): List<Int> = sequences.getValue("plant_${crop}_$light")
 
     /** The crop flying out of its bed, played over the watered [CropArt.emptyBed]. */
     fun harvest(crop: String, stage: String, light: String): List<Int> =
@@ -285,6 +297,8 @@ def motion_kotlin(sequences: dict[str, tuple[str, list[Path]]]) -> str:
         "FPS_VALUE": str(constants["FPS"]),
         "WET_FROM_VALUE": str(constants["WET_FROM"]),
         "WET_TO_VALUE": str(constants["WET_TO"]),
+        "SEED_FROM_VALUE": str(constants["SEED_FROM"]),
+        "SEED_TO_VALUE": str(constants["SEED_TO"]),
         "HARVEST_STAGE_MAP": "\n".join(f'        "{crop}" to listOf({quoted(stages)}),'
                                        for crop, stages in harvest_stages().items()),
         "SEQUENCE_MAP": "\n".join(lines),

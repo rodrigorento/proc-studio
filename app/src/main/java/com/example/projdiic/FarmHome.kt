@@ -21,32 +21,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -54,8 +44,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -180,7 +168,7 @@ private fun Bed(image: (wet: Boolean) -> Int, look: FieldLook) {
 }
 
 @Composable
-private fun Layer(@DrawableRes image: Int, alpha: Float = 1f) {
+internal fun Layer(@DrawableRes image: Int, alpha: Float = 1f) {
     Image(
         painter = painterResource(image),
         contentDescription = null,
@@ -212,9 +200,9 @@ fun WateringRow(watered: Boolean) {
     }
 }
 
-/** The field to plant a task in, by typing or with the phone's voice input. */
+/** Starts planting a task ([PlantFlow]); a full field says so instead. */
 @Composable
-fun PlantRow(full: Boolean, focus: FocusRequester, onPlant: (String) -> Boolean, onVoice: () -> Unit) {
+fun PlantButton(full: Boolean, onPlant: () -> Unit) {
     if (full) {
         Text(
             text = "Your field is full. Finish one to plant another.",
@@ -224,35 +212,10 @@ fun PlantRow(full: Boolean, focus: FocusRequester, onPlant: (String) -> Boolean,
         )
         return
     }
-    var draft by rememberSaveable { mutableStateOf("") }
-    val submit: () -> Unit = { if (onPlant(draft)) draft = "" }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = draft,
-            onValueChange = { draft = it },
-            placeholder = { Text("What do you keep putting off?") },
-            singleLine = true,
-            shape = RoundedCornerShape(16.dp),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { submit() }),
-            trailingIcon = {
-                IconButton(onClick = onVoice) {
-                    Icon(painter = painterResource(R.drawable.ic_mic), contentDescription = "Say a task")
-                }
-            },
-            modifier = Modifier.fillMaxWidth().focusRequester(focus)
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "Say when if it has a time: \"gym on Monday\". Sooner things grow as smaller crops.",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f).padding(end = 12.dp)
-            )
-            Button(onClick = submit, enabled = draft.isNotBlank(), shape = RoundedCornerShape(16.dp), modifier = Modifier.heightIn(min = 52.dp)) {
-                Text("Plant", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
-        }
+    Button(onClick = onPlant, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+        Image(painterResource(R.drawable.prop_seed_carrot), contentDescription = null, modifier = Modifier.size(30.dp))
+        Spacer(Modifier.width(8.dp))
+        Text("Plant a task", fontWeight = FontWeight.Bold, fontSize = 17.sp)
     }
 }
 

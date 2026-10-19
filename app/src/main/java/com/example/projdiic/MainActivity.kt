@@ -1,12 +1,10 @@
 package com.example.projdiic
 
 import android.Manifest
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.speech.RecognizerIntent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,15 +16,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -34,8 +29,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,7 +50,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     containerColor = MaterialTheme.colorScheme.background
                 ) { innerPadding ->
-                    ScrollGateScreen(modifier = Modifier.padding(innerPadding))
+                    // Consumed, so the planting steps' keyboard padding doesn't count the navigation bar twice.
+                    ScrollGateScreen(modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding))
                 }
             }
         }
@@ -84,7 +78,7 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
     var rainFrame by remember { mutableStateOf<Int?>(null) }
     var showFacilitator by rememberSaveable { mutableStateOf(false) }
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
-    val plantFocus = remember { FocusRequester() }
+    var planting by rememberSaveable { mutableStateOf(false) }
 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
@@ -100,12 +94,13 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
                 logCount = EventLog.count(context)
                 now = System.currentTimeMillis()
                 // A field nobody watered gets rain in the evening; a rain from a skipped watering shows here too.
-                val rains = FarmRules.rainsOnHome(FarmCache.wateredOn(context), now)
+                // Not while planting covers the field: it waits until the field is back in view.
+                val rains = !planting && FarmRules.rainsOnHome(FarmCache.wateredOn(context), now)
                 if (rains) {
                     FarmCache.rain(context, now, show = false)
                     EventLog.log(context, "field_watered", "by" to "rain", "where" to "app")
                 }
-                if (rains || FarmCache.takeRainToShow(context)) {
+                if (rains || (!planting && FarmCache.takeRainToShow(context))) {
                     try {
                         for (frame in CropMotion.rain(fieldLight(now)).indices) {
                             rainFrame = frame
@@ -121,8 +116,8 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    fun addTask(text: String, via: String): Boolean {
-        val task = TaskCache.addTask(context, text, via) ?: return false
+    fun plant(title: String, window: TimeWindow?, via: String): Task? {
+        val task = TaskCache.plant(context, title, window, via) ?: return null
         EventLog.log(
             context, "task_added",
             "via" to via,
@@ -133,7 +128,7 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
             "crop" to FarmRules.crop(task),
         )
         tasks = TaskCache.getTasks(context)
-        return true
+        return task
     }
 
     fun changeWhen(task: Task, window: TimeWindow?) {
@@ -154,13 +149,15 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasMicPermission = granted
     }
-    val voiceInput = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.let {
-            addTask(it, Task.VIA_VOICE)
-        }
-    }
     val rainWetness = rainFrame?.let { ((it - CropMotion.WET_FROM).toFloat() / (CropMotion.WET_TO - CropMotion.WET_FROM)).coerceIn(0f, 1f) }
     val look = FieldLook(fieldLight(now), watered && rainFrame == null, rainFrame, rainWetness ?: if (watered) 1f else 0f)
+
+    if (planting) {
+        Box(modifier.fillMaxSize()) {
+            PlantFlow(tasks = tasks, look = look, onPlant = ::plant, onClose = { planting = false })
+        }
+        return
+    }
 
     Column(
         modifier = modifier
@@ -232,28 +229,10 @@ fun ScrollGateScreen(modifier: Modifier = Modifier) {
                 now = now,
                 look = look,
                 onOpen = { openId = it.id },
-                onPlant = { plantFocus.requestFocus() },
+                onPlant = { planting = true },
             )
             WateringRow(watered = watered || rainFrame != null)
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionTitle("Plant a task")
-            PlantRow(
-                full = tasks.size >= TaskRules.MAX_TASKS,
-                focus = plantFocus,
-                onPlant = { addTask(it, Task.VIA_TEXT) },
-                onVoice = {
-                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                        .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                        .putExtra(RecognizerIntent.EXTRA_PROMPT, "What do you keep putting off?")
-                    try {
-                        voiceInput.launch(intent)
-                    } catch (e: ActivityNotFoundException) {
-                        Toast.makeText(context, "Voice input isn't available on this phone.", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            )
+            PlantButton(full = tasks.size >= TaskRules.MAX_TASKS, onPlant = { planting = true })
             if (!needsSetup && !hasMicPermission) {
                 Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
                     Column(Modifier.padding(horizontal = 16.dp)) {

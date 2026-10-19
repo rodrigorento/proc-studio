@@ -33,18 +33,17 @@ object TaskCache {
     fun find(context: Context, id: String): Task? = getTasks(context).firstOrNull { it.id == id }
 
     /**
-     * Adds a task at the end of the list, with the time it mentions ("tomorrow at 3")
-     * as its window. Returns null when the title is blank or the list is full.
+     * Plants a task in the next empty plot, for [window] (null: Anytime). Returns null when the title is blank or
+     * the field is full.
      */
-    fun addTask(context: Context, rawTitle: String, via: String): Task? {
+    fun plant(context: Context, rawTitle: String, window: TimeWindow?, via: String): Task? {
         val now = System.currentTimeMillis()
-        val parsed = WhenParser.parse(rawTitle, now)
-        val title = TaskRules.cleanTitle(parsed.title) ?: return null
+        val title = TaskRules.cleanTitle(rawTitle) ?: return null
         val tasks = getTasks(context)
         if (tasks.size >= TaskRules.MAX_TASKS) return null
         val task = TaskRules.withWhen(
             Task(id = UUID.randomUUID().toString(), title = title, createdAt = now, addedVia = via),
-            parsed.window,
+            window,
             now,
         )
         saveTasks(context, tasks + task)

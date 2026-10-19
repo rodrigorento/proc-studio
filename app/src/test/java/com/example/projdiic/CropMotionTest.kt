@@ -22,6 +22,19 @@ class CropMotionTest {
     }
 
     @Test
+    fun everyCropIsPlantedFromItsPacketInEveryLightWhileTheBedFadesToItsSeeds() {
+        val count = CropMotion.plant("radish", CropArt.DAY).size
+        assertTrue("planting must last past the seed fade", count > CropMotion.SEED_TO)
+        assertTrue(CropMotion.SEED_FROM in 0 until CropMotion.SEED_TO)
+        for (crop in CropArt.STAGES.keys) {
+            assertTrue(crop, "seed" in CropArt.STAGES.getValue(crop))
+            for (light in CropArt.LIGHTS) {
+                assertEquals("$crop $light", count, CropMotion.plant(crop, light).size)
+            }
+        }
+    }
+
+    @Test
     fun everyCropIsHarvestedFromItsOwnStages() {
         assertEquals(CropArt.STAGES.keys, CropMotion.HARVEST_STAGES.keys)
         for ((crop, stages) in CropMotion.HARVEST_STAGES) {

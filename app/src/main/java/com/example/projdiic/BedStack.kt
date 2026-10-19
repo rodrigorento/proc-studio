@@ -5,8 +5,8 @@ import android.widget.ImageView
 import androidx.annotation.DrawableRes
 
 /**
- * A rendered bed on an overlay screen ([R.layout.view_bed]): shows a bed, and plays the watering, rain and
- * harvest frames over it. Each animation calls its `onEnd` once, unless the screen goes away first.
+ * A rendered bed on an overlay screen ([R.layout.view_bed]): shows a bed, and plays the watering, rain, planting
+ * and harvest frames over it. Each animation calls its `onEnd` once, unless the screen goes away first.
  */
 class BedStack(root: View) {
     private val base: ImageView = root.findViewById(R.id.bedBase)
@@ -20,14 +20,21 @@ class BedStack(root: View) {
     }
 
     /** The can or the rain ([frames]) over the bed while it turns from [dry] to [wet]. */
-    fun water(@DrawableRes dry: Int, @DrawableRes wet: Int, frames: List<Int>, onEnd: () -> Unit) {
-        show(dry)
-        top.setImageResource(wet)
+    fun water(@DrawableRes dry: Int, @DrawableRes wet: Int, frames: List<Int>, onEnd: () -> Unit) =
+        turn(dry, wet, frames, CropMotion.WET_FROM, CropMotion.WET_TO, onEnd)
+
+    /** A seed packet pouring ([frames]) into the [empty] bed, which turns into the crop's [seeded] one as they land. */
+    fun plant(@DrawableRes empty: Int, @DrawableRes seeded: Int, frames: List<Int>, onEnd: () -> Unit) =
+        turn(empty, seeded, frames, CropMotion.SEED_FROM, CropMotion.SEED_TO, onEnd)
+
+    /** Plays [frames] over [from], fading it into [to] between frames [fadeFrom] and [fadeTo]. */
+    private fun turn(@DrawableRes from: Int, @DrawableRes to: Int, frames: List<Int>, fadeFrom: Int, fadeTo: Int, onEnd: () -> Unit) {
+        show(from)
+        top.setImageResource(to)
         effect.playFrames(frames, onFrame = { frame ->
-            val span = (CropMotion.WET_TO - CropMotion.WET_FROM).toFloat()
-            top.alpha = ((frame - CropMotion.WET_FROM) / span).coerceIn(0f, 1f)
+            top.alpha = ((frame - fadeFrom) / (fadeTo - fadeFrom).toFloat()).coerceIn(0f, 1f)
         }) {
-            show(wet)
+            show(to)
             onEnd()
         }
     }

@@ -1,4 +1,5 @@
-"""The rendered moments: watering (the can when you water, a rain cloud when it waters itself) and harvest.
+"""The rendered moments: watering (the can when you water, a rain cloud when it waters itself), planting and
+harvest.
 
 Frames are posed in Python and rendered one by one at 12 frames a second, which suits the toon look.
 
@@ -6,10 +7,15 @@ Watering is one effect layer per light, shared by every bed: the bed is a holdou
 falls behind them and the rest of the frame stays transparent. The app plays it over the card while fading the
 dry card into the wet one between WET_FROM and WET_TO.
 
+Planting is one effect layer per crop and light, made the same way: the crop's seed packet tips over the bed and
+pours a seed onto each spot the crop's seed card has a mound, and the app fades the empty card into the seed card
+between SEED_FROM and SEED_TO.
+
 A harvest is rendered as whole cards; the Android export keeps only what differs from the empty bed
 (harvest_base_<light>.png), so the frames play over the empty-bed card and bring the crops' shadows with them.
 
-File names: water_can_<light>_<nn>.png, water_rain_<light>_<nn>.png, harvest_<crop>_<stage>_<light>_<nn>.png.
+File names: water_can_<light>_<nn>.png, water_rain_<light>_<nn>.png, plant_<crop>_<light>_<nn>.png,
+harvest_<crop>_<stage>_<light>_<nn>.png.
 """
 import math
 import os
@@ -18,7 +24,7 @@ import random
 import bpy
 from mathutils import Matrix, Vector
 
-from . import bed, props, render, scene, style, toon
+from . import bed, props, render, scene, stills, style, toon
 from .crops.parts import ACROSS, DEPTH, TO_CAMERA, UP
 
 FPS = 12
@@ -37,6 +43,21 @@ POUR = range(7, 16)
 CLOUD_PATH = [(0, -1.5, 0.15, 1.02), (5, -0.02, 0.06, 0.88), (17, 0.04, 0.06, 0.88), (23, 1.55, 0.15, 1.05)]
 CLOUD_SCALE = 1.7
 RAIN = range(5, 17)
+
+PLANT_FRAMES = 16
+SEED_FROM, SEED_TO = 8, 13  # the frames over which the app fades the empty card into the crop's seed card
+# The packet's path as (frame, across, depth, height, tilt in degrees, top towards the picture's left): it drops in
+# over the right of the bed, tips its open top down, pours while drifting left, then rights itself and leaves past
+# the top left.
+PACKET_PATH = [(0, 1.25, 0.25, 1.5, 0), (3, 0.4, 0.14, 0.86, 20), (5, 0.34, 0.1, 0.84, 150),
+               (10, -0.16, -0.04, 0.82, 160), (12, -0.24, -0.08, 0.92, 30), (15, -0.75, -0.2, 1.8, 0)]
+PACKET_SCALE = 0.48  # of the packet prop, whose body is 0.92 m tall
+PACKET_MIDDLE = Vector((0.0, 0.0, 0.46))  # in the prop: the middle of the packet, which it tips about
+PACKET_MOUTH = Vector((0.0, 0.0, 0.95))  # in the prop: the middle of its top, where the seeds come out
+POUR_FROM, POUR_TO = 5, 10  # the frames seeds leave the packet
+SEED_COUNT = 16  # seeds poured into a bed, shared out over its spots
+SEED_FALL = 3  # frames from the packet's mouth to the soil
+SEED_SPARKLE = {1: 0.5, 2: 1.0, 3: 0.7, 4: 0.35}  # by frames since the last seed landed on a spot
 
 HARVEST_FRAMES = 14
 # By frames since a plant starts to move: how high it is (metres), how it is squashed (across, up) and leaning.
@@ -71,6 +92,33 @@ def render_water(out_dir: str, lights: list[str] | None = None) -> list[str]:
                     written.append(scene.render(card, os.path.join(out_dir, f"water_{kind}_{light}_{f:02d}.png")))
     finally:
         layer.holdout = False
+        _done(card)
+    return written
+
+
+def render_plant(out_dir: str, crops: list[str] | None = None, lights: list[str] | None = None) -> list[str]:
+    crops = crops or list(render.CROPS)
+    for crop in crops:
+        _clear(out_dir, f"plant_{crop}_")
+    card = _card()
+    lights = lights or list(style.LIGHTS)
+    written = []
+    try:
+        for crop in crops:
+            render.build(card, crop, "seed", False)
+            spots = _spots(card)
+            render.build(card, None, None, False)
+            card.view_layers[0].layer_collection.children["Bed"].holdout = True
+            seeds = _seeds(spots)
+            for f in range(PLANT_FRAMES):
+                _plant_frame(scene.collection(card, EFFECT), crop, f, spots, seeds)
+                for light in lights:
+                    scene.set_light(card, light)
+                    written.append(scene.render(card, os.path.join(out_dir, f"plant_{crop}_{light}_{f:02d}.png")))
+    finally:
+        bed_layer = card.view_layers[0].layer_collection.children.get("Bed")
+        if bed_layer:
+            bed_layer.holdout = False
         _done(card)
     return written
 
@@ -181,6 +229,64 @@ def _fall(start: Vector, velocity: Vector, spawned: int, gravity: float) -> tupl
             if p.z <= ground:
                 return path, (f + 1, Vector((p.x, p.y, ground)))
     return path, None
+
+
+# --- Planting ----------------------------------------------------------------------------------------------------
+
+def _spots(card) -> list[tuple[Vector, float]]:
+    """Where the seed card in the scene has a mound, and the mound's radius: one spot per plant."""
+    card.view_layers[0].update()
+    mounds = sorted((o for o in card.collection.children["Bed"].objects if o.name.endswith(".Mound")),
+                    key=lambda o: o.name)
+    return [(o.matrix_world.translation.copy(), o.dimensions.x / 2) for o in mounds]
+
+
+def _seeds(spots: list[tuple[Vector, float]]) -> list[tuple[int, int, Vector]]:
+    """Each seed as (frame it leaves the packet, the spot it lands on, where it lands). The packet drifts from
+    right to left, so the spots fill in that order; with fewer spots than seeds, a spot takes several."""
+    rng = random.Random(7)
+    order = sorted(range(len(spots)), key=lambda i: -spots[i][0].dot(ACROSS))
+    seeds = []
+    for k in range(SEED_COUNT):
+        spot = order[k * len(order) // SEED_COUNT]
+        centre, radius = spots[spot]
+        a, r = rng.uniform(0, 2 * math.pi), radius * 0.45 * math.sqrt(rng.random())
+        land = centre + Vector((math.cos(a), math.sin(a), 0.0)) * r
+        land.z = bed.soil_height(land.x, land.y) + 0.01
+        seeds.append((POUR_FROM + round((POUR_TO - POUR_FROM) * k / (SEED_COUNT - 1)), spot, land))
+    return seeds
+
+
+def _packet_matrix(f: int) -> Matrix:
+    across, depth, height, tilt = _keyed(PACKET_PATH, f)
+    return (Matrix.Translation(ACROSS * across + DEPTH * depth + UP * height)
+            @ Matrix.Rotation(math.radians(tilt), 4, TO_CAMERA) @ Matrix.Scale(PACKET_SCALE, 4)
+            @ Matrix.Translation(-PACKET_MIDDLE))
+
+
+def _plant_frame(collection: bpy.types.Collection, crop: str, f: int, spots: list, seeds: list) -> None:
+    stills.packet(collection, crop)
+    for obj in collection.all_objects:
+        for mod in obj.modifiers:
+            if mod.type == "SOLIDIFY":
+                mod.thickness /= PACKET_SCALE  # ink as wide as the bed's, not shrunk with the packet
+    scene.group(collection, "Packet").matrix_world = _packet_matrix(f)
+    falling = []
+    for spawn, _, land in seeds:
+        t = (f - spawn) / SEED_FALL
+        if 0.0 <= t < 1.0:
+            start = _packet_matrix(spawn) @ PACKET_MOUTH
+            here = start.lerp(land, t)
+            here.z = start.z + (land.z - start.z) * t * t  # falls, gathering speed
+            falling.append(here)
+    props.seeds(collection, "Seeds", falling)
+    sparkles = []
+    for i, (centre, radius) in enumerate(spots):
+        landed = max(spawn + SEED_FALL for spawn, spot, _ in seeds if spot == i)
+        if f - landed in SEED_SPARKLE:
+            size = SEED_SPARKLE[f - landed] * (0.07 + 0.5 * radius)
+            sparkles += [(centre + UP * 0.12, size), (centre + UP * 0.2 - ACROSS * 0.06, size * 0.6)]
+    props.sparkle(collection, "Sparkle", sparkles)
 
 
 # --- Harvest -----------------------------------------------------------------------------------------------------

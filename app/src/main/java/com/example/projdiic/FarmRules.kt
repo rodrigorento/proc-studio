@@ -28,14 +28,17 @@ object FarmRules {
      * The crop a task grows: the smaller the crop, the sooner it's due. A chip picks its own crop; a spoken time
      * picks by how many days away it was when planted.
      */
-    fun crop(task: Task, zone: TimeZone = TimeZone.getDefault()): String {
-        if (task.dueAt <= 0L) return SUNFLOWER
-        return when (task.whenKey) {
+    fun crop(task: Task, zone: TimeZone = TimeZone.getDefault()): String = crop(TaskRules.window(task), plantedAt(task), zone)
+
+    /** The crop a time choice ([window], null for Anytime) grows when planted at [plantedAt]. */
+    fun crop(window: TimeWindow?, plantedAt: Long, zone: TimeZone = TimeZone.getDefault()): String {
+        if (window == null) return SUNFLOWER
+        return when (window.key) {
             WhenChoices.TODAY, WhenChoices.TONIGHT -> RADISH
             WhenChoices.TOMORROW -> LETTUCE
             WhenChoices.THIS_WEEK -> CARROT
             WhenChoices.THIS_MONTH -> PUMPKIN
-            else -> when (DayMath.daysBetween(plantedAt(task), task.dueAt, zone)) {
+            else -> when (DayMath.daysBetween(plantedAt, window.end, zone)) {
                 in Int.MIN_VALUE..0 -> RADISH
                 1 -> LETTUCE
                 in 2..6 -> CARROT

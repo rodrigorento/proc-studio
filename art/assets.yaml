@@ -81,6 +81,12 @@ animations:
     outputs: [app/src/main/res/drawable-nodpi/anim_water_rain_*.webp]
     status: exported
     notes: the field watered itself (gate closed, or a day without Instagram)
+  planting:
+    concepts: [art/concepts/ui/plant_flow.png]
+    model: art/farmkit/anim.py
+    outputs: [app/src/main/res/drawable-nodpi/anim_plant_*.webp]
+    status: exported
+    notes: per crop, its seed packet tips over and pours a seed onto each spot; plays over any bed while the empty card fades to the seed stage
   harvest:
     concepts: [art/concepts/animations/harvest_fly.png]
     options: [art/concepts/animations/harvest_basket.png, art/concepts/animations/harvest_sparkle.png]

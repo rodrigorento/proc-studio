@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Planting, step 2 of the ask-for-tasks screen: when the task is for, as a seed packet per time. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/sg_bg"
+    android:orientation="vertical">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="16dp">
+
+            <Button
+                android:id="@+id/btnSeedsBack"
+                style="@style/ScrollGate.Button.Text"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="-8dp"
+                android:drawableStart="@drawable/ic_back"
+                android:text="@string/pick_back" />
+
+            <TextView
+                android:id="@+id/tvSeedsTask"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_pill_leaf"
+                android:fontFamily="@font/nunito_bold"
+                android:maxLines="2"
+                android:paddingStart="14dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="6dp"
+                android:textColor="@color/sg_accent"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/tvSeedsTitle"
+                style="@style/ScrollGate.Title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:accessibilityHeading="true"
+                android:text="@string/plant_seeds_title"
+                android:textSize="28sp" />
+
+            <TextView
+                style="@style/ScrollGate.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/plant_seeds_body"
+                android:textSize="16sp" />
+
+            <!-- The time said in the task, first and already picked. -->
+            <LinearLayout
+                android:id="@+id/saidCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_packet"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/ivSaidPacket"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:importantForAccessibility="no"
+                    android:scaleType="fitCenter" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/nunito_extrabold"
+                        android:letterSpacing="0.06"
+                        android:text="@string/plant_you_said"
+                        android:textAllCaps="true"
+                        android:textColor="@color/sg_accent"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvSaidWhen"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/nunito_extrabold"
+                        android:textColor="@color/sg_text"
+                        android:textSize="19sp" />
+
+                    <TextView
+                        android:id="@+id/tvSaidCrop"
+                        style="@style/ScrollGate.Small"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/sg_text_soft"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/ivSaidCheck"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:background="@drawable/bg_mic"
+                    android:importantForAccessibility="no"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_check"
+                    android:tint="@color/sg_on_accent" />
+            </LinearLayout>
+
+            <!-- Rows of three packets, filled in by GateOverlay. -->
+            <LinearLayout
+                android:id="@+id/packetRows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="vertical" />
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnPlant"
+        style="@style/ScrollGate.Button.Primary"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="16dp" />
+</LinearLayout>

@@ -103,6 +103,27 @@ object WhenText {
         }
     }
 
+    /** When a crop planted for [window] is ripe: "by tonight", "by 15:00 tomorrow", "by Sunday"; null for Anytime. */
+    fun due(window: TimeWindow?, now: Long, zone: TimeZone, formats: Formats): String? {
+        if (window == null) return null
+        val days = DayMath.daysBetween(now, window.end, zone)
+        if (window.hasTime) {
+            val day = when (days) {
+                0 -> ""
+                1 -> " tomorrow"
+                in 2..6 -> " on " + formats.weekday(window.end)
+                else -> " on " + formats.date(window.end)
+            }
+            return "by " + formats.time(window.end) + day
+        }
+        return when (days) {
+            0 -> "by tonight"
+            1 -> "by tomorrow night"
+            in 2..6 -> "by " + formats.weekday(window.end)
+            else -> "by " + formats.date(window.end)
+        }
+    }
+
     /** The line under the task on the gate, or null for a task without a time. */
     fun gateLine(window: TimeWindow?, now: Long, zone: TimeZone, formats: Formats): String? {
         if (window == null) return null

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A seed packet to pick on the planting screen: a card, leaf green with an outline while it is the one picked. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/sg_ripple_light">
+    <item>
+        <selector>
+            <item android:state_selected="true">
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/sg_leaf_container" />
+                    <stroke android:width="2dp" android:color="@color/sg_accent" />
+                    <corners android:radius="18dp" />
+                </shape>
+            </item>
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/sg_surface" />
+                    <corners android:radius="18dp" />
+                </shape>
+            </item>
+        </selector>
+    </item>
+</ripple>

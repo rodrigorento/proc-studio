@@ -352,8 +352,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         show(GateScreen.Gate(task.id))
     }
 
-    override fun onTaskAdded(title: String, via: String): Task? {
-        val task = TaskCache.addTask(this, title, via) ?: return null
+    override fun onTaskPlanted(title: String, window: TimeWindow?, via: String): Task? {
+        val task = TaskCache.plant(this, title, window, via) ?: return null
         EventLog.log(
             this, "task_added",
             "via" to via,

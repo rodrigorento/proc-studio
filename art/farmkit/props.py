@@ -1,4 +1,4 @@
-"""Props that are not crops: the toy watering can, the rain cloud, water drops, soil puffs and sparkles.
+"""Props that are not crops: the toy watering can, the rain cloud, water drops, seeds, soil puffs and sparkles.
 
 Each builder makes its meshes around the origin in a fresh collection-linked object and returns them, so the
 animations can place them with one matrix per frame.
@@ -68,6 +68,18 @@ def drops(collection: bpy.types.Collection, name: str, points: list[Vector], rad
     for p in points:
         parts.sphere(bm, p, radius, squash=stretch)
     obj = parts.mesh_object(name, bm, collection, "water")
+    toon.outline(obj, style.LEAF_OUTLINE_WIDTH)
+    return obj
+
+
+def seeds(collection: bpy.types.Collection, name: str, points: list[Vector], radius: float = 0.03) -> bpy.types.Object | None:
+    """Seeds falling from a packet, each a plump little oval."""
+    if not points:
+        return None
+    bm = bmesh.new()
+    for p in points:
+        parts.sphere(bm, p, radius, squash=1.35)
+    obj = parts.mesh_object(name, bm, collection, "seed")
     toon.outline(obj, style.LEAF_OUTLINE_WIDTH)
     return obj
 

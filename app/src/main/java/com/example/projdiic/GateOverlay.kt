@@ -57,8 +57,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
         fun onCheckInAccepted(task: Task)
         fun onCheckInOff(task: Task)
 
-        /** Returns the new task, or null when it could not be added (blank, or the list is full). */
-        fun onTaskAdded(title: String, via: String): Task?
+        /** Plants a task for [window] (null: Anytime). Returns it, or null when it could not (blank, or the field is full). */
+        fun onTaskPlanted(title: String, window: TimeWindow?, via: String): Task?
         fun onTaskRemoved(task: Task)
         fun onWhenChanged(task: Task, window: TimeWindow?)
         fun onAddTasksClosed()
@@ -91,6 +91,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
     /** Done was tapped and its harvest is still playing; the task is done as soon as it ends or the screen goes. */
     private var harvest: (() -> Unit)? = null
+
+    /** On a later step of planting (the ask-for-tasks screen), Back goes a step back instead of closing. */
+    private var plantBack: (() -> Unit)? = null
     private var recognizer: SpeechRecognizer? = null
     private var focusRequest: AudioFocusRequest? = null
     private val focusListener = AudioManager.OnAudioFocusChangeListener { }
@@ -177,7 +180,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
      * only closes through its choices.
      */
     private fun backActionFor(screen: GateScreen, task: Task?): (() -> Unit)? = when {
-        screen == GateScreen.AddTasks -> actions::onAddTasksClosed
+        screen == GateScreen.AddTasks -> { -> plantBack?.invoke() ?: actions.onAddTasksClosed() }
         task != null && (screen is GateScreen.PickTime || screen is GateScreen.DoingNow) ->
             { -> if (harvest == null) actions.onBackToChoices(task, screen) }
         else -> null
@@ -316,7 +319,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
         return root
     }
 
-    private fun buildAddTasks(): View {
+    /** Planting, step 1: the field so far, and the next task said or typed ([draft] when coming back to it). */
+    private fun buildAddTasks(draft: String = ""): View {
+        plantBack = null
         val root = inflater.inflate(R.layout.overlay_add_tasks, null)
         val list = root.findViewById<LinearLayout>(R.id.taskList)
         val listTitle = root.findViewById<TextView>(R.id.tvListTitle)
@@ -332,7 +337,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         val subtitle = root.findViewById<TextView>(R.id.tvAddSubtitle)
         val voiceReady = PermissionUtils.hasMicPermission(context) &&
             SpeechRecognizer.isRecognitionAvailable(context)
-        // The task whose time chips are open: the one just added, or one whose time pill was tapped.
+        // The task whose time chips are open: one whose time pill was tapped.
         var expandedId: String? = null
 
         fun bind() {
@@ -378,13 +383,15 @@ class GateOverlay(service: Context, private val actions: Actions) {
             start.setText(if (tasks.isEmpty()) R.string.add_not_now else R.string.add_start_scrolling)
         }
 
-        fun addTyped() {
-            val task = actions.onTaskAdded(input.text.toString(), Task.VIA_TEXT) ?: return
-            input.text.clear()
-            expandedId = task.id
-            bind()
+        fun toSeeds(text: String, via: String) {
+            val planting = SeedPackets.planting(text, System.currentTimeMillis()) ?: return
+            hideKeyboard(input)
+            swapTo(buildSeeds(planting, via, text), R.id.tvSeedsTitle)
         }
 
+        fun addTyped() = toSeeds(input.text.toString(), Task.VIA_TEXT)
+
+        input.setText(draft)
         bind()
         root.findViewById<Button>(R.id.btnAddTyped).setOnClickListener { addTyped() }
         // Done on the on-screen keyboard, or Enter on a physical one (which reports no action).
@@ -400,17 +407,122 @@ class GateOverlay(service: Context, private val actions: Actions) {
             }
         }
         mic.setOnClickListener {
-            toggleListening(mic, micStatus, transcript) { heard ->
-                val task = actions.onTaskAdded(heard, Task.VIA_VOICE) ?: return@toggleListening
-                micStatus.setText(R.string.add_voice_added)
-                expandedId = task.id
-                bind()
-            }
+            toggleListening(mic, micStatus, transcript) { heard -> toSeeds(heard, Task.VIA_VOICE) }
         }
         start.setOnClickListener { actions.onAddTasksClosed() }
         root.findViewById<Button>(R.id.btnSnoozeApp).setOnClickListener { actions.onSnoozeAppUntilTomorrow() }
         fitSystemBars(root, bottom = root)
         return root
+    }
+
+    /** Planting, step 2: when the task is for, one seed packet per time, the time said in it first and picked. */
+    private fun buildSeeds(planting: SeedPackets.Planting, via: String, draft: String): View {
+        val root = inflater.inflate(R.layout.overlay_plant_seeds, null)
+        val now = System.currentTimeMillis()
+        val title = planting.title
+        val packets = planting.packets
+        val plant = root.findViewById<Button>(R.id.btnPlant)
+        var picked = planting.picked
+        val cards = mutableMapOf<Int, View>()
+        fun label(packet: SeedPackets.Packet) = WhenText.label(packet.window, now, TimeZone.getDefault(), formats)
+        fun bind() {
+            cards.forEach { (index, card) -> card.isSelected = index == picked }
+            root.findViewById<View>(R.id.ivSaidCheck).isVisible = picked == packets.indexOfFirst { it.said }
+            val choice = packets.getOrNull(picked)
+            plant.isEnabled = choice != null
+            plant.text = choice?.let { context.getString(R.string.plant_button, FarmViews.cropName(it.crop).lowercase()) }
+                ?: context.getString(R.string.plant_pick)
+        }
+        root.findViewById<TextView>(R.id.tvSeedsTask).text = title
+        val saidIndex = packets.indexOfFirst { it.said }
+        if (saidIndex >= 0) {
+            val packet = packets[saidIndex]
+            root.findViewById<View>(R.id.saidCard).apply {
+                isVisible = true
+                contentDescription = context.getString(R.string.plant_packet_said, label(packet), packet.crop)
+                setOnClickListener { picked = saidIndex; bind() }
+                cards[saidIndex] = this
+            }
+            root.findViewById<ImageView>(R.id.ivSaidPacket).setImageResource(CropArt.seedPacket(packet.crop))
+            root.findViewById<TextView>(R.id.tvSaidWhen).text = label(packet)
+            root.findViewById<TextView>(R.id.tvSaidCrop).text = FarmViews.cropName(packet.crop)
+        }
+        val rows = root.findViewById<LinearLayout>(R.id.packetRows)
+        val gap = (10 * context.resources.displayMetrics.density).toInt()
+        packets.indices.filter { it != saidIndex }.chunked(3).forEach { indices ->
+            val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+            for (column in 0 until 3) {
+                val index = indices.getOrNull(column)
+                val cell = if (index == null) {
+                    View(context)
+                } else {
+                    val packet = packets[index]
+                    inflater.inflate(R.layout.item_seed_packet, row, false).apply {
+                        findViewById<ImageView>(R.id.ivPacket).setImageResource(CropArt.seedPacket(packet.crop))
+                        findViewById<TextView>(R.id.tvPacketWhen).text = label(packet)
+                        findViewById<TextView>(R.id.tvPacketCrop).text = FarmViews.cropName(packet.crop)
+                        contentDescription = context.getString(R.string.plant_packet, label(packet), packet.crop)
+                        setOnClickListener { picked = index; bind() }
+                        cards[index] = this
+                    }
+                }
+                row.addView(cell, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    if (column > 0) marginStart = gap
+                })
+            }
+            rows.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = gap
+            })
+        }
+        val back = { swapTo(buildAddTasks(draft), R.id.tvAddTitle) }
+        plantBack = back
+        root.findViewById<Button>(R.id.btnSeedsBack).setOnClickListener { back() }
+        plant.setOnClickListener {
+            val choice = packets.getOrNull(picked) ?: return@setOnClickListener
+            val task = actions.onTaskPlanted(title, SeedPackets.current(choice, System.currentTimeMillis()).window, via)
+            if (task == null) swapTo(buildAddTasks(draft), R.id.tvAddTitle) else swapTo(buildPlanted(task), R.id.tvPlantedTitle)
+        }
+        bind()
+        fitSystemBars(root, bottom = root)
+        return root
+    }
+
+    /** Planting, the last step: the seeds pour into the bed; then back to the feed, or plant another. */
+    private fun buildPlanted(task: Task): View {
+        val root = inflater.inflate(R.layout.overlay_plant_done, null)
+        val now = System.currentTimeMillis()
+        val light = fieldLight(now)
+        val wet = FarmCache.isWatered(context, now)
+        val crop = FarmRules.crop(task)
+        root.findViewById<View>(R.id.bed).contentDescription = context.getString(R.string.planted_bed, FarmViews.cropName(crop))
+        BedStack(root.findViewById(R.id.bed)).plant(CropArt.emptyBed(wet, light), CropArt.bed(crop, "seed", wet, light), CropMotion.plant(crop, light)) {}
+        val due = WhenText.due(TaskRules.window(task), now, TimeZone.getDefault(), formats)
+        root.findViewById<TextView>(R.id.tvPlantedLine).text = FarmViews.plantedLine(task.title, crop, due)
+        root.findViewById<TextView>(R.id.tvPlantedWhen)
+            .setText(if (task.deferredUntil > now) R.string.planted_waits else R.string.planted_now)
+        root.findViewById<Button>(R.id.btnPlantedScroll).setOnClickListener { actions.onAddTasksClosed() }
+        val another = { swapTo(buildAddTasks(), R.id.tvAddTitle) }
+        plantBack = another
+        root.findViewById<Button>(R.id.btnPlantAnother).apply {
+            isVisible = TaskCache.getTasks(context).size < TaskRules.MAX_TASKS
+            setOnClickListener { another() }
+        }
+        fitSystemBars(root, bottom = root)
+        return root
+    }
+
+    /**
+     * Puts [step] where the screen is, in the same window: the steps of planting on the ask-for-tasks screen. TalkBack
+     * moves to its [heading], since the button it was on is gone.
+     */
+    private fun swapTo(step: View, heading: Int) {
+        val host = view as? OverlayRoot ?: return
+        stopListening()
+        host.removeAllViews()
+        host.addView(step, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        ViewCompat.requestApplyInsets(step)
+        host.nextBack()
+        step.post { step.findViewById<View>(heading)?.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null) }
     }
 
     private fun taskRow(

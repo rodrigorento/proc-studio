@@ -37,6 +37,7 @@ PALETTE = {
     "water": ("#D2F0FF", "#8CD0F7", "#4596D2"),
     "cloud": ("#FFFFFF", "#E4E9F6", "#A3ADD3"),
     "sparkle": ("#FFFBD6", "#FFF29A", "#FFE45C"),  # nearly flat: sparkles glow rather than shade
+    "seed": ("#FBEBC4", "#E6C68A", "#A9824A"),
     # Props
     "packet_radish": ("#F9E6CB", "#EDCFA8", "#B8956A"),
     "packet_lettuce": ("#C3E58A", "#A2CF5E", "#5E8E2A"),
@@ -62,7 +63,7 @@ TINT_STRENGTH = {name: 0.35 for name in ("carrot", "radish", "radish_tail", "lea
                                          "yellow_flower", "pumpkin", "pumpkin_old", "pumpkin_young",
                                          "pumpkin_groove", "pumpkin_old_groove", "leaf_broad", "petal",
                                          "petal_back", "seed_disc", "seed_dot", "can", "can_rose", "water",
-                                         "cloud", "sparkle")}
+                                         "cloud", "sparkle", "seed")}
 
 # Direction from the scene towards the isometric camera: leaves are turned to face it so they read.
 TO_CAMERA = (0.5774, -0.5774, 0.5774)
