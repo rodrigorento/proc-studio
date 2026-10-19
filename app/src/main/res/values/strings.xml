@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ProjDIIC</string>
+    <string name="app_name">Scroll Gate</string>
     <string name="accessibility_description">Counts your swipes in Instagram and, after a stretch of scrolling, pauses it to show the next thing on your list. It notices which app is open; it does not save what is on screen.</string>
 
     <!-- Gate: one task, three ways out -->
