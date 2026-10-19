@@ -284,9 +284,5 @@ def _card() -> bpy.types.Scene:
 
 def _done(card: bpy.types.Scene) -> None:
     """Remove the effect objects and put the card back to full size."""
-    effect = bpy.data.collections.get(EFFECT)
-    if effect:
-        for obj in list(effect.objects):
-            bpy.data.objects.remove(obj)
-        bpy.data.collections.remove(effect)
+    scene.remove(EFFECT)
     card.render.resolution_percentage = 100

@@ -1,0 +1,133 @@
+# Every farm asset: where it comes from, what it becomes and how far along it is.
+#
+# status:
+#   exported  rendered and in the app's resources, but only the facilitator's art preview shows it so far
+#   in_app    used by the app itself
+# reference: the approved look it is held to. concepts: the images it was modelled from (and, under options, the
+# alternatives that were weighed). model: the farmkit code that builds it. outputs: the files the export writes.
+#
+# `python3 art/review.py check` confirms every file listed here exists and every exported image is listed.
+
+beds:
+  empty:
+    reference: art/style/references/bed.png
+    model: art/farmkit/bed.py
+    outputs: [app/src/main/res/drawable-nodpi/bed_empty_*.webp]
+    status: exported
+    notes: chunky toy plank bed with tilled ridges; watered and dry, in the four lights
+
+crops:
+  radish:
+    when: today
+    count: 9 in a 3x3 grid
+    reference: art/style/references/bed_radish.png
+    concepts: [art/concepts/radish/stages_wet.png, art/concepts/radish/stages_dry.png, art/concepts/radish/turnaround.png]
+    model: art/farmkit/crops/radish.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_radish_*.webp]
+    status: exported
+    notes: gone to seed, the corners and centre (5 of 9) bolt with pink flowers
+  lettuce:
+    when: tomorrow
+    count: 4 in a 2x2 grid
+    reference: art/style/references/bed_lettuce.png
+    concepts: [art/concepts/lettuce/stages_wet.png, art/concepts/lettuce/stages_dry.png,
+               art/concepts/lettuce/turnaround.png, art/concepts/lettuce/overripe_cone.png]
+    options: [art/concepts/lettuce/overripe_puffs.png, art/concepts/lettuce/overripe_open.png,
+              art/concepts/lettuce/overripe_yellowed.png]
+    model: art/farmkit/crops/lettuce.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_lettuce_*.webp]
+    status: exported
+    notes: gone to seed, each head stretches into a tall cone with yellow flowers
+  carrot:
+    when: this week
+    count: 2 side by side
+    reference: art/style/references/bed_carrot.png
+    concepts: [art/concepts/carrot/stages_wet.png, art/concepts/carrot/stages_dry.png, art/concepts/carrot/turnaround.png]
+    model: art/farmkit/crops/carrot.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_carrot_*.webp]
+    status: exported
+  pumpkin:
+    when: this month
+    count: 1 in the middle, with its vine
+    reference: art/style/references/bed_pumpkin.png
+    concepts: [art/concepts/pumpkin/stages_wet.png, art/concepts/pumpkin/stages_dry.png, art/concepts/pumpkin/turnaround.png]
+    model: art/farmkit/crops/pumpkin.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_pumpkin_*.webp]
+    status: exported
+    notes: overripe, the orange dulls with pale speckles
+  sunflower:
+    when: anytime
+    count: 1, a big head and two side blooms
+    reference: art/style/references/bed_sunflower.png
+    concepts: [art/concepts/sunflower/stages_wet.png, art/concepts/sunflower/stages_dry.png,
+               art/concepts/sunflower/turnaround.png, art/concepts/sunflower/bed_big_2.png]
+    options: [art/concepts/sunflower/bed_branching.png]
+    model: art/farmkit/crops/sunflower.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_sunflower_*.webp]
+    status: exported
+    notes: no due date, so no overripe stage; it stops at bloom
+
+animations:
+  watering:
+    concepts: [art/concepts/animations/water_can.png]
+    options: [art/concepts/animations/water_drops.png]
+    model: art/farmkit/anim.py
+    outputs: [app/src/main/res/drawable-nodpi/anim_water_can_*.webp]
+    status: exported
+    notes: the player watered; plays over any bed while the dry card fades to the wet one
+  rain:
+    concepts: [art/concepts/animations/water_cloud.png]
+    model: art/farmkit/anim.py
+    outputs: [app/src/main/res/drawable-nodpi/anim_water_rain_*.webp]
+    status: exported
+    notes: the field watered itself (gate closed, or a day without Instagram)
+  harvest:
+    concepts: [art/concepts/animations/harvest_fly.png]
+    options: [art/concepts/animations/harvest_basket.png, art/concepts/animations/harvest_sparkle.png]
+    model: art/farmkit/anim.py
+    outputs: [app/src/main/res/drawable-nodpi/anim_harvest_*.webp]
+    status: exported
+    notes: per crop, from ripe or overripe (sunflower from bloom); plays over the watered empty bed
+
+props:
+  watering_can:
+    concepts: [art/concepts/animations/water_can.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_watering_can.webp]
+    status: exported
+    notes: the watering button
+  seed_packets:
+    concepts: [art/concepts/props/packets_paper.png]
+    options: [art/concepts/props/packets_sack.png, art/concepts/props/packets_jar.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_seed_*.webp]
+    status: exported
+    notes: one per crop, for planting a task
+  basket:
+    concepts: [art/concepts/props/basket_wicker.png]
+    options: [art/concepts/props/basket_crate.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_basket.webp]
+    status: exported
+    notes: the harvest
+  gate:
+    concepts: [art/concepts/props/gate_plank.png]
+    options: [art/concepts/props/gate_picket.png, art/concepts/props/gate_arch.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_gate.webp]
+    status: exported
+    notes: paused until tomorrow
+  mailbox:
+    concepts: [art/concepts/props/mailbox_post.png]
+    options: [art/concepts/props/mailbox_barn.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_mailbox.webp]
+    status: exported
+    notes: the neighbour check-in
+  app_icon:
+    concepts: [art/concepts/props/icon_bed.png]
+    options: [art/concepts/props/icon_gate.png, art/concepts/props/icon_can.png, art/concepts/props/icon_carrot.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/mipmap-*/ic_launcher*.webp]
+    status: in_app
+    notes: the launcher icon; its green is ICON_BACKGROUND in art/export_android.py

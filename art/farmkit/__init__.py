@@ -7,7 +7,7 @@ Run inside Blender (through the Blender MCP server or `blender --python`), with 
 """
 import importlib
 
-_MODULES = ("style", "toon", "scene", "bed", "crops.parts", "crops.carrot", "crops.radish", "crops.lettuce", "crops.pumpkin", "crops.sunflower", "render", "props", "anim", "stills")
+_MODULES = ("style", "toon", "scene", "bed", "crops.parts", "crops.carrot", "crops.radish", "crops.lettuce", "crops.pumpkin", "crops.sunflower", "render", "props", "anim", "stills", "showroom")
 
 
 def reload() -> None:

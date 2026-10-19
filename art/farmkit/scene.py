@@ -2,7 +2,7 @@
 import math
 
 import bpy
-from mathutils import Euler, Vector
+from mathutils import Euler, Matrix, Vector
 
 from . import style, toon
 
@@ -34,6 +34,14 @@ def card_scene() -> bpy.types.Scene:
 
 def collection(scene: bpy.types.Scene, name: str) -> bpy.types.Collection:
     """An empty collection under the scene, replacing any previous one with that name."""
+    remove(name)
+    new = bpy.data.collections.new(name)
+    scene.collection.children.link(new)
+    return new
+
+
+def remove(name: str) -> None:
+    """Delete a collection and every object in it, if it exists."""
     old = bpy.data.collections.get(name)
     if old:
         for obj in list(old.all_objects):
@@ -41,9 +49,54 @@ def collection(scene: bpy.types.Scene, name: str) -> bpy.types.Collection:
         for child in list(old.children_recursive):
             bpy.data.collections.remove(child)
         bpy.data.collections.remove(old)
-    new = bpy.data.collections.new(name)
-    scene.collection.children.link(new)
-    return new
+
+
+def group(collection: bpy.types.Collection, name: str) -> bpy.types.Object:
+    """Parent every top-level object of the collection to a new empty at the origin, so they move as one."""
+    handle = bpy.data.objects.new(name, None)
+    collection.objects.link(handle)
+    bpy.context.view_layer.update()
+    for obj in collection.all_objects:
+        if obj is not handle and obj.parent is None:
+            obj.parent = handle
+            obj.matrix_parent_inverse = Matrix.Identity(4)
+    return handle
+
+
+def extent(camera: bpy.types.Object, objects) -> tuple[float, float, float, float]:
+    """The meshes' (left, right, bottom, top) as seen by the camera, in metres across its view."""
+    xs, ys, _ = _project(camera, objects)
+    return min(xs), max(xs), min(ys), max(ys)
+
+
+def frame(camera: bpy.types.Object, objects, margin: float) -> tuple[float, float]:
+    """Point the camera at the objects' middle and zoom so they fill its view with `margin` (a share of the view)
+    on each side, standing it off in front of the nearest one. Returns their (width, height) across the view."""
+    xs, ys, zs = _project(camera, objects)
+    width, height = max(xs) - min(xs), max(ys) - min(ys)
+    camera.data.ortho_scale = max(width, height) / (1 - 2 * margin)
+    right, up, back = (camera.matrix_world.col[i].xyz.normalized() for i in range(3))
+    camera.location = right * ((min(xs) + max(xs)) / 2) + up * ((min(ys) + max(ys)) / 2) + back * (max(zs) + 10.0)
+    camera.data.clip_end = max(zs) - min(zs) + 20.0
+    return width, height
+
+
+def _project(camera: bpy.types.Object, objects) -> tuple[list[float], list[float], list[float]]:
+    """The meshes' bounding-box corners along the camera's right, up and back axes. The camera's scene must be the
+    window's, since that is the one brought up to date."""
+    bpy.context.view_layer.update()
+    axes = [camera.matrix_world.col[i].xyz.normalized() for i in range(3)]
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    projected = ([], [], [])
+    for obj in objects:
+        if obj.type not in {"MESH", "FONT"}:
+            continue
+        evaluated = obj.evaluated_get(depsgraph)
+        for corner in evaluated.bound_box:
+            p = evaluated.matrix_world @ Vector(corner)
+            for values, axis in zip(projected, axes):
+                values.append(p.dot(axis))
+    return projected
 
 
 def set_light(scene: bpy.types.Scene, name: str) -> None:

@@ -23,10 +23,18 @@ FRONT = Matrix.Rotation(math.pi / 4, 4, "Z")  # turns a model's -Y front to face
 TURNS = {"gate": -28.0}  # degrees about the vertical, for props that read better a little side on
 
 
+def build(collection: bpy.types.Collection, name: str) -> None:
+    """Build one prop (a name from NAMES) standing at the origin, turned the way it is rendered."""
+    if name.startswith("seed_"):
+        _packet(collection, name[len("seed_"):])
+    else:
+        BUILDERS[name](collection)
+    if TURNS.get(name):
+        scene.group(collection, f"{name}.Turn").rotation_euler.z = math.radians(TURNS[name])
+
+
 def render_all(out_dir: str, names: list[str] | None = None) -> list[str]:
     os.makedirs(out_dir, exist_ok=True)
-    builders = {"watering_can": _can, "basket": _basket, "gate": _gate, "mailbox": _mailbox, "icon": _icon}
-    builders.update({f"seed_{crop}": (lambda c: lambda col: _packet(col, c))(crop) for crop in SEEDS})
     card = scene.card_scene()
     toon.reset()
     scene.collection(card, "Bed")  # an empty bed collection: nothing of the field in the frame
@@ -34,15 +42,14 @@ def render_all(out_dir: str, names: list[str] | None = None) -> list[str]:
     card.render.resolution_x = card.render.resolution_y = SIZE
     written = []
     try:
-        for name in names or list(builders):
+        for name in names or NAMES:
             collection = scene.collection(card, COLLECTION)
-            builders[name](collection)
-            _turn(collection, TURNS.get(name, 0.0))
-            _frame(card, collection)
+            build(collection, name)
+            scene.frame(card.camera, collection.all_objects, MARGIN)
             file = "icon_foreground.png" if name == "icon" else f"prop_{name}.png"
             written.append(scene.render(card, os.path.join(out_dir, file)))
     finally:
-        _remove(COLLECTION)
+        scene.remove(COLLECTION)
         scene.card_scene()  # back to the card camera and size
     return written
 
@@ -262,6 +269,8 @@ def _sunflower(collection) -> None:
 
 
 EMBLEMS = {"radish": _radish, "lettuce": _lettuce, "carrot": _carrot, "pumpkin": _pumpkin, "sunflower": _sunflower}
+BUILDERS = {"watering_can": _can, "basket": _basket, "gate": _gate, "mailbox": _mailbox, "icon": _icon}
+NAMES = ["watering_can"] + [f"seed_{crop}" for crop in SEEDS] + ["basket", "gate", "mailbox", "icon"]
 
 
 def _leaf_fan(collection, base: Vector, count: int, length: float, width: float, spread: float, lobes: int = 0) -> None:
@@ -298,48 +307,3 @@ def _star(bm: bmesh.types.BMesh, centre: Vector, radius: float) -> None:
             for k, a in enumerate(math.pi / 2 + math.pi * j / 5 for j in range(10))]
     for k in range(10):
         bm.faces.new((middle, ring[k], ring[(k + 1) % 10]))
-
-
-def _frame(card, collection) -> None:
-    """Point the camera at the collection's middle and zoom so it fills the frame with MARGIN on each side."""
-    camera = card.camera
-    bpy.context.view_layer.update()
-    right = camera.matrix_world.col[0].xyz.normalized()
-    up = camera.matrix_world.col[1].xyz.normalized()
-    back = camera.matrix_world.col[2].xyz.normalized()
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    xs, ys = [], []
-    for obj in collection.all_objects:
-        if obj.type != "MESH":
-            continue
-        evaluated = obj.evaluated_get(depsgraph)
-        for corner in evaluated.bound_box:
-            p = evaluated.matrix_world @ Vector(corner)
-            xs.append(p.dot(right))
-            ys.append(p.dot(up))
-    width, height = max(xs) - min(xs), max(ys) - min(ys)
-    camera.data.ortho_scale = max(width, height) / (1 - 2 * MARGIN)
-    middle = right * ((max(xs) + min(xs)) / 2) + up * ((max(ys) + min(ys)) / 2)
-    camera.location = middle + back * 10.0
-
-
-def _turn(collection, degrees: float) -> None:
-    """Swing the whole prop about the vertical through the origin."""
-    if not degrees:
-        return
-    pivot = bpy.data.objects.new("Turn", None)
-    collection.objects.link(pivot)
-    bpy.context.view_layer.update()
-    for obj in collection.objects:
-        if obj is not pivot and obj.parent is None:
-            obj.parent = pivot
-            obj.matrix_parent_inverse = Matrix.Identity(4)
-    pivot.rotation_euler.z = math.radians(degrees)
-
-
-def _remove(name: str) -> None:
-    collection = bpy.data.collections.get(name)
-    if collection:
-        for obj in list(collection.all_objects):
-            bpy.data.objects.remove(obj)
-        bpy.data.collections.remove(collection)
