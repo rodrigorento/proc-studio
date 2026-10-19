@@ -153,8 +153,8 @@ props:
   pulled:
     model: art/farmkit/stills.py
     outputs: [app/src/main/res/drawable-nodpi/prop_pulled.webp]
-    status: in_app
-    notes: a sprout pulled up with its clod and roots, on the Pull it up button
+    status: exported
+    notes: a sprout pulled up with its clod and roots; was on the crop sheet's Pull it up button, removed
   app_icon:
     concepts: [art/concepts/props/icon_bed.png]
     options: [art/concepts/props/icon_gate.png, art/concepts/props/icon_can.png, art/concepts/props/icon_carrot.png]

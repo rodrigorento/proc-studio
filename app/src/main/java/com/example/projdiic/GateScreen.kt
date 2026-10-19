@@ -9,7 +9,7 @@ sealed interface GateScreen {
     /** Drawn as a sheet over the dimmed feed rather than as a full screen. */
     val overFeed: Boolean get() = false
 
-    /** One task and its ways out: harvest it (or water it while it isn't ripe), or 5 more minutes. */
+    /** One task and its ways out: harvest it, or 5 more minutes. */
     data class Gate(override val taskId: String) : GateScreen {
         override val logName get() = "gate"
         override val overFeed get() = true

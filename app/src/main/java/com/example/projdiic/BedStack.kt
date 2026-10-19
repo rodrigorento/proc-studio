@@ -5,8 +5,8 @@ import android.widget.ImageView
 import androidx.annotation.DrawableRes
 
 /**
- * A rendered bed on an overlay screen ([R.layout.view_bed]): shows a bed, and plays the watering, rain, planting
- * and harvest frames over it. Each animation calls its `onEnd` once, unless the screen goes away first.
+ * A rendered bed on an overlay screen ([R.layout.view_bed]): shows a bed, and plays the planting and harvest
+ * frames over it. Each animation calls its `onEnd` once, unless the screen goes away first.
  */
 class BedStack(root: View) {
     private val base: ImageView = root.findViewById(R.id.bedBase)
@@ -21,10 +21,6 @@ class BedStack(root: View) {
         top.animate().cancel()
         top.alpha = 0f
     }
-
-    /** The can or the rain ([frames]) over the bed while it turns from [dry] to [wet]. */
-    fun water(@DrawableRes dry: Int, @DrawableRes wet: Int, frames: List<Int>, onEnd: () -> Unit) =
-        turn(dry, wet, frames, CropMotion.WET_FROM, CropMotion.WET_TO, onEnd)
 
     /** A seed packet pouring ([frames]) into the [empty] bed, which turns into the crop's [seeded] one as they land. */
     fun plant(@DrawableRes empty: Int, @DrawableRes seeded: Int, frames: List<Int>, onEnd: () -> Unit) =

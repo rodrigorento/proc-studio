@@ -149,8 +149,6 @@ class SeedPacketsTest {
         assertEquals("Blooms tomorrow", line(book, at(17, 20)))
         assertEquals("Blooms today", line(book, at(18, 9)))
         assertEquals("In bloom", line(book, at(18, 11)))
-        // Watering doesn't bring it sooner: only time grows a crop.
-        assertEquals("Blooms tomorrow", line(TaskRules.water(book), at(17, 9)))
     }
 
     @Test

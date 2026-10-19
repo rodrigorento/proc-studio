@@ -78,9 +78,8 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
     var tasks by remember { mutableStateOf(TaskCache.getTasks(context)) }
     var logCount by remember { mutableIntStateOf(EventLog.count(context)) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var watered by remember { mutableStateOf(FarmCache.isWatered(context)) }
-    var rainFrame by remember { mutableStateOf<Int?>(null) }
-    var pour by remember { mutableStateOf<Pour?>(null) }
+    var reap by remember { mutableStateOf<Reap?>(null) }
+    val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     var showFacilitator by rememberSaveable { mutableStateOf(false) }
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -88,7 +87,7 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
-        // Only while the home screen is in view: from the background it would take the rain meant for the next pause.
+        // Only while the home screen is in view.
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
                 hasOverlayPermission = PermissionUtils.hasOverlayPermission(context)
@@ -99,25 +98,6 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                 tasks = TaskCache.getTasks(context)
                 logCount = EventLog.count(context)
                 now = System.currentTimeMillis()
-                // A field nobody watered gets rain in the evening; a rain from a skipped watering shows here too.
-                // Not while planting covers the field: it waits until the field is back in view.
-                // Nor while the can pours: the rain would dry the field under it first.
-                val rains = !planting && pour == null && FarmRules.rainsOnHome(FarmCache.wateredOn(context), now)
-                if (rains) {
-                    FarmCache.rain(context, now, show = false)
-                    EventLog.log(context, "field_watered", "by" to "rain", "where" to "app")
-                }
-                if (rains || (!planting && pour == null && FarmCache.takeRainToShow(context))) {
-                    try {
-                        for (frame in CropMotion.rain().indices) {
-                            rainFrame = frame
-                            delay(1000L / CropMotion.FPS)
-                        }
-                    } finally {
-                        rainFrame = null
-                    }
-                }
-                watered = FarmCache.isWatered(context, now)
                 delay(1000L)
             }
         }
@@ -138,59 +118,47 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
         return task
     }
 
-    // A tap on a bed: the can pours over it and a dry field is watered. Only time grows a crop; a ripe one just says so.
-    fun water(task: Task) {
+    // Not while a crop is being harvested: its Harvest it would wait for nothing.
+    fun open(task: Task) {
+        if (reap == null) openId = task.id
+    }
+
+    // Harvest it from the crop's sheet: the crop ripens if it must and flies out of its bed on the field; then it's done.
+    fun harvest(task: Task) {
+        if (reap != null) return
+        openId = null
         val at = System.currentTimeMillis()
-        if (pour != null || rainFrame != null) return
-        if (FarmRules.isReady(task, at)) {
-            val atPause = if (TaskRules.next(tasks, at)?.id == task.id) " at your next pause" else ""
-            Toast.makeText(context, "${task.title} is ready to harvest$atPause.", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val wasDry = !FarmCache.isWatered(context, at)
-        if (wasDry) {
-            FarmCache.water(context, at)
-            EventLog.log(context, "field_watered", "by" to "can", "where" to "app", "how" to "tapped", "task" to task.title)
-        }
-        pour = Pour(task.id, 0, wasDry)
+        val crop = FarmRules.crop(task)
+        val stage = CropMotion.harvestedAs(crop, FarmRules.stage(task, at))
+        val ripe = FarmRules.isReady(task, at)
+        reap = Reap(task.id, crop, stage, frame = -1)
+        // The harvest plays on the field: bring it into view from a card further down.
+        scope.launch { scroll.animateScrollTo(0) }
         scope.launch {
             try {
-                for (frame in CropMotion.water().indices) {
-                    pour = Pour(task.id, frame, wasDry)
+                delay(FarmViews.RIPEN_MS)
+                for (frame in CropMotion.harvest(crop, stage).indices) {
+                    reap = Reap(task.id, crop, stage, frame)
                     delay(1000L / CropMotion.FPS)
                 }
             } finally {
-                pour = null
-                watered = FarmCache.isWatered(context)
+                // Leaving the screen mid-harvest still harvests it, as on the pause.
+                reap = null
+                TaskCache.remove(context, task.id)
+                EventLog.log(context, "task_done", "task" to task.title, "screen" to "app", "ripe" to ripe)
+                tasks = TaskCache.getTasks(context)
+                Toast.makeText(context, R.string.toast_done, Toast.LENGTH_SHORT).show()
             }
         }
-    }
-
-    fun changeWhen(task: Task, window: TimeWindow?) {
-        val changed = TaskRules.withWhen(task, window, System.currentTimeMillis())
-        TaskCache.update(context, changed)
-        EventLog.log(
-            context, "when_changed",
-            "where" to "app",
-            "task" to task.title,
-            "from" to task.whenKey.ifEmpty { "anytime" },
-            "to" to (window?.key ?: "anytime"),
-            "due_ms" to window?.end,
-            "crop" to FarmRules.crop(changed),
-        )
-        tasks = TaskCache.getTasks(context)
     }
 
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasMicPermission = granted
     }
-    fun wetnessAt(frame: Int) = ((frame - CropMotion.WET_FROM).toFloat() / (CropMotion.WET_TO - CropMotion.WET_FROM)).coerceIn(0f, 1f)
-    val wetness = rainFrame?.let(::wetnessAt) ?: pour?.takeIf { it.wasDry }?.let { wetnessAt(it.frame) } ?: if (watered) 1f else 0f
-    val look = FieldLook(wetness >= 1f, rainFrame, wetness, pour)
 
     if (planting) {
         Box(modifier.fillMaxSize()) {
-            PlantFlow(tasks = tasks, look = look, onPlant = ::plant, onClose = { planting = false })
+            PlantFlow(tasks = tasks, onPlant = ::plant, onClose = { planting = false })
         }
         return
     }
@@ -200,7 +168,7 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .weight(1f)
                 .imePadding()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
                 .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
@@ -258,12 +226,12 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                 Field(
                     tasks = tasks,
                     now = now,
-                    look = look,
-                    onWater = ::water,
+                    reap = reap,
+                    onOpen = ::open,
                     onPlant = { planting = true },
                     modifier = Modifier.bleed(20.dp),
                 )
-                CropCards(tasks = tasks, now = now, look = look, onOpen = { openId = it.id })
+                CropCards(tasks = tasks, now = now, onOpen = ::open)
                 if (!needsSetup && !hasMicPermission) {
                     Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
                         Column(Modifier.padding(horizontal = 16.dp)) {
@@ -274,19 +242,7 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
             }
 
             tasks.firstOrNull { it.id == openId }?.let { task ->
-                PlotSheet(
-                    task = task,
-                    now = now,
-                    look = look,
-                    onWhen = { changeWhen(task, it) },
-                    onRemove = {
-                        TaskCache.remove(context, task.id)
-                        EventLog.log(context, "task_removed", "where" to "app", "task" to task.title)
-                        tasks = TaskCache.getTasks(context)
-                        openId = null
-                    },
-                    onDismiss = { openId = null },
-                )
+                PlotSheet(task = task, now = now, onHarvest = { harvest(task) }, onDismiss = { openId = null })
             }
 
             if (showFacilitator) {
@@ -296,7 +252,8 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                     logCount = logCount,
                     onReset = {
                         TaskCache.clear(context)
-                        FarmCache.clear(context)
+                        // Left by versions that watered the field.
+                        context.deleteSharedPreferences("farm_prefs")
                         EventLog.clear(context)
                         EventLog.log(context, "data_reset")
                         tasks = TaskCache.getTasks(context)

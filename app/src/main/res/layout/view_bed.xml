@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A rendered bed on an overlay screen: the bed, a second bed fading in over it (dry to wet, or ripening),
-     and the frames of a watering, rain or harvest on top. See BedStack. Screen readers read the whole bed as one
+<!-- A rendered bed on an overlay screen: the bed, a second bed fading in over it (seeds landing, or ripening),
+     and the frames of a planting or harvest on top. See BedStack. Screen readers read the whole bed as one
      image, from the content description the screen gives it. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"

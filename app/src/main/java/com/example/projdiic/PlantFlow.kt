@@ -83,7 +83,6 @@ private const val PLANTED = "planted"
 @Composable
 fun PlantFlow(
     tasks: List<Task>,
-    look: FieldLook,
     onPlant: (title: String, window: TimeWindow?, via: String) -> Task?,
     onClose: () -> Unit,
 ) {
@@ -160,7 +159,6 @@ fun PlantFlow(
             }
             PlantedStep(
                 task = task,
-                look = look,
                 hasRoom = tasks.size < TaskRules.MAX_TASKS,
                 onAnother = {
                     draft = ""
@@ -344,7 +342,7 @@ private fun SeedsStep(
 }
 
 @Composable
-internal fun PacketCard(packet: SeedPackets.Packet, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun PacketCard(packet: SeedPackets.Packet, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = if (selected) LeafContainer else MaterialTheme.colorScheme.surface,
@@ -372,7 +370,7 @@ internal fun PacketCard(packet: SeedPackets.Packet, label: String, selected: Boo
 }
 
 @Composable
-private fun PlantedStep(task: Task, look: FieldLook, hasRoom: Boolean, onAnother: () -> Unit, onClose: () -> Unit) {
+private fun PlantedStep(task: Task, hasRoom: Boolean, onAnother: () -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
     val now = System.currentTimeMillis()
     val crop = FarmRules.crop(task)
@@ -401,7 +399,7 @@ private fun PlantedStep(task: Task, look: FieldLook, hasRoom: Boolean, onAnother
             }
         },
     ) {
-        PlantingBed(crop, look, Modifier.fillMaxWidth().padding(horizontal = 24.dp))
+        PlantingBed(crop, Modifier.fillMaxWidth().padding(horizontal = 24.dp))
         Text(
             text = "Planted!",
             fontSize = 32.sp,
@@ -433,7 +431,7 @@ private fun PlantedStep(task: Task, look: FieldLook, hasRoom: Boolean, onAnother
 
 /** The seeds pouring into an empty bed, which turns into the crop's seed bed as they land; played once. */
 @Composable
-private fun PlantingBed(crop: String, look: FieldLook, modifier: Modifier) {
+private fun PlantingBed(crop: String, modifier: Modifier) {
     val frames = remember(crop) { CropMotion.plant(crop) }
     var frame by remember { mutableStateOf<Int?>(0) }
     LaunchedEffect(crop) {
@@ -447,8 +445,8 @@ private fun PlantingBed(crop: String, look: FieldLook, modifier: Modifier) {
     val shown = frame
     val seeded = if (shown == null) 1f else ((shown - CropMotion.SEED_FROM).toFloat() / (CropMotion.SEED_TO - CropMotion.SEED_FROM)).coerceIn(0f, 1f)
     Box(modifier.aspectRatio(1f).semantics { contentDescription = FarmViews.cropName(crop) + " seeds, just planted" }) {
-        if (seeded < 1f) Layer(CropArt.emptyBed(look.wet))
-        if (seeded > 0f) Layer(CropArt.bed(crop, "seed", look.wet), seeded)
+        if (seeded < 1f) Layer(CropArt.emptyBed(true))
+        if (seeded > 0f) Layer(CropArt.bed(crop, "seed", true), seeded)
         shown?.let { Layer(frames[it]) }
     }
 }

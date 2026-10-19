@@ -123,8 +123,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     private fun onLeftInstagram(pkg: String, className: String?, windowType: Int?) {
         val current = screen ?: return
         val task = current.taskId?.let { TaskCache.find(this, it) }
-        // Walking away from a gate counts as passing on its task, once the task was on screen (and isn't being harvested or watered).
-        if (task != null && !overlay.thirsty && !overlay.busy) TaskCache.update(this, passOnce(task))
+        // Walking away from a gate counts as passing on its task (unless it is being harvested).
+        if (task != null && !overlay.busy) TaskCache.update(this, passOnce(task))
         EventLog.log(
             this, "left_instagram",
             "screen" to current.logName,
@@ -263,7 +263,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
 
     // GateOverlay.Actions: what each tap does.
 
-    override fun onHarvested(task: Task, where: String, tappedAt: Long, via: String) {
+    override fun onHarvested(task: Task, where: String, tappedAt: Long) {
         val ready = latest(task)?.let { FarmRules.isReady(it, tappedAt) }
         EventLog.log(
             this, "choice",
@@ -271,28 +271,11 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             "screen" to where,
             "task" to task.title,
             "ripe" to ready,
-            "via" to via,
             "ms_on_gate" to tappedAt - gateOpenedAt,
         )
         TaskCache.remove(this, task.id)
         EventLog.log(this, "task_done", "task" to task.title, "screen" to where)
         Toast.makeText(this, R.string.toast_done, Toast.LENGTH_SHORT).show()
-        backToFeed()
-    }
-
-    override fun onWatered(task: Task, where: String, tappedAt: Long) {
-        val current = latest(task) ?: return backToFeed()
-        val watered = TaskRules.water(current)
-        TaskCache.update(this, watered)
-        EventLog.log(
-            this, "choice",
-            "choice" to "water",
-            "screen" to where,
-            "task" to task.title,
-            "stage" to FarmRules.stage(watered, tappedAt),
-            "ms_on_gate" to tappedAt - gateOpenedAt,
-        )
-        Toast.makeText(this, R.string.toast_watered, Toast.LENGTH_SHORT).show()
         backToFeed()
     }
 
@@ -360,16 +343,6 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         EventLog.log(this, "app_snoozed", "until_ms" to until, "tasks" to TaskCache.getTasks(this).size)
         Toast.makeText(this, R.string.toast_app_snoozed, Toast.LENGTH_LONG).show()
         backToFeed(withCooldown = false)
-    }
-
-    override fun onFieldWatered(by: String, how: String) {
-        if (by == GateOverlay.BY_CAN) {
-            FarmCache.water(this)
-        } else {
-            // Rain the player chose has played already; rain from leaving the gate shows the next time the field does.
-            FarmCache.rain(this, show = how != "chose")
-        }
-        EventLog.log(this, "field_watered", "by" to by, "where" to "gate", "how" to how)
     }
 
     override fun onAddTasksClosed() {

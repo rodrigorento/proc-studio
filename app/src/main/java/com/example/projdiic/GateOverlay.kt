@@ -50,14 +50,8 @@ import java.util.TimeZone
 class GateOverlay(service: Context, private val actions: Actions) {
 
     interface Actions {
-        /**
-         * Harvest it, tapped at [tappedAt] on the gate or the check-in ([where]) [via] the button ("button") or the
-         * Already done? link ("link"), once its harvest has played.
-         */
-        fun onHarvested(task: Task, where: String, tappedAt: Long, via: String)
-
-        /** Water it, tapped at [tappedAt] on [where], once the can has played. */
-        fun onWatered(task: Task, where: String, tappedAt: Long)
+        /** Harvest it, tapped at [tappedAt] on the gate or the check-in ([where]), once its harvest has played. */
+        fun onHarvested(task: Task, where: String, tappedAt: Long)
         fun onSnooze(task: Task)
         fun onCheckInAccepted(task: Task)
         fun onCheckInOff(task: Task)
@@ -70,12 +64,6 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
         /** "Close the gate until tomorrow" on the ask-for-tasks screen: no gates until midnight. */
         fun onSnoozeAppUntilTomorrow()
-
-        /**
-         * The thirsty field was watered on the gate: [by] the can or rain; [how] "chose" (a button) or "left" (the
-         * gate went away first, so the rain still has to be shown).
-         */
-        fun onFieldWatered(by: String, how: String)
     }
 
     /** The line above the task. The service picks a new one for every gate. */
@@ -91,10 +79,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private var view: View? = null
     private var shown: GateScreen? = null
 
-    /** A gate is up on a thirsty field that nobody has watered yet; if it goes away like that, it rains. */
-    private var thirstyGate = false
-
-    /** Harvest it or Water it was tapped and its animation is playing; it takes effect when that ends or the screen goes. */
+    /** Harvest it was tapped and its animation is playing; it takes effect when that ends or the screen goes. */
     private var pending: (() -> Unit)? = null
 
     /** On a later step of planting (the ask-for-tasks screen), Back goes a step back instead of closing. */
@@ -103,11 +88,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private var focusRequest: AudioFocusRequest? = null
     private val focusListener = AudioManager.OnAudioFocusChangeListener { }
 
-    /** The gate's task is still hidden behind the thirsty field, so walking away isn't passing on it. */
-    val thirsty: Boolean
-        get() = thirstyGate
-
-    /** A harvest or watering is playing, so walking away isn't passing on its task: it happens either way. */
+    /** A harvest is playing, so walking away isn't passing on its task: it happens either way. */
     val busy: Boolean
         get() = pending != null
 
@@ -122,7 +103,6 @@ class GateOverlay(service: Context, private val actions: Actions) {
             Log.e(TAG, "Overlay permission not granted!")
             return false
         }
-        leaveThirstyField()
         val next = when (screen) {
             is GateScreen.Gate -> task?.let(::buildGate)
             is GateScreen.CheckIn -> task?.let(::buildCheckIn)
@@ -141,7 +121,6 @@ class GateOverlay(service: Context, private val actions: Actions) {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show the ${screen.logName} overlay", e)
-            thirstyGate = false
             shown = null
             releaseAudioFocus()
             false
@@ -150,7 +129,6 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
     fun hide() {
         finishPending()
-        leaveThirstyField()
         removeView()
         shown = null
         releaseAudioFocus()
@@ -168,14 +146,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         view = null
     }
 
-    /** The gate on a thirsty field is going away before anyone watered it: it rains instead. */
-    private fun leaveThirstyField() {
-        if (!thirstyGate) return
-        thirstyGate = false
-        actions.onFieldWatered(BY_RAIN, "left")
-    }
-
-    /** The harvest or watering has played, or the screen is going before it could: it happens either way. */
+    /** The harvest has played, or the screen is going before it could: it happens either way. */
     private fun finishPending() {
         val choice = pending ?: return
         pending = null
@@ -191,60 +162,20 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private fun buildGate(task: Task): View {
         val root = inflater.inflate(R.layout.overlay_gate, null)
         val now = System.currentTimeMillis()
-        val bed = BedStack(root.findViewById(R.id.bed))
-        val dry = FarmViews.bed(task, now, wet = false)
-        val wet = FarmViews.bed(task, now, wet = true)
-        val waterBlock = root.findViewById<View>(R.id.waterBlock)
-        val taskBlock = root.findViewById<View>(R.id.taskBlock)
+        val bed = BedStack(root.findViewById(R.id.bed)).apply { show(FarmViews.bed(task, now)) }
         root.findViewById<TextView>(R.id.tvEyebrow).text = eyebrow
         root.findViewById<TextView>(R.id.tvTaskTitle).text = task.title
         root.findViewById<TextView>(R.id.tvTaskMeta).text = metaFor(task)
-        // Due (ripe, or due today): Harvest it first, then Water it. Not yet: Water it, or harvest it early if it's done.
         val where = GateScreen.Gate(task.id).logName
-        val due = FarmRules.isDue(task, now)
-        val harvest = root.findViewById<Button>(R.id.btnHarvest).apply { isVisible = due; withIcon(R.drawable.prop_basket) }
-        val water = root.findViewById<Button>(R.id.btnWaterIt).apply { withIcon(R.drawable.prop_watering_can) }
-        val early = root.findViewById<Button>(R.id.btnHarvestEarly).apply { isVisible = !due }
+        val harvest = root.findViewById<Button>(R.id.btnHarvest).apply { withIcon(R.drawable.prop_basket) }
         val snooze = root.findViewById<Button>(R.id.btnSnooze).apply {
             isVisible = !task.snoozeUsed
             setOnClickListener { actions.onSnooze(task) }
         }
-        val choices = listOf(harvest, water, snooze, early)
-        harvest.setOnClickListener { harvestOn(bed, task, where, choices, "button") }
-        water.setOnClickListener { waterOn(bed, task, where, choices) }
-        early.setOnClickListener { harvestOn(bed, task, where, choices, "link") }
+        harvest.setOnClickListener { harvestOn(bed, task, where, listOf(harvest, snooze)) }
         root.findViewById<TextView>(R.id.tvSnoozeUsed).isVisible = task.snoozeUsed
-
-        // The first pause of the day: water the field (or let it rain), then the task.
-        if (!FarmCache.isWatered(context, now)) {
-            thirstyGate = true
-            bed.show(dry)
-            waterBlock.isVisible = true
-            taskBlock.isVisible = false
-            val can = root.findViewById<Button>(R.id.btnWater)
-            val rain = root.findViewById<Button>(R.id.btnLetItRain)
-            fun pour(by: String, frames: List<Int>) {
-                thirstyGate = false
-                can.isEnabled = false
-                rain.isEnabled = false
-                actions.onFieldWatered(by, "chose")
-                bed.water(dry, wet, frames) {
-                    waterBlock.isVisible = false
-                    taskBlock.isVisible = true
-                    // The button that had TalkBack's focus is gone; move it to the task.
-                    root.findViewById<View>(R.id.tvTaskTitle)
-                        .performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
-                }
-            }
-            can.setOnClickListener { pour(BY_CAN, CropMotion.water()) }
-            rain.setOnClickListener { pour(BY_RAIN, CropMotion.rain()) }
-        } else if (FarmCache.takeRainToShow(context)) {
-            // The choices wait for the rain, so a harvest or watering doesn't play over it.
-            choices.forEach { it.isEnabled = false }
-            bed.water(dry, wet, CropMotion.rain()) { choices.forEach { it.isEnabled = true } }
-        } else {
-            bed.show(wet)
-        }
+        // With the 5 minutes had, Harvest it is the only choice left.
+        root.findViewById<TextView>(R.id.tvGateHint).isVisible = !task.snoozeUsed
         root.findViewById<View>(R.id.bed).contentDescription = FarmViews.describe(task, now)
         fitSystemBars(root, bottom = root.findViewById(R.id.sheet))
         return root
@@ -252,16 +183,16 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
     /**
      * Harvest it: the crop ripens first if it isn't ready, flies out of [bed], and then the task is done. The other
-     * [choices] are off while it plays. Harvests are rendered over a watered bed, so they play on one.
+     * [choices] are off while it plays.
      */
-    private fun harvestOn(bed: BedStack, task: Task, where: String, choices: List<View>, via: String) {
+    private fun harvestOn(bed: BedStack, task: Task, where: String, choices: List<View>) {
         if (pending != null) return
         choices.forEach { it.isEnabled = false }
         val tappedAt = System.currentTimeMillis()
         val crop = FarmRules.crop(task)
         val stage = CropMotion.harvestedAs(crop, FarmRules.stage(task, tappedAt))
-        pending = { actions.onHarvested(task, where, tappedAt, via) }
-        bed.fadeTo(CropArt.bed(crop, stage, true), RIPEN_MS) {
+        pending = { actions.onHarvested(task, where, tappedAt) }
+        bed.fadeTo(CropArt.bed(crop, stage, true), FarmViews.RIPEN_MS) {
             bed.harvest(CropArt.emptyBed(true), CropMotion.harvest(crop, stage)) { finishPending() }
         }
     }
@@ -281,23 +212,6 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
     private fun dp(value: Int): Int = (value * context.resources.displayMetrics.density).roundToInt()
 
-    /**
-     * Water it: the can waters [bed] (only time grows the crop), then the feed opens. The other [choices] are off
-     * meanwhile. A field still dry (the check-in has no thirsty step) counts as watered by the can.
-     */
-    private fun waterOn(bed: BedStack, task: Task, where: String, choices: List<View>) {
-        if (pending != null) return
-        choices.forEach { it.isEnabled = false }
-        val tappedAt = System.currentTimeMillis()
-        val wet = FarmCache.isWatered(context, tappedAt)
-        val watered = FarmViews.bed(task, tappedAt, true)
-        pending = {
-            if (!wet) actions.onFieldWatered(BY_CAN, "chose")
-            actions.onWatered(task, where, tappedAt)
-        }
-        bed.water(FarmViews.bed(task, tappedAt, wet), watered, CropMotion.water()) { finishPending() }
-    }
-
     private fun buildCheckIn(task: Task): View {
         val root = inflater.inflate(R.layout.overlay_check_in, null)
         val person = settings.trustedPerson.ifBlank { context.getString(R.string.trusted_person_fallback) }
@@ -306,19 +220,16 @@ class GateOverlay(service: Context, private val actions: Actions) {
         root.findViewById<TextView>(R.id.tvCheckInWho).text = context.getString(R.string.check_in_who, person)
         root.findViewById<TextView>(R.id.tvCheckInMessage).text =
             context.getString(R.string.check_in_message, task.title)
-        // As on the gate: Harvest it first once the crop is due, then Water it; before that, Water it or harvest it early.
+        // As on the gate: Harvest it.
         val where = GateScreen.CheckIn(task.id).logName
-        val due = FarmRules.isDue(task, System.currentTimeMillis())
-        val harvest = root.findViewById<Button>(R.id.btnCheckInHarvest).apply { isVisible = due; withIcon(R.drawable.prop_basket) }
-        val water = root.findViewById<Button>(R.id.btnCheckInWater).apply { withIcon(R.drawable.prop_watering_can) }
-        val early = root.findViewById<Button>(R.id.btnCheckInHarvestEarly).apply { isVisible = !due }
+        val harvest = root.findViewById<Button>(R.id.btnCheckInHarvest).apply { withIcon(R.drawable.prop_basket) }
         val ok = root.findViewById<Button>(R.id.btnCheckInOk).apply {
             text = context.getString(R.string.check_in_ok, person)
             setOnClickListener { actions.onCheckInAccepted(task) }
         }
         val off = root.findViewById<Button>(R.id.btnCheckInOff).apply { setOnClickListener { actions.onCheckInOff(task) } }
-        val choices = listOf(harvest, water, early, ok, off)
-        // The harvest or the watering plays where the mailbox was, scrolled into view, set up on the first tap.
+        val choices = listOf(harvest, ok, off)
+        // The harvest plays where the mailbox was, scrolled into view, set up on the first tap.
         val bed by lazy(LazyThreadSafetyMode.NONE) {
             val now = System.currentTimeMillis()
             root.findViewById<View>(R.id.ivMailbox).isVisible = false
@@ -327,11 +238,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
                 contentDescription = FarmViews.describe(task, now)
             }
             (root as? ScrollView)?.smoothScrollTo(0, 0)
-            BedStack(view).apply { show(FarmViews.bed(task, now, FarmCache.isWatered(context, now))) }
+            BedStack(view).apply { show(FarmViews.bed(task, now)) }
         }
-        harvest.setOnClickListener { harvestOn(bed, task, where, choices, "button") }
-        water.setOnClickListener { waterOn(bed, task, where, choices) }
-        early.setOnClickListener { harvestOn(bed, task, where, choices, "link") }
+        harvest.setOnClickListener { harvestOn(bed, task, where, choices) }
         fitSystemBars(root, bottom = root)
         return root
     }
@@ -508,10 +417,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private fun buildPlanted(task: Task): View {
         val root = inflater.inflate(R.layout.overlay_plant_done, null)
         val now = System.currentTimeMillis()
-        val wet = FarmCache.isWatered(context, now)
         val crop = FarmRules.crop(task)
         root.findViewById<View>(R.id.bed).contentDescription = context.getString(R.string.planted_bed, FarmViews.cropName(crop))
-        BedStack(root.findViewById(R.id.bed)).plant(CropArt.emptyBed(wet), CropArt.bed(crop, "seed", wet), CropMotion.plant(crop)) {}
+        BedStack(root.findViewById(R.id.bed)).plant(CropArt.emptyBed(true), CropArt.bed(crop, "seed", true), CropMotion.plant(crop)) {}
         val due = WhenText.due(TaskRules.window(task), now, TimeZone.getDefault(), formats)
         root.findViewById<TextView>(R.id.tvPlantedLine).text =
             FarmViews.plantedLine(task.title, crop, due, FarmViews.bloomDays(task, now, TimeZone.getDefault()))
@@ -554,7 +462,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     ): View {
         val row = inflater.inflate(R.layout.item_task_row, parent, false)
         row.findViewById<ImageView>(R.id.ivRowBed).apply {
-            setImageResource(FarmViews.bed(task, now, FarmCache.isWatered(context, now)))
+            setImageResource(FarmViews.bed(task, now))
             alpha = if (isNext) 1f else 0.75f
         }
         row.findViewById<TextView>(R.id.tvRowTitle).text = task.title
@@ -770,11 +678,5 @@ class GateOverlay(service: Context, private val actions: Actions) {
     companion object {
         private const val TAG = "ReelsBlocker"
         private const val BLUR_RADIUS = 40
-
-        /** How long a crop that isn't ready takes to ripen before its harvest. */
-        private const val RIPEN_MS = 300L
-
-        const val BY_CAN = "can"
-        const val BY_RAIN = "rain"
     }
 }

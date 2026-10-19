@@ -98,30 +98,10 @@
             android:layout_weight="1"
             android:minHeight="24dp" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:divider="@drawable/space_10dp"
-            android:orientation="vertical"
-            android:showDividers="middle">
-
-            <Button
-                android:id="@+id/btnCheckInHarvest"
-                style="@style/ScrollGate.Button.Primary"
-                android:text="@string/gate_harvest" />
-
-            <Button
-                android:id="@+id/btnCheckInWater"
-                style="@style/ScrollGate.Button.Water"
-                android:text="@string/gate_water_it" />
-        </LinearLayout>
-
         <Button
-            android:id="@+id/btnCheckInHarvestEarly"
-            style="@style/ScrollGate.Button.Text"
-            android:layout_gravity="center_horizontal"
-            android:text="@string/gate_harvest_early"
-            android:visibility="gone" />
+            android:id="@+id/btnCheckInHarvest"
+            style="@style/ScrollGate.Button.Primary"
+            android:text="@string/gate_harvest" />
 
         <Button
             android:id="@+id/btnCheckInOk"

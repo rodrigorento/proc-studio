@@ -3,6 +3,8 @@ package com.example.projdiic
 import android.content.Context
 import android.text.format.DateFormat
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -22,26 +24,20 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -66,7 +62,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.projdiic.ui.theme.Danger
 import java.util.Date
 import java.util.TimeZone
 import kotlin.math.roundToInt
@@ -79,24 +74,21 @@ import kotlin.math.roundToInt
 private const val SKY = 0.1f
 
 /**
- * The field as it looks at one moment: whether it is watered (and how far a watering has got), a rain frame while it
- * rains, and the can while it pours over one bed.
+ * [taskId]'s crop being harvested on the field: ripening into [stage] while [frame] is below 0, then flying out of its
+ * bed at [frame] of [CropMotion.harvest].
  */
-class FieldLook(val wet: Boolean, val rainFrame: Int? = null, val wetness: Float = if (wet) 1f else 0f, val pour: Pour? = null)
-
-/** The can pouring over [taskId]'s bed, at [frame] of [CropMotion.water]; [wasDry] when it is watering a dry field. */
-class Pour(val taskId: String, val frame: Int, val wasDry: Boolean)
+class Reap(val taskId: String, val crop: String, val stage: String, val frame: Int)
 
 /**
  * The home screen's field: one lawn with four plots, back to front, a task's bed in each planted one and pegs and
- * string marking out the empty ones. Tapping a bed waters it ([onWater]); tapping an empty plot plants ([onPlant]).
- * The crop cards under it name the crops and open them.
+ * string marking out the empty ones. Tapping a bed opens its crop ([onOpen]); tapping an empty plot plants
+ * ([onPlant]). While [reap] is on, that crop is harvested on its bed.
  */
 @Composable
-fun Field(tasks: List<Task>, now: Long, look: FieldLook, onWater: (Task) -> Unit, onPlant: () -> Unit, modifier: Modifier = Modifier) {
+fun Field(tasks: List<Task>, now: Long, reap: Reap?, onOpen: (Task) -> Unit, onPlant: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val planted by rememberUpdatedState(tasks)
-    val water by rememberUpdatedState(onWater)
+    val open by rememberUpdatedState(onOpen)
     val plant by rememberUpdatedState(onPlant)
     // Each bed's picture, to tell which bed a tap is on: a tall crop in front covers the bed behind it.
     val pictures by rememberUpdatedState(
@@ -113,7 +105,7 @@ fun Field(tasks: List<Task>, now: Long, look: FieldLook, onWater: (Task) -> Unit
                         val plot = FieldPlots.at(at.x / size.width, (at.y + full * SKY) / full, planted.size) { i, u, v ->
                             pictures.getOrNull(i)?.let { solid(it, u, v) } ?: false
                         } ?: return@detectTapGestures
-                        planted.getOrNull(plot)?.let(water) ?: plant()
+                        planted.getOrNull(plot)?.let(open) ?: plant()
                     }
                 }
                 .layout { measurable, constraints ->
@@ -134,20 +126,19 @@ fun Field(tasks: List<Task>, now: Long, look: FieldLook, onWater: (Task) -> Unit
             FieldArt.PLOTS.forEachIndexed { i, plot ->
                 val task = tasks.getOrNull(i)
                 Box(Modifier.over(plot.card)) {
-                    if (task == null) {
-                        Layer(FieldArt.MARKED_PLOT)
-                    } else {
-                        Bed({ wet -> CropArt.bed(FarmRules.crop(task), FarmRules.stage(task, now), wet) }, look)
+                    when {
+                        task == null -> Layer(FieldArt.MARKED_PLOT)
+                        reap?.taskId == task.id -> Reaping(FarmViews.bed(task, now), reap)
+                        else -> Layer(FarmViews.bed(task, now))
                     }
                 }
             }
-            // Rain and the can after all the beds, so no bed in front cuts them off; rain falls on empty plots too.
-            look.rainFrame?.let { frame ->
-                FieldArt.PLOTS.forEach { plot -> Box(Modifier.over(plot.card)) { Layer(CropMotion.rain()[frame]) } }
-            }
-            look.pour?.let { pour ->
-                val plot = tasks.indexOfFirst { it.id == pour.taskId }
-                if (plot in FieldArt.PLOTS.indices) Box(Modifier.over(FieldArt.PLOTS[plot].card)) { Layer(CropMotion.water()[pour.frame]) }
+            // The harvest after all the beds, so no bed in front cuts off the crop flying up.
+            reap?.takeIf { it.frame >= 0 }?.let { reap ->
+                val plot = tasks.indexOfFirst { it.id == reap.taskId }
+                if (plot in FieldArt.PLOTS.indices) {
+                    Box(Modifier.over(FieldArt.PLOTS[plot].card)) { Layer(CropMotion.harvest(reap.crop, reap.stage)[reap.frame]) }
+                }
             }
             // For screen readers, one node per plot with its action; they take no touches, the field handles those.
             FieldArt.PLOTS.forEachIndexed { i, plot ->
@@ -168,7 +159,7 @@ fun Field(tasks: List<Task>, now: Long, look: FieldLook, onWater: (Task) -> Unit
                                     FarmViews.cropAndStage(FarmRules.crop(task), FarmRules.stage(task, now)),
                                     statusFor(context, task, now) ?: harvestLine(context, task, now),
                                 ).joinToString(", ")
-                                if (!FarmRules.isReady(task, now)) onClick("Water it") { water(task); true }
+                                onClick("Open it") { open(task); true }
                             }
                         }
                 )
@@ -187,17 +178,17 @@ private fun solid(picture: ImageBitmap, u: Float, v: Float): Boolean {
 
 /** Every crop in the field as a card, the one the next pause shows first: its bed, its name and when to harvest it. */
 @Composable
-fun CropCards(tasks: List<Task>, now: Long, look: FieldLook, onOpen: (Task) -> Unit) {
+fun CropCards(tasks: List<Task>, now: Long, onOpen: (Task) -> Unit) {
     val next = TaskRules.next(tasks, now)
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         (listOfNotNull(next) + tasks.filter { it.id != next?.id }).forEach { task ->
-            CropCard(task, task.id == next?.id, now, look) { onOpen(task) }
+            CropCard(task, task.id == next?.id, now) { onOpen(task) }
         }
     }
 }
 
 @Composable
-private fun CropCard(task: Task, isNext: Boolean, now: Long, look: FieldLook, onOpen: () -> Unit) {
+private fun CropCard(task: Task, isNext: Boolean, now: Long, onOpen: () -> Unit) {
     val context = LocalContext.current
     val crop = FarmRules.crop(task)
     val stage = FarmRules.stage(task, now)
@@ -209,10 +200,10 @@ private fun CropCard(task: Task, isNext: Boolean, now: Long, look: FieldLook, on
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .clickable(onClickLabel = "Change it or pull it up", role = Role.Button, onClick = onOpen)
+            .clickable(onClickLabel = "Open it", role = Role.Button, onClick = onOpen)
     ) {
         Row(Modifier.padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(68.dp)) { Layer(CropArt.bed(crop, stage, look.wet)) }
+            Box(Modifier.size(68.dp)) { Layer(CropArt.bed(crop, stage, true)) }
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                 if (isNext) Text("Next up", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
                 Text(task.title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -227,12 +218,16 @@ private fun CropCard(task: Task, isNext: Boolean, now: Long, look: FieldLook, on
     }
 }
 
-/** A bed image: dry fading into wet while it is watered. */
+/** A bed being harvested: [bed] ripening into the crop the harvest starts from, then empty as the crop flies out. */
 @Composable
-private fun Bed(image: (wet: Boolean) -> Int, look: FieldLook) {
-    Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
-        Layer(image(look.wetness >= 1f))
-        if (look.wetness > 0f && look.wetness < 1f) Layer(image(true), look.wetness)
+private fun Reaping(@DrawableRes bed: Int, reap: Reap) {
+    val ripe = remember(reap.taskId) { Animatable(0f) }
+    LaunchedEffect(reap.taskId) { ripe.animateTo(1f, tween(FarmViews.RIPEN_MS.toInt())) }
+    if (reap.frame >= 0) {
+        Layer(CropArt.emptyBed(true))
+    } else {
+        Layer(bed)
+        Layer(CropArt.bed(reap.crop, reap.stage, true), ripe.value)
     }
 }
 
@@ -265,17 +260,13 @@ fun PlantButton(full: Boolean, onPlant: () -> Unit, modifier: Modifier = Modifie
     }
 }
 
-/**
- * A planted task up close: its bed and how it's growing, then two ways to change it. **Change crop** shows the seed
- * packets, one per time ([onWhen] replants it); **Pull it up** removes it.
- */
+/** A planted task up close: its bed and how it's growing, and Harvest it ([onHarvest]), which plays on the field. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlotSheet(task: Task, now: Long, look: FieldLook, onWhen: (TimeWindow?) -> Unit, onRemove: () -> Unit, onDismiss: () -> Unit) {
+fun PlotSheet(task: Task, now: Long, onHarvest: () -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val crop = FarmRules.crop(task)
     val stage = FarmRules.stage(task, now)
-    var changing by rememberSaveable(task.id) { mutableStateOf(false) }
     // Never half open: Back, or a swipe down, closes it.
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -287,7 +278,7 @@ fun PlotSheet(task: Task, now: Long, look: FieldLook, onWhen: (TimeWindow?) -> U
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(112.dp)) { Layer(CropArt.bed(crop, stage, look.wet)) }
+                Box(Modifier.size(112.dp)) { Layer(CropArt.bed(crop, stage, true)) }
                 Column(Modifier.padding(start = 12.dp)) {
                     Text(task.title, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                     Text(
@@ -298,65 +289,18 @@ fun PlotSheet(task: Task, now: Long, look: FieldLook, onWhen: (TimeWindow?) -> U
                     )
                 }
             }
-            if (changing) {
-                SeedChoices(task, now, onPick = { window -> onWhen(window); onDismiss() }, onKeep = { changing = false })
-            } else {
-                Spacer(Modifier.height(4.dp))
-                Button(
-                    onClick = { changing = true },
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                ) {
-                    Image(painterResource(CropArt.seedPacket(crop)), contentDescription = null, modifier = Modifier.size(30.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text("Change crop", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
-                }
-                OutlinedButton(
-                    onClick = onRemove,
-                    shape = RoundedCornerShape(50),
-                    border = BorderStroke(2.dp, Danger),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                ) {
-                    Image(painterResource(R.drawable.prop_pulled), contentDescription = null, modifier = Modifier.size(30.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text("Pull it up", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
-                }
+            Spacer(Modifier.height(4.dp))
+            Button(
+                onClick = onHarvest,
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+            ) {
+                Image(painterResource(R.drawable.prop_basket), contentDescription = null, modifier = Modifier.size(30.dp))
+                Spacer(Modifier.width(10.dp))
+                Text("Harvest it", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
             }
         }
     }
-}
-
-/** The seed packets for a new time, the task's own one marked; picking it again, or Back, keeps the crop ([onKeep]). */
-@Composable
-private fun SeedChoices(task: Task, now: Long, onPick: (TimeWindow?) -> Unit, onKeep: () -> Unit) {
-    val context = LocalContext.current
-    val formats = remember { whenFormats(context) }
-    val zone = TimeZone.getDefault()
-    val window = TaskRules.window(task)
-    // A time that was said rather than picked ("Tomorrow 15:00") stays on offer, first.
-    val packets = SeedPackets.forTask(window?.takeIf { it.key == WhenChoices.CUSTOM }, now, zone)
-    val current = packets.indexOfFirst { (it.window?.key ?: "") == task.whenKey && (it.window?.key != WhenChoices.CUSTOM || it.window == window) }
-    Text("Pick new seeds", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-    Text(
-        "Each time grows its own crop. Changing it replants the bed.",
-        fontSize = 14.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        packets.indices.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { i ->
-                    val packet = packets[i]
-                    PacketCard(packet, WhenText.label(packet.window, now, zone, formats), i == current, {
-                        if (i == current) onKeep() else onPick(packet.window)
-                    }, Modifier.weight(1f))
-                }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-            }
-        }
-    }
-    TextButton(onClick = onKeep, modifier = Modifier.fillMaxWidth()) { Text("Back") }
 }
 
 private fun harvestLine(context: Context, task: Task, now: Long): String =

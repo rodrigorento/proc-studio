@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Gate A: a calm sheet over the dimmed feed. The task's crop, then one task and its ways out, no close
-     button. On the first pause of the day the field is thirsty: it is watered (or rained on) before the task. -->
+<!-- Gate A: a calm sheet over the dimmed feed. The task's crop, then one task and its ways out (Harvest it, or
+     5 more minutes once), no close button. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -79,52 +79,6 @@
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="2dp" />
 
-        <!-- The first pause of the day: the field is thirsty. -->
-        <LinearLayout
-            android:id="@+id/waterBlock"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <TextView
-                style="@style/ScrollGate.Title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:accessibilityHeading="true"
-                android:gravity="center"
-                android:text="@string/gate_water_title"
-                android:textSize="26sp" />
-
-            <TextView
-                style="@style/ScrollGate.Body"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center"
-                android:text="@string/gate_water_body"
-                android:textSize="15sp" />
-
-            <Button
-                android:id="@+id/btnWater"
-                style="@style/ScrollGate.Button.Primary"
-                android:layout_marginTop="22dp"
-                android:text="@string/gate_water" />
-
-            <Button
-                android:id="@+id/btnLetItRain"
-                style="@style/ScrollGate.Button.Text"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="6dp"
-                android:text="@string/gate_let_it_rain" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/taskBlock"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
         <TextView
             android:id="@+id/tvTaskTitle"
             style="@style/ScrollGate.Title"
@@ -144,25 +98,11 @@
             android:textColor="@color/sg_muted"
             android:textSize="15sp" />
 
-        <!-- Harvest it first once the crop is due, then Water it; before that, Water it alone. -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+        <Button
+            android:id="@+id/btnHarvest"
+            style="@style/ScrollGate.Button.Primary"
             android:layout_marginTop="24dp"
-            android:divider="@drawable/space_10dp"
-            android:orientation="vertical"
-            android:showDividers="middle">
-
-            <Button
-                android:id="@+id/btnHarvest"
-                style="@style/ScrollGate.Button.Primary"
-                android:text="@string/gate_harvest" />
-
-            <Button
-                android:id="@+id/btnWaterIt"
-                style="@style/ScrollGate.Button.Water"
-                android:text="@string/gate_water_it" />
-        </LinearLayout>
+            android:text="@string/gate_harvest" />
 
         <Button
             android:id="@+id/btnSnooze"
@@ -181,22 +121,13 @@
             android:textSize="14sp"
             android:visibility="gone" />
 
-        <!-- Before the crop is due: finish it anyway. -->
-        <Button
-            android:id="@+id/btnHarvestEarly"
-            style="@style/ScrollGate.Button.Text"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            android:text="@string/gate_harvest_early"
-            android:visibility="gone" />
-
         <TextView
+            android:id="@+id/tvGateHint"
             style="@style/ScrollGate.Small"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:gravity="center"
             android:text="@string/gate_hint" />
-        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

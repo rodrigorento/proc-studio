@@ -92,25 +92,6 @@ class TaskRulesTest {
     }
 
     @Test
-    fun wateringLeavesTheTaskUndoneSoItCountsAsAPass() {
-        val back = task("a", 1, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE, passes = 2)
-
-        val watered = TaskRules.water(TaskRules.water(back))
-
-        assertEquals(2, watered.waterings)
-        assertEquals(4, watered.passes)
-        assertEquals(0L, watered.deferredUntil)
-        assertEquals("", watered.deferredBy)
-    }
-
-    @Test
-    fun replantingStartsTheWateringAgain() {
-        val watered = TaskRules.water(task("a", 1))
-
-        assertEquals(0, TaskRules.withWhen(watered, null, now = 50).waterings)
-    }
-
-    @Test
     fun checkInNeedsTwoPassesAndConsent() {
         val once = TaskRules.pass(task("a", 1))
         val twice = TaskRules.pass(once)

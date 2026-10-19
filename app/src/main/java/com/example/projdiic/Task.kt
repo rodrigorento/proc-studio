@@ -20,8 +20,6 @@ data class Task(
     val whenKey: String = "",
     /** When its crop was planted: when its time was last set, or 0 to count from [createdAt]. See [FarmRules]. */
     val plantedAt: Long = 0L,
-    /** Times it was watered at a pause since it was planted. Watering doesn't grow it: see [FarmRules.stage]. */
-    val waterings: Int = 0,
 ) {
     companion object {
         const val VIA_TEXT = "text"
@@ -72,7 +70,7 @@ object TaskRules {
      */
     fun withWhen(task: Task, window: TimeWindow?, now: Long): Task {
         val putOff = task.deferredBy != Task.BY_WHEN && task.deferredUntil > now
-        val base = (if (putOff) task else task.copy(deferredUntil = 0L, deferredBy = "")).copy(plantedAt = now, waterings = 0)
+        val base = (if (putOff) task else task.copy(deferredUntil = 0L, deferredBy = "")).copy(plantedAt = now)
         if (window == null) return base.copy(dueAt = 0L, dueHasTime = false, whenKey = "")
         val waits = window.start > now && window.start > base.deferredUntil
         return base.copy(
@@ -86,9 +84,6 @@ object TaskRules {
 
     fun snooze(task: Task, now: Long): Task =
         task.copy(deferredUntil = now + SNOOZE_MS, deferredBy = Task.BY_SNOOZE, snoozeUsed = true)
-
-    /** Watered at a pause: only time grows the crop, so the task is still undone and it counts as a [pass]. */
-    fun water(task: Task): Task = pass(task).copy(waterings = task.waterings + 1)
 
     /** The gate ended without the task being done. */
     fun pass(task: Task): Task = task.copy(passes = task.passes + 1, deferredUntil = 0L, deferredBy = "")

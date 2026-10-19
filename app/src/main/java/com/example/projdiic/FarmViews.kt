@@ -3,11 +3,14 @@ package com.example.projdiic
 import androidx.annotation.DrawableRes
 import java.util.TimeZone
 
-/** The farm art for a task on the overlay screens. */
+/** The farm art for a task on the overlay screens and the home field. */
 object FarmViews {
-    /** The task's bed as it looks at [now]: its crop at its stage, watered or not. */
+    /** How long a crop that isn't ripe yet takes to ripen before its harvest. */
+    const val RIPEN_MS = 300L
+
+    /** The task's bed as it looks at [now]: its crop at its stage. */
     @DrawableRes
-    fun bed(task: Task, now: Long, wet: Boolean): Int = CropArt.bed(FarmRules.crop(task), FarmRules.stage(task, now), wet)
+    fun bed(task: Task, now: Long): Int = CropArt.bed(FarmRules.crop(task), FarmRules.stage(task, now), true)
 
     /** For screen readers, in the words the gate shows: "Radish seeds", "Carrot, ripe". */
     fun describe(task: Task, now: Long): String =

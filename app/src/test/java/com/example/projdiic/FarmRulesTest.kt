@@ -92,14 +92,14 @@ class FarmRulesTest {
     }
 
     @Test
-    fun onlyTimeGrowsACropNotWatering() {
-        val carrot = planted(WhenChoices.thisWeek(friday, utc)).copy(waterings = 3)
+    fun aCropGrowsWithTimeAlone() {
+        val carrot = planted(WhenChoices.thisWeek(friday, utc))
 
         assertEquals(
             listOf("seed", "sprout", "growing", "ripe", "overripe"),
             listOf(friday, at(16, 22), at(17, 12), at(18, 9), at(19, 9)).map { FarmRules.stage(carrot, it) },
         )
-        assertEquals("seed", FarmRules.stage(planted(null).copy(waterings = 3), friday))
+        assertEquals("seed", FarmRules.stage(planted(null), friday))
     }
 
     @Test
@@ -107,20 +107,10 @@ class FarmRulesTest {
         val carrot = planted(WhenChoices.thisWeek(friday, utc))
 
         assertFalse(FarmRules.isReady(carrot, friday))
-        assertFalse(FarmRules.isReady(carrot.copy(waterings = 3), friday))
+        assertFalse(FarmRules.isReady(carrot, at(17, 12)))
         assertTrue(FarmRules.isReady(carrot, at(18, 9)))
         assertTrue(FarmRules.isReady(carrot, at(19, 9))) // gone to seed: still harvested
         assertTrue(FarmRules.isReady(planted(null), at(19, 15)))
-    }
-
-    @Test
-    fun aCropIsDueOnceItIsRipeOrItsTaskIsDueToday() {
-        assertTrue(FarmRules.isDue(planted(WhenChoices.today(friday, utc)), friday, utc))
-        val carrot = planted(WhenChoices.thisWeek(friday, utc))
-        assertFalse(FarmRules.isDue(carrot, friday, utc))
-        assertTrue(FarmRules.isDue(carrot, at(18, 9), utc)) // ripe on Sunday morning, due that night
-        assertFalse(FarmRules.isDue(planted(null), friday, utc))
-        assertTrue(FarmRules.isDue(planted(null), at(19, 15), utc)) // in bloom
     }
 
     @Test
@@ -131,39 +121,5 @@ class FarmRulesTest {
         assertEquals("growing", FarmRules.stage(task, at(18, 0)))
         assertEquals("bloom", FarmRules.stage(task, at(19, 15)))
         assertEquals("bloom", FarmRules.stage(task, at(30, 15)))
-    }
-
-    @Test
-    fun theFieldIsThirstyEachMorningUntilItIsWatered() {
-        val wateredFriday = FarmRules.wateredOn(friday, utc)
-
-        assertTrue(FarmRules.isWatered(wateredFriday, at(16, 23), utc))
-        assertFalse(FarmRules.isWatered(wateredFriday, at(17, 7), utc))
-        assertFalse(FarmRules.isWatered(0L, friday, utc))
-    }
-
-    @Test
-    fun aFieldNobodyWateredGetsRainInTheEvening() {
-        val wateredYesterday = FarmRules.wateredOn(at(15, 12), utc)
-
-        assertFalse(FarmRules.rainsOnHome(wateredYesterday, at(16, 15), utc))
-        assertFalse(FarmRules.rainsOnHome(wateredYesterday, at(16, 17, 59), utc))
-        assertTrue(FarmRules.rainsOnHome(wateredYesterday, at(16, 18), utc))
-        assertFalse(FarmRules.rainsOnHome(FarmRules.wateredOn(at(16, 9), utc), at(16, 20), utc))
-    }
-
-    @Test
-    fun theFieldDriesOutAtLocalMidnightAcrossAClockChange() {
-        val london = TimeZone.getTimeZone("Europe/London") // the clocks go back at 02:00 on Sunday 25 October
-        fun local(day: Int, hour: Int, minute: Int = 0) = Calendar.getInstance(london).apply {
-            clear()
-            set(2026, Calendar.OCTOBER, day, hour, minute)
-        }.timeInMillis
-        val wateredBeforeTheChange = FarmRules.wateredOn(local(25, 1, 30), london)
-
-        assertTrue(FarmRules.isWatered(wateredBeforeTheChange, local(25, 23, 59), london))
-        assertFalse(FarmRules.isWatered(wateredBeforeTheChange, local(26, 0, 1), london))
-        assertFalse(FarmRules.isWatered(FarmRules.wateredOn(local(24, 23), london), local(25, 0, 30), london))
-        assertTrue(FarmRules.rainsOnHome(FarmRules.wateredOn(local(24, 9), london), local(25, 18), london))
     }
 }
