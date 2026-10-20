@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,9 +35,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -57,16 +59,23 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.projdiic.ui.theme.Bark
 import com.example.projdiic.ui.theme.Danger
+import com.example.projdiic.ui.theme.Ink
+import com.example.projdiic.ui.theme.Leaf
+import com.example.projdiic.ui.theme.Stick
+import com.example.projdiic.ui.theme.Wood
 import java.util.Date
 import java.util.TimeZone
 import kotlin.math.roundToInt
@@ -145,6 +154,14 @@ fun Field(tasks: List<Task>, now: Long, reap: Reap?, onOpen: (Task) -> Unit, onP
                     Box(Modifier.over(FieldArt.PLOTS[plot].card)) { Layer(CropMotion.harvest(reap.crop, reap.stage)[reap.frame]) }
                 }
             }
+            // The signs after every bed, so a bed in front never hides the name of the one behind it.
+            val next = TaskRules.next(tasks, now)
+            FieldArt.PLOTS.forEachIndexed { i, plot ->
+                val task = tasks.getOrNull(i)
+                if (task != null && reap?.taskId != task.id) {
+                    Sign(task.title, task.id == next?.id, { open(task) }, Modifier.anchor(width * plot.front.x, height * plot.front.y + 6.dp))
+                }
+            }
             // For screen readers, one node per plot with its action; they take no touches, the field handles those.
             FieldArt.PLOTS.forEachIndexed { i, plot ->
                 val task = tasks.getOrNull(i)
@@ -170,6 +187,38 @@ fun Field(tasks: List<Task>, now: Long, reap: Reap?, onOpen: (Task) -> Unit, onP
                 )
             }
         }
+    }
+}
+
+/**
+ * A task's name on a small wooden sign at the front of its bed, leaf green for the one the next pause shows. Tapping it
+ * opens the crop, as the bed does; screen readers have it from the bed.
+ */
+@Composable
+private fun Sign(title: String, isNext: Boolean, onOpen: () -> Unit, modifier: Modifier) {
+    Column(modifier.clearAndSetSemantics {}.clickable(onClick = onOpen), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = title,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = if (isNext) Ink else Bark,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .widthIn(max = 120.dp)
+                .background(if (isNext) Leaf else Wood, RoundedCornerShape(7.dp))
+                .border(2.dp, Bark, RoundedCornerShape(7.dp))
+                .padding(horizontal = 8.dp, vertical = 1.dp)
+        )
+        Box(Modifier.size(width = 6.dp, height = 9.dp).background(Stick).border(2.dp, Bark))
+    }
+}
+
+/** Places the content so that the point ([alignX], [alignY]) of it, as shares of its size, lands on ([x], [y]). */
+private fun Modifier.anchor(x: Dp, y: Dp, alignX: Float = 0.5f, alignY: Float = 1f): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+    layout(placeable.width, placeable.height) {
+        placeable.place((x.toPx() - placeable.width * alignX).roundToInt(), (y.toPx() - placeable.height * alignY).roundToInt())
     }
 }
 
