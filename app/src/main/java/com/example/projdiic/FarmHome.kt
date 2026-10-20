@@ -26,9 +26,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.projdiic.ui.theme.Danger
 import java.util.Date
 import java.util.TimeZone
 import kotlin.math.roundToInt
@@ -260,10 +263,13 @@ fun PlantButton(full: Boolean, onPlant: () -> Unit, modifier: Modifier = Modifie
     }
 }
 
-/** A planted task up close: its bed and how it's growing, and Harvest it ([onHarvest]), which plays on the field. */
+/**
+ * A planted task up close: its bed and how it's growing. A due crop ([FarmRules.isDue]) offers Harvest it
+ * ([onHarvest]), which plays on the field; one not due yet offers Remove it ([onRemove]) instead.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlotSheet(task: Task, now: Long, onHarvest: () -> Unit, onDismiss: () -> Unit) {
+fun PlotSheet(task: Task, now: Long, onHarvest: () -> Unit, onRemove: () -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val crop = FarmRules.crop(task)
     val stage = FarmRules.stage(task, now)
@@ -290,14 +296,28 @@ fun PlotSheet(task: Task, now: Long, onHarvest: () -> Unit, onDismiss: () -> Uni
                 }
             }
             Spacer(Modifier.height(4.dp))
-            Button(
-                onClick = onHarvest,
-                shape = RoundedCornerShape(50),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-            ) {
-                Image(painterResource(R.drawable.prop_basket), contentDescription = null, modifier = Modifier.size(30.dp))
-                Spacer(Modifier.width(10.dp))
-                Text("Harvest it", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+            if (FarmRules.isDue(task, now)) {
+                Button(
+                    onClick = onHarvest,
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                ) {
+                    Image(painterResource(R.drawable.prop_basket), contentDescription = null, modifier = Modifier.size(30.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Harvest it", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                }
+            } else {
+                OutlinedButton(
+                    onClick = onRemove,
+                    shape = RoundedCornerShape(50),
+                    border = BorderStroke(2.dp, Danger),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                ) {
+                    Image(painterResource(R.drawable.prop_pulled), contentDescription = null, modifier = Modifier.size(30.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Remove it", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                }
             }
         }
     }

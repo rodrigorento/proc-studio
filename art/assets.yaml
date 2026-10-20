@@ -73,8 +73,8 @@ animations:
     options: [art/concepts/animations/water_drops.png]
     model: art/farmkit/anim.py
     outputs: [app/src/main/res/drawable-nodpi/anim_water_can_*.webp]
-    status: exported
-    notes: the player watered; plays over any bed while the dry card fades to the wet one
+    status: in_app
+    notes: Water it on the light pause; plays over the bed, which stays as it is (only time grows a crop)
   rain:
     concepts: [art/concepts/animations/water_cloud.png]
     model: art/farmkit/anim.py
@@ -120,8 +120,8 @@ props:
     concepts: [art/concepts/animations/water_can.png]
     model: art/farmkit/stills.py
     outputs: [app/src/main/res/drawable-nodpi/prop_watering_can.webp]
-    status: exported
-    notes: the watering button
+    status: in_app
+    notes: the Water it button
   seed_packets:
     concepts: [art/concepts/props/packets_paper.png]
     options: [art/concepts/props/packets_sack.png, art/concepts/props/packets_jar.png]
@@ -153,8 +153,8 @@ props:
   pulled:
     model: art/farmkit/stills.py
     outputs: [app/src/main/res/drawable-nodpi/prop_pulled.webp]
-    status: exported
-    notes: a sprout pulled up with its clod and roots; was on the crop sheet's Pull it up button, removed
+    status: in_app
+    notes: a sprout pulled up with its clod and roots, on the crop sheet's Remove it button
   app_icon:
     concepts: [art/concepts/props/icon_bed.png]
     options: [art/concepts/props/icon_gate.png, art/concepts/props/icon_can.png, art/concepts/props/icon_carrot.png]

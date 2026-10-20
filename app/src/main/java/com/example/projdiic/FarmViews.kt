@@ -43,6 +43,19 @@ object FarmViews {
             ?: blooms(bloomDays(task, now, zone)).replaceFirstChar { it.uppercaseChar() }
     }
 
+    /** "Carrots growing · 2 days, 9 hours left", "Sunflower growing · blooms in 2 days": the light pause's line. */
+    fun nodLine(task: Task, now: Long, zone: TimeZone, formats: WhenText.Formats): String {
+        val growing = when (FarmRules.crop(task)) {
+            FarmRules.RADISH -> "Radishes"
+            FarmRules.LETTUCE -> "Lettuce"
+            FarmRules.CARROT -> "Carrots"
+            FarmRules.PUMPKIN -> "Pumpkin"
+            else -> "Sunflower"
+        }
+        val left = WhenText.gateLine(TaskRules.window(task), now, zone, formats) ?: blooms(bloomDays(task, now, zone))
+        return "$growing growing · $left"
+    }
+
     /** Calendar days from [now] until an Anytime task's sunflower blooms. */
     fun bloomDays(task: Task, now: Long, zone: TimeZone): Int = DayMath.daysBetween(now, FarmRules.bloomsAt(task), zone)
 

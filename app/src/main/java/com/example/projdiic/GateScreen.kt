@@ -9,10 +9,18 @@ sealed interface GateScreen {
     /** Drawn as a sheet over the dimmed feed rather than as a full screen. */
     val overFeed: Boolean get() = false
 
-    /** One task and its ways out: harvest it, or 5 more minutes. */
+    /** A due crop and its ways out: harvest it, or 5 more minutes once. */
     data class Gate(override val taskId: String) : GateScreen {
         override val logName get() = "gate"
         override val overFeed get() = true
+    }
+
+    /**
+     * The light pause for a crop that isn't due yet, once a session: a small card over the lightly dimmed feed with
+     * the time left and Water it. Walking away from it isn't passing on the task.
+     */
+    data class Nod(override val taskId: String) : GateScreen {
+        override val logName get() = "nod"
     }
 
     /** After two passes on the same task, when he has switched check-ins on. */

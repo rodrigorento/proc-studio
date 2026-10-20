@@ -54,8 +54,8 @@ private val FIELD = listOf(
 private enum class Moment { WATER, RAIN, HARVEST, PLANT }
 
 /**
- * A look at the farm's rendered beds before the farm screens exist: a 2x2 field, which can be watered (by can
- * or rain: art the app no longer uses), harvested and planted again, and every stage of each crop, watered
+ * A look at the farm's rendered beds before the farm screens exist: a 2x2 field, which can be watered (by can,
+ * as on the pause, or by rain, which the app no longer uses), harvested and planted again, and every stage of each crop, watered
  * or dry.
  */
 @Composable

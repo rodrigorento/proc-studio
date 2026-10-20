@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Water it: outlined in the watering can's blue. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/sg_ripple_light">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="2dp"
+                android:color="@color/sg_water" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+</ripple>

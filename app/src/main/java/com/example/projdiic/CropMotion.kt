@@ -2,8 +2,8 @@
 package com.example.projdiic
 
 /**
- * The farm's rendered moments, as frames to play over a bed card at [FPS]: the watering can and the rain cloud (only
- * in the art preview), each crop's seed packet planting it, and each crop's harvest.
+ * The farm's rendered moments, as frames to play over a bed card at [FPS]: the watering can, the rain cloud (only in
+ * the art preview), each crop's seed packet planting it, and each crop's harvest.
  */
 object CropMotion {
     const val FPS = 12

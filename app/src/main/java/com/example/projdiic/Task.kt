@@ -1,5 +1,7 @@
 package com.example.projdiic
 
+import java.util.TimeZone
+
 /** One pending thing on the list. Times are epoch milliseconds. */
 data class Task(
     val id: String,
@@ -38,19 +40,23 @@ object TaskRules {
     const val MAX_TITLE_LENGTH = 120
 
     /**
-     * The one task the gate shows, among those whose time has started: the one due
-     * soonest (one back from its 5 more minutes counts as due then), then the oldest.
+     * The one task the gate shows, among those whose time has started: a crop that is due ([FarmRules.isDue]) first,
+     * so a ripe one is never hidden behind one still growing; then the one due soonest (one back from its 5 more
+     * minutes counts as due then), then the oldest.
      */
-    fun next(tasks: List<Task>, now: Long): Task? =
+    fun next(tasks: List<Task>, now: Long, zone: TimeZone = TimeZone.getDefault()): Task? =
         tasks.filter { it.deferredUntil <= now }
-            .minWithOrNull(compareBy<Task>({ dueBy(it) }, { it.createdAt }))
+            .minWithOrNull(compareBy<Task>({ !FarmRules.isDue(it, now, zone) }, { dueBy(it) }, { it.createdAt }))
 
     /**
      * Nothing on the list is for now (or there is no list): the gate asks for tasks instead.
      * Not when the list is full, since then there's nothing to ask for.
      */
     fun shouldAskForTasks(tasks: List<Task>, now: Long): Boolean =
-        tasks.size < MAX_TASKS && next(tasks, now) == null
+        tasks.size < MAX_TASKS && next(tasks, now) == null && tasks.none { onFiveMoreMinutes(it, now) }
+
+    /** Back at a pause once its 5 more minutes are up: still something to do now, not a task for later. */
+    fun onFiveMoreMinutes(task: Task, now: Long): Boolean = task.deferredBy == Task.BY_SNOOZE && task.deferredUntil > now
 
     private fun dueBy(task: Task): Long {
         val picked = if (task.deferredBy != Task.BY_WHEN) task.deferredUntil else 0L
@@ -88,8 +94,9 @@ object TaskRules {
     /** The gate ended without the task being done. */
     fun pass(task: Task): Task = task.copy(passes = task.passes + 1, deferredUntil = 0L, deferredBy = "")
 
-    fun needsCheckIn(task: Task, checkInEnabled: Boolean): Boolean =
-        checkInEnabled && task.passes >= CHECK_IN_AFTER_PASSES
+    /** Passed twice, check-ins on, and the crop is due: a crop not due yet only gets the light pause. */
+    fun needsCheckIn(task: Task, checkInEnabled: Boolean, now: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
+        checkInEnabled && task.passes >= CHECK_IN_AFTER_PASSES && FarmRules.isDue(task, now, zone)
 
     fun cleanTitle(raw: String): String? =
         raw.replace(Regex("\\s+"), " ")

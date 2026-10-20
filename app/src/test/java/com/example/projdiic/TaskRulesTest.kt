@@ -92,13 +92,29 @@ class TaskRulesTest {
     }
 
     @Test
+    fun aTaskOnItsFiveMoreMinutesIsStillSomethingToDo() {
+        val snoozed = TaskRules.snooze(task("a", 1), now = 1_000)
+
+        assertFalse(TaskRules.shouldAskForTasks(listOf(snoozed), now = 2_000))
+        assertTrue(TaskRules.shouldAskForTasks(listOf(task("a", 1, deferredUntil = 100)), now = 50))
+    }
+
+    @Test
     fun checkInNeedsTwoPassesAndConsent() {
         val once = TaskRules.pass(task("a", 1))
         val twice = TaskRules.pass(once)
 
-        assertFalse(TaskRules.needsCheckIn(once, checkInEnabled = true))
-        assertTrue(TaskRules.needsCheckIn(twice, checkInEnabled = true))
-        assertFalse(TaskRules.needsCheckIn(twice, checkInEnabled = false))
+        val inBloom = 10 * 24 * 60 * 60_000L // an Anytime task's sunflower: due once it blooms
+        assertFalse(TaskRules.needsCheckIn(once, checkInEnabled = true, now = inBloom))
+        assertTrue(TaskRules.needsCheckIn(twice, checkInEnabled = true, now = inBloom))
+        assertFalse(TaskRules.needsCheckIn(twice, checkInEnabled = false, now = inBloom))
+    }
+
+    @Test
+    fun aCheckInOnlyComesForADueCrop() {
+        val twice = TaskRules.pass(TaskRules.pass(task("a", 1)))
+
+        assertFalse(TaskRules.needsCheckIn(twice, checkInEnabled = true, now = 50)) // still a seed
     }
 
     @Test

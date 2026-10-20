@@ -52,6 +52,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
     interface Actions {
         /** Harvest it, tapped at [tappedAt] on the gate or the check-in ([where]), once its harvest has played. */
         fun onHarvested(task: Task, where: String, tappedAt: Long)
+
+        /** Water it, tapped at [tappedAt] on the gate or the check-in ([where]), once the can has poured. */
+        fun onWatered(task: Task, where: String, tappedAt: Long)
         fun onSnooze(task: Task)
         fun onCheckInAccepted(task: Task)
         fun onCheckInOff(task: Task)
@@ -79,7 +82,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private var view: View? = null
     private var shown: GateScreen? = null
 
-    /** Harvest it was tapped and its animation is playing; it takes effect when that ends or the screen goes. */
+    /** Harvest it or Water it was tapped and its animation is playing; it takes effect when that ends or the screen goes. */
     private var pending: (() -> Unit)? = null
 
     /** On a later step of planting (the ask-for-tasks screen), Back goes a step back instead of closing. */
@@ -88,7 +91,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private var focusRequest: AudioFocusRequest? = null
     private val focusListener = AudioManager.OnAudioFocusChangeListener { }
 
-    /** A harvest is playing, so walking away isn't passing on its task: it happens either way. */
+    /** A harvest or a watering is playing, so walking away isn't passing on its task: it happens either way. */
     val busy: Boolean
         get() = pending != null
 
@@ -105,6 +108,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         }
         val next = when (screen) {
             is GateScreen.Gate -> task?.let(::buildGate)
+            is GateScreen.Nod -> task?.let(::buildNod)
             is GateScreen.CheckIn -> task?.let(::buildCheckIn)
             GateScreen.AddTasks -> buildAddTasks()
         } ?: return false
@@ -146,7 +150,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         view = null
     }
 
-    /** The harvest has played, or the screen is going before it could: it happens either way. */
+    /** The harvest or the watering has played, or the screen is going before it could: it happens either way. */
     private fun finishPending() {
         val choice = pending ?: return
         pending = null
@@ -166,6 +170,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         root.findViewById<TextView>(R.id.tvEyebrow).text = eyebrow
         root.findViewById<TextView>(R.id.tvTaskTitle).text = task.title
         root.findViewById<TextView>(R.id.tvTaskMeta).text = metaFor(task)
+        // A due crop (a crop still growing gets the light pause instead, buildNod): Harvest it, or 5 more minutes once.
         val where = GateScreen.Gate(task.id).logName
         val harvest = root.findViewById<Button>(R.id.btnHarvest).apply { withIcon(R.drawable.prop_basket) }
         val snooze = root.findViewById<Button>(R.id.btnSnooze).apply {
@@ -197,6 +202,36 @@ class GateOverlay(service: Context, private val actions: Actions) {
         }
     }
 
+    /**
+     * The light pause for a crop still growing: the crop, the time left and Water it. The can pours over the small bed
+     * (only time grows the crop), the card slides away, and the feed opens.
+     */
+    private fun buildNod(task: Task): View {
+        val root = inflater.inflate(R.layout.overlay_nod, null)
+        val now = System.currentTimeMillis()
+        val bed = BedStack(root.findViewById(R.id.bed)).apply { show(FarmViews.bed(task, now)) }
+        root.findViewById<View>(R.id.bed).contentDescription = FarmViews.describe(task, now)
+        root.findViewById<TextView>(R.id.tvNodTitle).text = task.title
+        root.findViewById<TextView>(R.id.tvNodLine).text = FarmViews.nodLine(task, now, TimeZone.getDefault(), formats)
+        val card = root.findViewById<View>(R.id.card)
+        root.findViewById<Button>(R.id.btnNodWater).apply {
+            withIcon(R.drawable.prop_watering_can)
+            setOnClickListener {
+                if (pending != null) return@setOnClickListener
+                isEnabled = false
+                alpha = 0.5f
+                val tappedAt = System.currentTimeMillis()
+                pending = { actions.onWatered(task, GateScreen.Nod(task.id).logName, tappedAt) }
+                bed.water(CropMotion.water()) {
+                    card.animate().translationY(card.height + dp(12).toFloat()).alpha(0f).setDuration(SLIDE_MS)
+                        .withEndAction { finishPending() }.start()
+                }
+            }
+        }
+        fitSystemBars(root, bottom = root)
+        return root
+    }
+
     /** Shows [icon] just before the button's text, the two centred together: a platform [Button] has no icon of its own. */
     private fun Button.withIcon(@DrawableRes icon: Int) {
         val size = dp(30)
@@ -220,7 +255,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         root.findViewById<TextView>(R.id.tvCheckInWho).text = context.getString(R.string.check_in_who, person)
         root.findViewById<TextView>(R.id.tvCheckInMessage).text =
             context.getString(R.string.check_in_message, task.title)
-        // As on the gate: Harvest it.
+        // As on the gate: Harvest it. A check-in only comes for a due crop (TaskRules.needsCheckIn).
         val where = GateScreen.CheckIn(task.id).logName
         val harvest = root.findViewById<Button>(R.id.btnCheckInHarvest).apply { withIcon(R.drawable.prop_basket) }
         val ok = root.findViewById<Button>(R.id.btnCheckInOk).apply {
@@ -480,14 +515,13 @@ class GateOverlay(service: Context, private val actions: Actions) {
         if (expanded) {
             val chips = row.findViewById<LinearLayout>(R.id.whenChips)
             val current = TaskRules.window(task)
-            val options = WhenChoices.chips(now).toMutableList<TimeWindow?>()
+            val options = WhenChoices.chips(now).toMutableList()
             // What he said that isn't one of the chips ("Tomorrow 15:00") stays on offer, first so it's in view.
             if (current != null && current.key == WhenChoices.CUSTOM) options.add(0, current)
             options.forEach { window ->
                 val chip = inflater.inflate(R.layout.item_when_chip, chips, false) as Button
                 chip.text = WhenText.label(window, now, TimeZone.getDefault(), formats)
-                chip.isSelected = (window?.key ?: "") == task.whenKey &&
-                    (window?.key != WhenChoices.CUSTOM || window == current)
+                chip.isSelected = window.key == task.whenKey && (window.key != WhenChoices.CUSTOM || window == current)
                 chip.setOnClickListener { onWhen(window) }
                 chips.addView(chip)
             }
@@ -678,5 +712,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
     companion object {
         private const val TAG = "ReelsBlocker"
         private const val BLUR_RADIUS = 40
+
+        /** How long the light pause's card takes to slide away once watered. */
+        private const val SLIDE_MS = 220L
     }
 }

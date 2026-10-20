@@ -14,6 +14,7 @@
     <string name="gate_meta_said">Said out loud %1$s · %2$s</string>
     <string name="gate_meta_snoozed">Back after its 5 minutes</string>
     <string name="gate_harvest">Harvest it</string>
+    <string name="gate_water_it">Water it</string>
     <string name="gate_snooze">5 more minutes · once</string>
     <string name="gate_snooze_used">You\'ve had your 5 minutes for this one.</string>
     <string name="gate_hint">Pick one and the feed opens again.</string>
@@ -21,6 +22,7 @@
     <string name="day_yesterday">yesterday</string>
 
     <string name="toast_done">Harvested. It\'s off your field.</string>
+    <string name="toast_watered">Watered.</string>
     <string name="back">Back</string>
 
     <!-- Trusted-person check-in -->

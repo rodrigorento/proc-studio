@@ -5,8 +5,8 @@ import android.widget.ImageView
 import androidx.annotation.DrawableRes
 
 /**
- * A rendered bed on an overlay screen ([R.layout.view_bed]): shows a bed, and plays the planting and harvest
- * frames over it. Each animation calls its `onEnd` once, unless the screen goes away first.
+ * A rendered bed on an overlay screen ([R.layout.view_bed]): shows a bed, and plays the planting, watering and
+ * harvest frames over it. Each animation calls its `onEnd` once, unless the screen goes away first.
  */
 class BedStack(root: View) {
     private val base: ImageView = root.findViewById(R.id.bedBase)
@@ -47,6 +47,9 @@ class BedStack(root: View) {
             onEnd()
         }.start()
     }
+
+    /** The can pours over the bed ([frames]); only time grows the crop, so the bed stays as it is. */
+    fun water(frames: List<Int>, onEnd: () -> Unit) = play(frames, onEnd = onEnd)
 
     /** The crop flies out ([frames]) and leaves [emptyBed]. */
     fun harvest(@DrawableRes emptyBed: Int, frames: List<Int>, onEnd: () -> Unit) {

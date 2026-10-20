@@ -242,7 +242,23 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
             }
 
             tasks.firstOrNull { it.id == openId }?.let { task ->
-                PlotSheet(task = task, now = now, onHarvest = { harvest(task) }, onDismiss = { openId = null })
+                PlotSheet(
+                    task = task,
+                    now = now,
+                    onHarvest = { harvest(task) },
+                    onRemove = {
+                        TaskCache.remove(context, task.id)
+                        EventLog.log(
+                            context, "task_removed",
+                            "where" to "app",
+                            "task" to task.title,
+                            "stage" to FarmRules.stage(task, System.currentTimeMillis()),
+                        )
+                        tasks = TaskCache.getTasks(context)
+                        openId = null
+                    },
+                    onDismiss = { openId = null },
+                )
             }
 
             if (showFacilitator) {

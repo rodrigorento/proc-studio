@@ -61,6 +61,8 @@ object FarmRules {
             progress < SPROUT_FROM -> 0
             progress < GROWING_FROM -> 1
             progress < RIPE_FROM -> 2
+            // Not ripe before its time starts ("gym on Monday", on Sunday): it couldn't come up at a pause yet.
+            task.deferredBy == Task.BY_WHEN && task.deferredUntil > now -> 2
             else -> 3
         }
         return listOf("seed", "sprout", "growing", if (sunflower) "bloom" else "ripe")[grown]
@@ -68,6 +70,10 @@ object FarmRules {
 
     /** Ripe (or gone to seed, or in bloom): its harvest needn't ripen it first. */
     fun isReady(task: Task, now: Long): Boolean = stage(task, now) in setOf("ripe", "overripe", "bloom")
+
+    /** Ripe, or its task is due by the end of today: the pause offers Harvest it; before that, Water it. */
+    fun isDue(task: Task, now: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
+        isReady(task, now) || (task.dueAt > 0L && DayMath.daysBetween(now, task.dueAt, zone) <= 0)
 
     /** When an Anytime task's sunflower blooms. */
     fun bloomsAt(task: Task): Long = plantedAt(task) + SUNFLOWER_BLOOMS_AFTER_MS

@@ -114,6 +114,35 @@ class FarmRulesTest {
     }
 
     @Test
+    fun aCropIsDueOnceItIsRipeOrItsTaskIsDueToday() {
+        assertTrue(FarmRules.isDue(planted(WhenChoices.today(friday, utc)), friday, utc))
+        val carrot = planted(WhenChoices.thisWeek(friday, utc))
+        assertFalse(FarmRules.isDue(carrot, friday, utc))
+        assertTrue(FarmRules.isDue(carrot, at(18, 9), utc)) // ripe on Sunday morning, due that night
+        assertFalse(FarmRules.isDue(planted(null), friday, utc))
+        assertTrue(FarmRules.isDue(planted(null), at(19, 15), utc)) // in bloom
+    }
+
+    @Test
+    fun aDueCropComesUpBeforeOneThatIsNot() {
+        val monday = at(19, 9)
+        val sunflower = planted(null).copy(id = "sunflower") // in bloom by Monday afternoon
+        val carrot = planted(WhenChoices.thisWeek(monday, utc), at = monday).copy(id = "carrot") // a seed till Sunday
+
+        assertEquals("sunflower", TaskRules.next(listOf(carrot, sunflower), at(19, 15), utc)?.id)
+        assertEquals("carrot", TaskRules.next(listOf(carrot, sunflower), at(17, 9), utc)?.id) // neither due: soonest
+    }
+
+    @Test
+    fun aCropWaitingForItsTimeIsNotRipeBeforeThen() {
+        val monday = WhenParser.parse("Gym on Monday", friday, utc).window!!
+        val gym = planted(monday)
+
+        assertEquals("growing", FarmRules.stage(gym, monday.start - 60_000))
+        assertEquals("ripe", FarmRules.stage(gym, monday.start))
+    }
+
+    @Test
     fun aSunflowerBloomsAfterAFewDaysAndStaysInBloom() {
         val task = planted(null)
 

@@ -27,10 +27,10 @@ object WhenChoices {
 
     const val MORNING_HOUR = 8
     const val EVENING_HOUR = 19
-    private const val LAST_EVENING_HOUR = 23
 
     fun today(now: Long, zone: TimeZone) = TimeWindow(TODAY, now, DayMath.endOfDay(now, zone))
 
+    /** No longer offered as a choice; tasks saved with it (and their tests) still use it. */
     fun tonight(now: Long, zone: TimeZone): TimeWindow {
         val evening = DayMath.at(DayMath.midnight(now, zone), zone, EVENING_HOUR)
         return TimeWindow(TONIGHT, maxOf(now, evening), DayMath.endOfDay(now, zone))
@@ -55,13 +55,11 @@ object WhenChoices {
         DayMath.midnight(now, zone, plusDays = 1)
 
     /**
-     * Anytime (null) first; Tonight drops off late at night, This week on Sundays, and This month once the week
-     * reaches as far.
+     * The times a task can be given, soonest first: This week drops off on Sundays, and This month once the week
+     * reaches as far. Tonight and Anytime aren't offered; tasks saved with them still work.
      */
-    fun chips(now: Long, zone: TimeZone = TimeZone.getDefault()): List<TimeWindow?> = buildList {
-        add(null)
+    fun chips(now: Long, zone: TimeZone = TimeZone.getDefault()): List<TimeWindow> = buildList {
         add(today(now, zone))
-        if (DayMath.hourOf(now, zone) < LAST_EVENING_HOUR) add(tonight(now, zone))
         add(tomorrow(now, zone))
         if (DayMath.dayOfWeek(now, zone) != Calendar.SUNDAY) add(thisWeek(now, zone))
         thisMonth(now, zone).takeIf { it.end > thisWeek(now, zone).end }?.let { add(it) }
@@ -124,16 +122,33 @@ object WhenText {
         }
     }
 
-    /** The line under the task on the gate, or null for a task without a time. */
+    /** The line under the task on the gate: the time left ("2 days, 9 hours left"), or null for a task without a time. */
     fun gateLine(window: TimeWindow?, now: Long, zone: TimeZone, formats: Formats): String? {
         if (window == null) return null
         val label = label(window, now, zone, formats)
         return when {
             label.startsWith("Was for ") -> "This was for " + label.removePrefix("Was for ")
             label.startsWith("From ") -> label
-            else -> "For " + lower(label)
+            else -> timeLeft(window.end, now)
         }
     }
+
+    /** "2 days, 9 hours left", "1 day left", "5 hours left", "30 minutes left": from [now] to [end], to the minute. */
+    fun timeLeft(end: Long, now: Long): String {
+        val minutes = ((end - now).coerceAtLeast(1L) + MINUTE_MS - 1) / MINUTE_MS
+        val days = minutes / (24 * 60)
+        val hours = minutes % (24 * 60) / 60
+        val parts = when {
+            days > 0 -> listOfNotNull(count(days, "day"), count(hours, "hour").takeIf { hours > 0 })
+            hours > 0 -> listOf(count(hours, "hour"))
+            else -> listOf(count(minutes, "minute"))
+        }
+        return parts.joinToString(", ") + " left"
+    }
+
+    private fun count(n: Long, unit: String): String = "$n $unit" + if (n == 1L) "" else "s"
+
+    private const val MINUTE_MS = 60_000L
 
     private fun day(time: Long, now: Long, zone: TimeZone, formats: Formats): String =
         when (DayMath.daysBetween(now, time, zone)) {

@@ -35,17 +35,14 @@ class SeedPacketsTest {
     private fun packets(said: TimeWindow?, now: Long = friday) = SeedPackets.forTask(said, now, utc)
 
     @Test
-    fun withoutATimeEveryChipIsAPacketFromSoonestToAnytime() {
+    fun withoutATimeEveryChipIsAPacketFromSoonest() {
         val packets = packets(null)
 
         assertEquals(
-            listOf(
-                WhenChoices.TODAY, WhenChoices.TONIGHT, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK,
-                WhenChoices.THIS_MONTH, null,
-            ),
-            packets.map { it.window?.key },
+            listOf(WhenChoices.TODAY, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK, WhenChoices.THIS_MONTH),
+            packets.map { it.window.key },
         )
-        assertEquals(listOf("radish", "radish", "lettuce", "carrot", "pumpkin", "sunflower"), packets.map { it.crop })
+        assertEquals(listOf("radish", "lettuce", "carrot", "pumpkin"), packets.map { it.crop })
         assertTrue(packets.none { it.said })
     }
 
@@ -57,7 +54,7 @@ class SeedPacketsTest {
         assertEquals(dentist, packets.first().window)
         assertEquals("lettuce", packets.first().crop)
         assertTrue(packets.first().said)
-        assertEquals(7, packets.size)
+        assertEquals(5, packets.size)
         assertEquals(1, packets.count { it.said })
     }
 
@@ -66,18 +63,20 @@ class SeedPacketsTest {
         val rent = said("Pay rent this month")
         val packets = packets(rent)
 
-        assertEquals(6, packets.size)
-        assertEquals(listOf(WhenChoices.THIS_MONTH), packets.filter { it.said }.map { it.window?.key })
+        assertEquals(4, packets.size)
+        assertEquals(listOf(WhenChoices.THIS_MONTH), packets.filter { it.said }.map { it.window.key })
         assertEquals(rent, packets.single { it.said }.window)
     }
 
     @Test
-    fun tonightSaidLateAtNightStillComesFirst() {
+    fun tonightSaidIsTheTodayPacket() {
         val late = at(16, 23, 30)
-        val packets = packets(said("Call mom tonight", late), late)
 
-        assertEquals(WhenChoices.TONIGHT, packets.first().window?.key)
-        assertTrue(packets.first().said)
+        for (now in listOf(friday, late)) {
+            val packets = packets(said("Call mom tonight", now), now)
+            assertEquals(4, packets.size)
+            assertEquals(listOf(WhenChoices.TODAY), packets.filter { it.said }.map { it.window.key })
+        }
     }
 
     @Test
@@ -101,13 +100,11 @@ class SeedPacketsTest {
     @Test
     fun aChoiceLeftOpenPastMidnightIsMadeAgainForTheNewDay() {
         val saturday = at(17, 0, 30)
-        val today = packets(null).first { it.window?.key == WhenChoices.TODAY }
+        val today = packets(null).first { it.window.key == WhenChoices.TODAY }
         val dentist = packets(said("Dentist tomorrow at 3pm")).first()
-        val anytime = packets(null).last()
 
         assertEquals(WhenChoices.today(saturday, utc), SeedPackets.current(today, saturday, utc).window)
         assertEquals(dentist, SeedPackets.current(dentist, saturday, utc))
-        assertEquals(anytime, SeedPackets.current(anytime, saturday, utc))
     }
 
     @Test
@@ -149,6 +146,16 @@ class SeedPacketsTest {
         assertEquals("Blooms tomorrow", line(book, at(17, 20)))
         assertEquals("Blooms today", line(book, at(18, 9)))
         assertEquals("In bloom", line(book, at(18, 11)))
+    }
+
+    @Test
+    fun theLightPauseSaysTheCropIsGrowingAndTheTimeLeft() {
+        fun planted(window: TimeWindow?) = TaskRules.withWhen(Task(id = "t", title = "Gym", createdAt = friday), window, friday)
+        fun line(task: Task) = FarmViews.nodLine(task, friday, utc, formats)
+
+        assertEquals("Carrots growing · 2 days, 9 hours left", line(planted(WhenChoices.thisWeek(friday, utc))))
+        assertEquals("Pumpkin growing · 15 days, 9 hours left", line(planted(WhenChoices.thisMonth(friday, utc))))
+        assertEquals("Sunflower growing · blooms in 2 days", line(planted(null)))
     }
 
     @Test
