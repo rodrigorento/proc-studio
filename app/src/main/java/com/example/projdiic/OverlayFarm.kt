@@ -80,17 +80,24 @@ fun OverlayFarm(actions: GateOverlay.Actions) {
         overFeed = true,
         header = {
             Text(
-                text = if (tasks.isEmpty()) "What needs planting?" else "Nothing's ripe right now.",
+                text = when {
+                    tasks.isEmpty() -> "What needs planting?"
+                    // Planted here for today: it's due already.
+                    tasks.any { FarmRules.isDue(it, now) } -> "Something's ready to harvest."
+                    else -> "Nothing's ripe right now."
+                },
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
         },
-        buttons = { plant ->
+        // While a harvest plays, the screen stays: it's done (and logged) before the feed comes back.
+        buttons = { plant, harvesting ->
             PlantButton(full = tasks.size >= TaskRules.MAX_TASKS, onPlant = plant)
             Button(
                 onClick = actions::onAddTasksClosed,
+                enabled = !harvesting,
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -100,7 +107,11 @@ fun OverlayFarm(actions: GateOverlay.Actions) {
             ) {
                 Text(if (tasks.isEmpty()) "Not now" else "Back to the feed", fontSize = 17.sp, fontWeight = FontWeight.Bold)
             }
-            TextButton(onClick = actions::onSnoozeAppUntilTomorrow, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+            TextButton(
+                onClick = actions::onSnoozeAppUntilTomorrow,
+                enabled = !harvesting,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
                 Text("Close the gate until tomorrow", fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },

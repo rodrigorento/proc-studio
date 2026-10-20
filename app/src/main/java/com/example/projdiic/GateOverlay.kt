@@ -356,7 +356,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.CENTER
-            // The keyboard only opens when the text field is tapped.
+            // Over the farm the keyboard comes up for planting's text field, and the screen makes room for it.
             softInputMode = if (screen == GateScreen.AddTasks) {
                 WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
             } else {

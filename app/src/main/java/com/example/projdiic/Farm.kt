@@ -1,6 +1,7 @@
 package com.example.projdiic
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,8 +50,9 @@ interface Farmer {
 /**
  * The farm: the title, the field and a card per crop, a crop's sheet (Harvest it or Remove it) and planting; the same
  * in the app and over Instagram. [header] and [footer] add what only one of them has, above and under the field, and
- * [buttons] what stays at the foot of the screen, given a way to start planting. Over Instagram ([overFeed]) the crop's
- * sheet is drawn in the screen, as an overlay window can't open a dialog of its own.
+ * [buttons] what stays at the foot of the screen, given a way to start planting and whether a harvest is playing (Back
+ * waits for it too, so it's done before the screen goes). Over Instagram ([overFeed]) the crop's sheet is drawn in the
+ * screen, as an overlay window can't open a dialog of its own.
  */
 @Composable
 fun Farm(
@@ -63,7 +65,7 @@ fun Farm(
     onTitleLongPress: (() -> Unit)? = null,
     header: @Composable ColumnScope.() -> Unit = {},
     footer: @Composable ColumnScope.() -> Unit = {},
-    buttons: @Composable ColumnScope.(plant: () -> Unit) -> Unit,
+    buttons: @Composable ColumnScope.(plant: () -> Unit, harvesting: Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     var planting by rememberSaveable { mutableStateOf(false) }
@@ -103,6 +105,8 @@ fun Farm(
             }
         }
     }
+
+    BackHandler(enabled = reap != null) {}
 
     if (planting) {
         Box(modifier.fillMaxSize()) {
@@ -151,7 +155,7 @@ fun Farm(
             Column(
                 Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) { buttons { planting = true } }
+            ) { buttons({ planting = true }, reap != null) }
         }
 
         tasks.firstOrNull { it.id == openId }?.let { task ->
