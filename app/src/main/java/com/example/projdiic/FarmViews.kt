@@ -35,7 +35,7 @@ object FarmViews {
     }
 
     /** "Harvest by Sunday", "Harvest now", "Gone to seed", "Blooms in 2 days": when the crop is ready, under its name on the field. */
-    fun harvestLine(task: Task, now: Long, zone: TimeZone, formats: WhenText.Formats): String = when (FarmRules.stage(task, now)) {
+    fun harvestLine(task: Task, now: Long, zone: TimeZone, formats: WhenText.Formats): String = when (FarmRules.stage(task, now, zone)) {
         "ripe" -> "Harvest now"
         "overripe" -> "Gone to seed"
         "bloom" -> "In bloom"

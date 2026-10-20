@@ -1,6 +1,7 @@
 package com.example.projdiic
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -32,79 +33,134 @@ class SeedPacketsTest {
 
     private fun said(text: String, now: Long = friday) = WhenParser.parse(text, now, utc).window
 
-    private fun packets(said: TimeWindow?, now: Long = friday) = SeedPackets.forTask(said, now, utc)
+    private fun seeds(now: Long = friday) = SeedPackets.seeds(now, utc)
 
     @Test
-    fun withoutATimeEveryChipIsAPacketFromSoonest() {
-        val packets = packets(null)
+    fun fourSeedsBackToBackEachGrowingItsOwnCrop() {
+        val seeds = seeds()
 
-        assertEquals(
-            listOf(WhenChoices.TODAY, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK, WhenChoices.THIS_MONTH),
-            packets.map { it.window.key },
-        )
-        assertEquals(listOf("radish", "lettuce", "carrot", "pumpkin"), packets.map { it.crop })
-        assertTrue(packets.none { it.said })
+        assertEquals(listOf("Today", "In 7 days", "In 15 days", "In 1 month"), seeds.map { it.name })
+        assertEquals(listOf("radish", "lettuce", "carrot", "pumpkin"), seeds.map { it.crop })
+        assertEquals(listOf(0 to 0, 1 to 7, 8 to 15, 16 to 31), seeds.map { it.firstDay to it.lastDay })
     }
 
     @Test
-    fun aTimeSaidInTheTaskComesFirst() {
-        val dentist = said("Dentist tomorrow at 3pm")
-        val packets = packets(dentist)
-
-        assertEquals(dentist, packets.first().window)
-        assertEquals("lettuce", packets.first().crop)
-        assertTrue(packets.first().said)
-        assertEquals(5, packets.size)
-        assertEquals(1, packets.count { it.said })
+    fun aMonthRunsToTheSameDateNextMonthOrItsLastDay() {
+        assertEquals(30, seeds(at(31, 10)).last().lastDay) // 31 October to 30 November
     }
 
     @Test
-    fun aTimeSaidThatIsAChipMarksThatChip() {
-        val rent = said("Pay rent this month")
-        val packets = packets(rent)
+    fun aSeedOpensOnItsLastDayAtAnyTime() {
+        val pick = SeedPackets.pick(seeds()[1])
 
-        assertEquals(4, packets.size)
-        assertEquals(listOf(WhenChoices.THIS_MONTH), packets.filter { it.said }.map { it.window.key })
-        assertEquals(rent, packets.single { it.said }.window)
+        assertEquals(7, pick.day)
+        assertNull(pick.minute)
+        assertFalse(pick.said)
     }
 
     @Test
-    fun tonightSaidIsTheTodayPacket() {
-        val late = at(16, 23, 30)
+    fun aPickIsDueAtTheEndOfItsDayOrAtItsTime() {
+        val lettuce = seeds()[1]
 
-        for (now in listOf(friday, late)) {
-            val packets = packets(said("Call mom tonight", now), now)
-            assertEquals(4, packets.size)
-            assertEquals(listOf(WhenChoices.TODAY), packets.filter { it.said }.map { it.window.key })
+        val anyTime = SeedPackets.window(SeedPackets.Pick(lettuce, day = 7, minute = null), friday, utc)
+        assertEquals(friday, anyTime.start)
+        assertEquals(at(23, 23, 59) + 59_999, anyTime.end)
+        assertFalse(anyTime.hasTime)
+        assertEquals("lettuce", FarmRules.crop(anyTime, friday, utc))
+
+        val atThree = SeedPackets.window(SeedPackets.Pick(lettuce, day = 3, minute = 15 * 60), friday, utc)
+        assertEquals(at(19, 15), atThree.end)
+        assertTrue(atThree.hasTime)
+    }
+
+    @Test
+    fun everyDayOfASeedGrowsThatSeedsCrop() {
+        for (seed in seeds()) {
+            for (day in seed.firstDay..seed.lastDay) {
+                val window = SeedPackets.window(SeedPackets.Pick(seed, day, minute = null), friday, utc)
+                assertEquals(seed.name, seed.crop, FarmRules.crop(window, friday, utc))
+            }
         }
     }
 
     @Test
-    fun plantingATaskTakesTheTimeOutOfItsTitleAndPicksThatTime() {
-        val gym = SeedPackets.planting("gym on Monday", friday, utc)!!
-        val book = SeedPackets.planting("read a book", friday, utc)!!
+    fun aTimeSaidOpensOnItsSeedWithItsDayAndTime() {
+        val dentist = SeedPackets.planting("Dentist tomorrow at 3pm", friday, utc)!!
+        val said = dentist.said!!
 
-        assertEquals("Gym", gym.title)
-        assertEquals(0, gym.picked)
-        assertTrue(gym.packets[gym.picked].said)
-        assertEquals("Read a book", book.title)
-        assertEquals(-1, book.picked)
+        assertEquals("Dentist", dentist.title)
+        assertEquals("In 7 days", said.seed.name)
+        assertEquals(1, said.day)
+        assertEquals(15 * 60, said.minute)
+        assertTrue(said.said)
+
+        val rent = SeedPackets.planting("Pay rent this month", friday, utc)!!.said!!
+        assertEquals("In 15 days", rent.seed.name)
+        assertEquals(15, rent.day) // 31 October
+        assertNull(rent.minute)
+
+        assertNull(SeedPackets.planting("read a book", friday, utc)!!.said)
+    }
+
+    @Test
+    fun tonightSaidIsTodayAndStillWaitsForTheEvening() {
+        val said = SeedPackets.planting("Call mom tonight", friday, utc)!!.said!!
+
+        assertEquals("Today", said.seed.name)
+        assertEquals(0, said.day)
+        assertEquals(at(16, 19), SeedPackets.window(said, friday, utc).start)
+    }
+
+    @Test
+    fun aTimeSaidBeyondAMonthIsAPumpkinOnThatDay() {
+        val said = SeedPackets.planting("Form on December 25th", friday, utc)!!.said!!
+
+        assertEquals("In 1 month", said.seed.name)
+        assertEquals(70, said.day)
+        assertTrue(said.day <= said.seed.lastDay)
+    }
+
+    @Test
+    fun aTimeAlreadyGoneTodayCantBePlanted() {
+        val today = seeds()[0]
+
+        assertTrue(SeedPackets.isPast(SeedPackets.Pick(today, 0, minute = 9 * 60), friday, utc))
+        assertFalse(SeedPackets.isPast(SeedPackets.Pick(today, 0, minute = 18 * 60), friday, utc))
+        assertFalse(SeedPackets.isPast(SeedPackets.Pick(today, 0, minute = null), friday, utc))
+    }
+
+    @Test
+    fun theTimeOffersTheNextHourTodayAndNineOnALaterDay() {
+        assertEquals(15 * 60, SeedPackets.defaultMinute(day = 0, now = friday, zone = utc))
+        assertEquals(9 * 60, SeedPackets.defaultMinute(day = 3, now = friday, zone = utc))
+        assertEquals(23 * 60 + 59, SeedPackets.defaultMinute(day = 0, now = at(16, 23, 10), zone = utc))
+    }
+
+    @Test
+    fun theCalendarOpensOnlyTheSeedsDays() {
+        val october = SeedCalendar.months(seeds()[1], friday, utc, firstDayOfWeek = Calendar.MONDAY).single()
+        val days = october.weeks.flatten().filterNotNull()
+
+        assertEquals(at(1, 0), october.firstDay)
+        assertEquals(listOf(null, null, null, 1, 2, 3, 4), october.weeks.first().map { it?.dayOfMonth }) // 1 October is a Thursday
+        assertEquals((17..23).toList(), days.filter { it.open }.map { it.dayOfMonth })
+        assertEquals(1, days.first { it.dayOfMonth == 17 }.day)
+        assertEquals(31, days.size)
+    }
+
+    @Test
+    fun aSeedRunningIntoNextMonthShowsBothMonths() {
+        val months = SeedCalendar.months(seeds(at(27, 10))[1], at(27, 10), utc, firstDayOfWeek = Calendar.MONDAY)
+
+        assertEquals(2, months.size)
+        assertEquals((28..31).toList(), months[0].weeks.flatten().filterNotNull().filter { it.open }.map { it.dayOfMonth })
+        assertEquals((1..3).toList(), months[1].weeks.flatten().filterNotNull().filter { it.open }.map { it.dayOfMonth })
     }
 
     @Test
     fun thereIsNothingToPlantWithoutATitle() {
         assertNull(SeedPackets.planting("", friday, utc))
         assertNull(SeedPackets.planting("   ", friday, utc))
-    }
-
-    @Test
-    fun aChoiceLeftOpenPastMidnightIsMadeAgainForTheNewDay() {
-        val saturday = at(17, 0, 30)
-        val today = packets(null).first { it.window.key == WhenChoices.TODAY }
-        val dentist = packets(said("Dentist tomorrow at 3pm")).first()
-
-        assertEquals(WhenChoices.today(saturday, utc), SeedPackets.current(today, saturday, utc).window)
-        assertEquals(dentist, SeedPackets.current(dentist, saturday, utc))
     }
 
     @Test

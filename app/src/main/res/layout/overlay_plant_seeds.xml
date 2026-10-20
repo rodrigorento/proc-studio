@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Planting, step 2 of the ask-for-tasks screen: when the task is for, as a seed packet per time. -->
+<!-- Planting, step 2 of the ask-for-tasks screen: four seeds, one per stretch of days. A picked seed moves up and
+     opens its days on a calendar and a time; the time said in the task opens that way already. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -7,6 +8,7 @@
     android:orientation="vertical">
 
     <ScrollView
+        android:id="@+id/seedsScroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -55,6 +57,7 @@
                 android:textSize="28sp" />
 
             <TextView
+                android:id="@+id/tvSeedsBody"
                 style="@style/ScrollGate.Body"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -62,22 +65,28 @@
                 android:text="@string/plant_seeds_body"
                 android:textSize="16sp" />
 
-            <!-- The time said in the task, first and already picked. -->
+            <!-- Two rows of two seeds, filled in by GateOverlay; hidden once one is picked. -->
             <LinearLayout
-                android:id="@+id/saidCard"
+                android:id="@+id/seedRows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="vertical" />
+
+            <!-- The picked seed, where "You said" sits; Change brings the others back. -->
+            <LinearLayout
+                android:id="@+id/pickedCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/bg_packet"
-                android:clickable="true"
-                android:focusable="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="12dp"
                 android:visibility="gone">
 
                 <ImageView
-                    android:id="@+id/ivSaidPacket"
+                    android:id="@+id/ivPickedPacket"
                     android:layout_width="60dp"
                     android:layout_height="60dp"
                     android:importantForAccessibility="no"
@@ -91,50 +100,150 @@
                     android:orientation="vertical">
 
                     <TextView
+                        android:id="@+id/tvPickedEyebrow"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/nunito_extrabold"
                         android:letterSpacing="0.06"
-                        android:text="@string/plant_you_said"
                         android:textAllCaps="true"
                         android:textColor="@color/sg_accent"
                         android:textSize="12sp" />
 
                     <TextView
-                        android:id="@+id/tvSaidWhen"
+                        android:id="@+id/tvPickedCrop"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/nunito_extrabold"
                         android:textColor="@color/sg_text"
                         android:textSize="19sp" />
-
-                    <TextView
-                        android:id="@+id/tvSaidCrop"
-                        style="@style/ScrollGate.Small"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/sg_text_soft"
-                        android:textSize="14sp" />
                 </LinearLayout>
 
-                <ImageView
-                    android:id="@+id/ivSaidCheck"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:background="@drawable/bg_mic"
-                    android:importantForAccessibility="no"
-                    android:padding="5dp"
-                    android:src="@drawable/ic_check"
-                    android:tint="@color/sg_on_accent" />
+                <Button
+                    android:id="@+id/btnChangeSeed"
+                    style="@style/ScrollGate.Button.Text"
+                    android:layout_height="wrap_content"
+                    android:text="@string/plant_change"
+                    android:textColor="@color/sg_accent" />
             </LinearLayout>
 
-            <!-- Rows of three packets, filled in by GateOverlay. -->
+            <!-- The seed's days: a month at a time, only its days open. -->
             <LinearLayout
-                android:id="@+id/packetRows"
+                android:id="@+id/calendar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:orientation="vertical" />
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvMonth"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:accessibilityHeading="true"
+                        android:fontFamily="@font/nunito_extrabold"
+                        android:textColor="@color/sg_text"
+                        android:textSize="17sp" />
+
+                    <ImageButton
+                        android:id="@+id/btnPrevMonth"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/plant_prev_month"
+                        android:src="@drawable/ic_back"
+                        android:tint="@color/sg_accent" />
+
+                    <ImageButton
+                        android:id="@+id/btnNextMonth"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/plant_next_month"
+                        android:scaleX="-1"
+                        android:src="@drawable/ic_back"
+                        android:tint="@color/sg_accent" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/weekdays"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal" />
+
+                <LinearLayout
+                    android:id="@+id/dayRows"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <!-- Any time that day, or a time set on Android's wheels. -->
+            <LinearLayout
+                android:id="@+id/timeRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center_vertical"
+                android:minHeight="56dp"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/nunito_bold"
+                    android:text="@string/plant_time"
+                    android:textColor="@color/sg_muted"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/tvTime"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/nunito_extrabold"
+                    android:textColor="@color/sg_text"
+                    android:textSize="17sp" />
+
+                <Switch
+                    android:id="@+id/swTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/plant_set_time" />
+            </LinearLayout>
+
+            <include
+                android:id="@+id/timeWheel"
+                layout="@layout/view_time_wheel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvRipeBy"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:fontFamily="@font/nunito_bold"
+                android:textColor="@color/sg_text_soft"
+                android:textSize="15sp"
+                android:visibility="gone" />
         </LinearLayout>
     </ScrollView>
 

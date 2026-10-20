@@ -16,13 +16,15 @@ object FarmRules {
     /** The span a sunflower (Anytime, no due time) grows over, as planting to the due time is for the other crops. */
     const val SUNFLOWER_GROWS_OVER_MS = 3 * 24 * 3_600_000L
 
-    /** Share of the way from planting to the due time where each stage starts. */
-    private const val SPROUT_FROM = 0.1
-    private const val GROWING_FROM = 0.3
-    private const val RIPE_FROM = 0.6
+    /** Share of the way from planting to the due time where each stage starts; a crop is ripe on the day it's due. */
+    private const val SPROUT_FROM = 0.25
+    private const val GROWING_FROM = 0.5
 
-    /** How long after planting a sunflower blooms: when it is as grown as a ripe crop. */
-    val SUNFLOWER_BLOOMS_AFTER_MS: Long = (SUNFLOWER_GROWS_OVER_MS * RIPE_FROM).toLong()
+    /** Share of its span where a sunflower (planted before Anytime was dropped) blooms. */
+    private const val SUNFLOWER_BLOOMS_FROM = 0.6
+
+    /** How long after planting a sunflower blooms. */
+    val SUNFLOWER_BLOOMS_AFTER_MS: Long = (SUNFLOWER_GROWS_OVER_MS * SUNFLOWER_BLOOMS_FROM).toLong()
 
     /**
      * The crop a task grows: the smaller the crop, the sooner it's due. A chip picks its own crop; a spoken time
@@ -38,20 +40,21 @@ object FarmRules {
             WhenChoices.TOMORROW -> LETTUCE
             WhenChoices.THIS_WEEK -> CARROT
             WhenChoices.THIS_MONTH -> PUMPKIN
+            // The seeds' days (SeedPackets.seeds): today, then up to 7, 15 and a month on.
             else -> when (DayMath.daysBetween(plantedAt, window.end, zone)) {
                 in Int.MIN_VALUE..0 -> RADISH
-                1 -> LETTUCE
-                in 2..6 -> CARROT
+                in 1..7 -> LETTUCE
+                in 8..15 -> CARROT
                 else -> PUMPKIN
             }
         }
     }
 
     /**
-     * How grown the task's crop is at [now]: seed, sprout, growing, ripe, overripe once past due; a sunflower blooms.
-     * Only time grows it.
+     * How grown the task's crop is at [now]: seed, sprout and growing over the way from planting to its due time,
+     * ripe on the day it's due, overripe once past due; a sunflower blooms. Only time grows it.
      */
-    fun stage(task: Task, now: Long): String {
+    fun stage(task: Task, now: Long, zone: TimeZone = TimeZone.getDefault()): String {
         val sunflower = task.dueAt <= 0L
         val planted = plantedAt(task)
         val end = if (sunflower) planted + SUNFLOWER_GROWS_OVER_MS else task.dueAt
@@ -60,8 +63,9 @@ object FarmRules {
         val grown = when {
             progress < SPROUT_FROM -> 0
             progress < GROWING_FROM -> 1
-            progress < RIPE_FROM -> 2
-            // Not ripe before its time starts ("gym on Monday", on Sunday): it couldn't come up at a pause yet.
+            sunflower -> if (progress < SUNFLOWER_BLOOMS_FROM) 2 else 3
+            DayMath.daysBetween(now, end, zone) > 0 -> 2
+            // Not ripe before its time starts ("tonight", in the afternoon): it couldn't come up at a pause yet.
             task.deferredBy == Task.BY_WHEN && task.deferredUntil > now -> 2
             else -> 3
         }
@@ -69,11 +73,12 @@ object FarmRules {
     }
 
     /** Ripe (or gone to seed, or in bloom): its harvest needn't ripen it first. */
-    fun isReady(task: Task, now: Long): Boolean = stage(task, now) in setOf("ripe", "overripe", "bloom")
+    fun isReady(task: Task, now: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
+        stage(task, now, zone) in setOf("ripe", "overripe", "bloom")
 
     /** Ripe, or its task is due by the end of today: the pause offers Harvest it; before that, Water it. */
     fun isDue(task: Task, now: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
-        isReady(task, now) || (task.dueAt > 0L && DayMath.daysBetween(now, task.dueAt, zone) <= 0)
+        isReady(task, now, zone) || (task.dueAt > 0L && DayMath.daysBetween(now, task.dueAt, zone) <= 0)
 
     /** When an Anytime task's sunflower blooms. */
     fun bloomsAt(task: Task): Long = plantedAt(task) + SUNFLOWER_BLOOMS_AFTER_MS

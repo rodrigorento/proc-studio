@@ -54,16 +54,6 @@ object WhenChoices {
     fun startOfTomorrow(now: Long, zone: TimeZone = TimeZone.getDefault()): Long =
         DayMath.midnight(now, zone, plusDays = 1)
 
-    /**
-     * The times a task can be given, soonest first: This week drops off on Sundays, and This month once the week
-     * reaches as far. Tonight and Anytime aren't offered; tasks saved with them still work.
-     */
-    fun chips(now: Long, zone: TimeZone = TimeZone.getDefault()): List<TimeWindow> = buildList {
-        add(today(now, zone))
-        add(tomorrow(now, zone))
-        if (DayMath.dayOfWeek(now, zone) != Calendar.SUNDAY) add(thisWeek(now, zone))
-        thisMonth(now, zone).takeIf { it.end > thisWeek(now, zone).end }?.let { add(it) }
-    }
 }
 
 /** Short words for a window, for the task list and the gate. */

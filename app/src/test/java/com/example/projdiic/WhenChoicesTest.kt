@@ -33,48 +33,11 @@ class WhenChoicesTest {
     private fun label(window: TimeWindow?, now: Long = friday) = WhenText.label(window, now, utc, formats)
 
     @Test
-    fun theFixedChips() {
-        val chips = WhenChoices.chips(friday, utc)
-
-        assertEquals(
-            listOf(WhenChoices.TODAY, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK, WhenChoices.THIS_MONTH),
-            chips.map { it.key },
-        )
-    }
-
-    @Test
-    fun thisMonthRunsToTheLastDayAndIsLeftOutWhenTheWeekReachesAsFar() {
+    fun thisMonthRunsToTheLastDay() {
         val month = WhenChoices.thisMonth(friday, utc)
 
         assertEquals(friday, month.start)
         assertEquals(at(31, 23, 59) + 59_999, month.end)
-        assertEquals(
-            listOf(WhenChoices.TODAY, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK),
-            WhenChoices.chips(at(27, 10), utc).map { it.key },
-        )
-    }
-
-    @Test
-    fun thisMonthIsLeftOutOnItsLastDayAndKeptWhileTheMonthOutlastsTheWeek() {
-        val sunday30August = Calendar.getInstance(utc).apply {
-            clear()
-            set(2026, Calendar.AUGUST, 30, 10, 0)
-        }.timeInMillis
-
-        assertFalse(WhenChoices.chips(at(31, 10), utc).any { it.key == WhenChoices.THIS_MONTH })
-        assertTrue(WhenChoices.chips(sunday30August, utc).any { it.key == WhenChoices.THIS_MONTH })
-    }
-
-    @Test
-    fun onSundaysThisWeekIsLeftOut() {
-        assertEquals(
-            listOf(WhenChoices.TODAY, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK, WhenChoices.THIS_MONTH),
-            WhenChoices.chips(at(16, 23, 30), utc).map { it.key },
-        )
-        assertEquals(
-            listOf(WhenChoices.TODAY, WhenChoices.TOMORROW, WhenChoices.THIS_MONTH),
-            WhenChoices.chips(at(18, 10), utc).map { it.key },
-        )
     }
 
     @Test

@@ -33,6 +33,8 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Switch
+import android.widget.TimePicker
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -376,73 +378,186 @@ class GateOverlay(service: Context, private val actions: Actions) {
         return root
     }
 
-    /** Planting, step 2: when the task is for, one seed packet per time, the time said in it first and picked. */
+    /**
+     * Planting, step 2: four seeds, one per stretch of days. Tapping one moves it up where the time said would be, hides
+     * the others and opens its days on a calendar and a time; the time said in the task opens that way already.
+     */
     private fun buildSeeds(planting: SeedPackets.Planting, via: String, draft: String): View {
         val root = inflater.inflate(R.layout.overlay_plant_seeds, null)
+        val zone = TimeZone.getDefault()
         val now = System.currentTimeMillis()
         val title = planting.title
-        val packets = planting.packets
+        val firstDayOfWeek = java.util.Calendar.getInstance(zone).firstDayOfWeek
+        var pick = planting.said
+        var monthShown = 0
+        var binding = false
         val plant = root.findViewById<Button>(R.id.btnPlant)
-        var picked = planting.picked
-        val cards = mutableMapOf<Int, View>()
-        fun label(packet: SeedPackets.Packet) = WhenText.label(packet.window, now, TimeZone.getDefault(), formats)
-        fun bind() {
-            cards.forEach { (index, card) -> card.isSelected = index == picked }
-            root.findViewById<View>(R.id.ivSaidCheck).isVisible = picked == packets.indexOfFirst { it.said }
-            val choice = packets.getOrNull(picked)
-            plant.isEnabled = choice != null
-            plant.text = choice?.let { context.getString(R.string.plant_button, FarmViews.cropName(it.crop).lowercase()) }
-                ?: context.getString(R.string.plant_pick)
-        }
+        val seedRows = root.findViewById<LinearLayout>(R.id.seedRows)
+        val pickedCard = root.findViewById<View>(R.id.pickedCard).apply { isSelected = true }
+        val calendar = root.findViewById<View>(R.id.calendar)
+        val dayRows = root.findViewById<LinearLayout>(R.id.dayRows)
+        val timeRow = root.findViewById<View>(R.id.timeRow)
+        val timeSwitch = root.findViewById<Switch>(R.id.swTime)
+        val wheel = root.findViewById<TimePicker>(R.id.timeWheel).apply { setIs24HourView(DateFormat.is24HourFormat(context)) }
+        val ripeBy = root.findViewById<TextView>(R.id.tvRipeBy)
         root.findViewById<TextView>(R.id.tvSeedsTask).text = title
-        val saidIndex = packets.indexOfFirst { it.said }
-        if (saidIndex >= 0) {
-            val packet = packets[saidIndex]
-            root.findViewById<View>(R.id.saidCard).apply {
-                isVisible = true
-                contentDescription = context.getString(R.string.plant_packet_said, label(packet), packet.crop)
-                setOnClickListener { picked = saidIndex; bind() }
-                cards[saidIndex] = this
-            }
-            root.findViewById<ImageView>(R.id.ivSaidPacket).setImageResource(CropArt.seedPacket(packet.crop))
-            root.findViewById<TextView>(R.id.tvSaidWhen).text = label(packet)
-            root.findViewById<TextView>(R.id.tvSaidCrop).text = FarmViews.cropName(packet.crop)
+
+        fun monthOf(p: SeedPackets.Pick) =
+            SeedCalendar.months(p.seed, now, zone, firstDayOfWeek).indexOfFirst { m -> m.weeks.flatten().any { it?.day == p.day } }.coerceAtLeast(0)
+
+        lateinit var bind: () -> Unit
+        fun choose(next: SeedPackets.Pick?) {
+            val opened = pick == null && next != null
+            pick = next
+            next?.let { monthShown = monthOf(it) }
+            bind()
+            if (opened) pickedCard.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
         }
-        val rows = root.findViewById<LinearLayout>(R.id.packetRows)
+        // Set by hand: no longer the time said, so it starts now.
+        fun change(next: SeedPackets.Pick) {
+            pick = next.copy(said = false, startsAt = 0L)
+            bind()
+        }
+
         val gap = (10 * context.resources.displayMetrics.density).toInt()
-        packets.indices.filter { it != saidIndex }.chunked(3).forEach { indices ->
+        SeedPackets.seeds(now, zone).chunked(2).forEach { pair ->
             val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-            for (column in 0 until 3) {
-                val index = indices.getOrNull(column)
-                val cell = if (index == null) {
-                    View(context)
-                } else {
-                    val packet = packets[index]
-                    inflater.inflate(R.layout.item_seed_packet, row, false).apply {
-                        findViewById<ImageView>(R.id.ivPacket).setImageResource(CropArt.seedPacket(packet.crop))
-                        findViewById<TextView>(R.id.tvPacketWhen).text = label(packet)
-                        findViewById<TextView>(R.id.tvPacketCrop).text = FarmViews.cropName(packet.crop)
-                        contentDescription = context.getString(R.string.plant_packet, label(packet), packet.crop)
-                        setOnClickListener { picked = index; bind() }
-                        cards[index] = this
-                    }
+            pair.forEachIndexed { column, seed ->
+                val card = inflater.inflate(R.layout.item_seed_packet, row, false).apply {
+                    findViewById<ImageView>(R.id.ivPacket).setImageResource(CropArt.seedPacket(seed.crop))
+                    findViewById<TextView>(R.id.tvPacketWhen).text = seed.name
+                    findViewById<TextView>(R.id.tvPacketCrop).text = FarmViews.cropName(seed.crop)
+                    contentDescription = context.getString(R.string.plant_seed, seed.name, seed.crop)
+                    setOnClickListener { choose(SeedPackets.pick(seed)) }
                 }
-                row.addView(cell, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                row.addView(card, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                     if (column > 0) marginStart = gap
                 })
             }
-            rows.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            seedRows.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = gap
             })
         }
+        root.findViewById<LinearLayout>(R.id.weekdays).apply {
+            SeedCalendar.weekdayLetters(firstDayOfWeek).forEach { letter ->
+                addView(TextView(context).apply {
+                    text = letter
+                    gravity = Gravity.CENTER
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    setTextColor(ContextCompat.getColor(context, R.color.sg_faint))
+                    textSize = 13f
+                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            }
+        }
+        root.findViewById<Button>(R.id.btnChangeSeed).setOnClickListener { choose(null) }
+        root.findViewById<View>(R.id.btnPrevMonth).setOnClickListener { monthShown--; bind() }
+        root.findViewById<View>(R.id.btnNextMonth).setOnClickListener { monthShown++; bind() }
+        timeSwitch.setOnCheckedChangeListener { _, on ->
+            val p = pick ?: return@setOnCheckedChangeListener
+            if (binding) return@setOnCheckedChangeListener
+            change(p.copy(minute = if (on) SeedPackets.defaultMinute(p.day, System.currentTimeMillis(), zone) else null))
+            // The wheels open under the fold: bring them, and the line under them, into view.
+            if (on) root.findViewById<ScrollView>(R.id.seedsScroll).let { scroll -> scroll.post { scroll.fullScroll(View.FOCUS_DOWN) } }
+        }
+        timeRow.setOnClickListener { timeSwitch.toggle() }
+        wheel.setOnTimeChangedListener { _, hour, minute ->
+            val p = pick ?: return@setOnTimeChangedListener
+            if (!binding && p.minute != hour * 60 + minute) change(p.copy(minute = hour * 60 + minute))
+        }
+
+        fun dayCell(day: SeedCalendar.Day?, picked: Int): View {
+            val cell = android.widget.FrameLayout(context)
+            if (day == null) return cell
+            val size = (40 * context.resources.displayMetrics.density).toInt()
+            cell.addView(TextView(context).apply {
+                text = day.dayOfMonth.toString()
+                gravity = Gravity.CENTER
+                textSize = 15f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.nunito_bold)
+                setBackgroundResource(R.drawable.bg_day)
+                isSelected = day.day == picked
+                val color = when {
+                    isSelected -> R.color.sg_on_accent
+                    day.open -> R.color.sg_text
+                    else -> R.color.sg_dot_muted
+                }
+                setTextColor(ContextCompat.getColor(context, color))
+                if (day.open) {
+                    contentDescription = SeedCalendar.spoken(day.day, now, zone)
+                    setOnClickListener { pick?.let { change(it.copy(day = day.day)) } }
+                } else {
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }
+            }, android.widget.FrameLayout.LayoutParams(size, size, Gravity.CENTER))
+            return cell
+        }
+
+        bind = {
+            binding = true
+            val p = pick
+            seedRows.isVisible = p == null
+            root.findViewById<View>(R.id.tvSeedsBody).isVisible = p == null
+            pickedCard.isVisible = p != null
+            calendar.isVisible = p != null && p.seed.lastDay > 0
+            timeRow.isVisible = p != null
+            wheel.isVisible = p?.minute != null
+            ripeBy.isVisible = p != null
+            if (p != null) {
+                val seed = p.seed
+                root.findViewById<ImageView>(R.id.ivPickedPacket).setImageResource(CropArt.seedPacket(seed.crop))
+                root.findViewById<TextView>(R.id.tvPickedEyebrow).text =
+                    if (p.said) context.getString(R.string.plant_you_said_seed, seed.name) else seed.name
+                root.findViewById<TextView>(R.id.tvPickedCrop).text = FarmViews.cropName(seed.crop)
+                val months = SeedCalendar.months(seed, now, zone, firstDayOfWeek)
+                monthShown = monthShown.coerceIn(0, months.lastIndex)
+                val month = months[monthShown]
+                root.findViewById<TextView>(R.id.tvMonth).text = SeedCalendar.title(month, now, zone)
+                root.findViewById<View>(R.id.btnPrevMonth).isVisible = months.size > 1
+                root.findViewById<View>(R.id.btnNextMonth).isVisible = months.size > 1
+                root.findViewById<View>(R.id.btnPrevMonth).isEnabled = monthShown > 0
+                root.findViewById<View>(R.id.btnNextMonth).isEnabled = monthShown < months.lastIndex
+                dayRows.removeAllViews()
+                month.weeks.forEach { week ->
+                    val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+                    week.forEach { day -> row.addView(dayCell(day, p.day), LinearLayout.LayoutParams(0, (44 * context.resources.displayMetrics.density).toInt(), 1f)) }
+                    dayRows.addView(row)
+                }
+                val window = SeedPackets.window(p, now, zone)
+                root.findViewById<TextView>(R.id.tvTime).text =
+                    if (p.minute == null) context.getString(R.string.plant_any_time) else formats.time(window.end)
+                timeSwitch.isChecked = p.minute != null
+                p.minute?.let {
+                    if (wheel.hour != it / 60) wheel.hour = it / 60
+                    if (wheel.minute != it % 60) wheel.minute = it % 60
+                }
+                val gone = SeedPackets.isPast(p, System.currentTimeMillis(), zone)
+                ripeBy.text = if (gone) {
+                    context.getString(R.string.plant_time_gone)
+                } else {
+                    context.getString(R.string.plant_ripe_by, WhenText.due(window, now, zone, formats) ?: "")
+                }
+                ripeBy.setTextColor(ContextCompat.getColor(context, if (gone) R.color.sg_wood else R.color.sg_text_soft))
+                plant.isEnabled = !gone
+                plant.text = context.getString(R.string.plant_button, FarmViews.cropName(seed.crop).lowercase())
+            } else {
+                plant.isEnabled = false
+                plant.text = context.getString(R.string.plant_pick)
+            }
+            plant.alpha = if (plant.isEnabled) 1f else 0.4f
+            binding = false
+        }
+
         val back = { swapTo(buildAddTasks(draft), R.id.tvAddTitle) }
         plantBack = back
         root.findViewById<Button>(R.id.btnSeedsBack).setOnClickListener { back() }
         plant.setOnClickListener {
-            val choice = packets.getOrNull(picked) ?: return@setOnClickListener
-            val task = actions.onTaskPlanted(title, SeedPackets.current(choice, System.currentTimeMillis()).window, via)
+            val chosen = pick ?: return@setOnClickListener
+            val at = System.currentTimeMillis()
+            if (SeedPackets.isPast(chosen, at, zone)) return@setOnClickListener bind()
+            val task = actions.onTaskPlanted(title, SeedPackets.window(chosen, at, zone), via)
             if (task == null) swapTo(buildAddTasks(draft), R.id.tvAddTitle) else swapTo(buildPlanted(task), R.id.tvPlantedTitle)
         }
+        pick?.let { monthShown = monthOf(it) }
         bind()
         fitSystemBars(root, bottom = root)
         return root
@@ -514,15 +629,13 @@ class GateOverlay(service: Context, private val actions: Actions) {
         row.findViewById<View>(R.id.whenChipsScroll).isVisible = expanded
         if (expanded) {
             val chips = row.findViewById<LinearLayout>(R.id.whenChips)
-            val current = TaskRules.window(task)
-            val options = WhenChoices.chips(now).toMutableList()
-            // What he said that isn't one of the chips ("Tomorrow 15:00") stays on offer, first so it's in view.
-            if (current != null && current.key == WhenChoices.CUSTOM) options.add(0, current)
-            options.forEach { window ->
+            // The seeds, each on its last day: the one the task's crop is marked.
+            val crop = FarmRules.crop(task)
+            SeedPackets.seeds(now).forEach { seed ->
                 val chip = inflater.inflate(R.layout.item_when_chip, chips, false) as Button
-                chip.text = WhenText.label(window, now, TimeZone.getDefault(), formats)
-                chip.isSelected = window.key == task.whenKey && (window.key != WhenChoices.CUSTOM || window == current)
-                chip.setOnClickListener { onWhen(window) }
+                chip.text = seed.name
+                chip.isSelected = seed.crop == crop
+                chip.setOnClickListener { onWhen(SeedPackets.window(SeedPackets.pick(seed), System.currentTimeMillis())) }
                 chips.addView(chip)
             }
         }

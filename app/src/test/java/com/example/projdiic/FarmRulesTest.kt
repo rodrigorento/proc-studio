@@ -41,8 +41,9 @@ class FarmRulesTest {
 
         assertEquals("radish", spoken("Dentist at 3pm"))
         assertEquals("lettuce", spoken("Dentist tomorrow at 3pm"))
-        assertEquals("carrot", spoken("Gym on Monday"))
-        assertEquals("pumpkin", spoken("Form on October 25th"))
+        assertEquals("lettuce", spoken("Gym on Monday"))
+        assertEquals("carrot", spoken("Form on October 25th"))
+        assertEquals("pumpkin", spoken("Form on November 10th"))
     }
 
     @Test
@@ -51,7 +52,7 @@ class FarmRulesTest {
             val task = planted(window)
             val stages = CropArt.STAGES.getValue(FarmRules.crop(task, utc))
             for (hours in listOf(0, 1, 5, 30, 200, 2000)) {
-                assertTrue(stages.contains(FarmRules.stage(task, friday + hours * 3_600_000L)))
+                assertTrue(stages.contains(FarmRules.stage(task, friday + hours * 3_600_000L, utc)))
             }
         }
     }
@@ -60,12 +61,14 @@ class FarmRulesTest {
     fun aCropGrowsTowardsItsDueTimeAndGoesToSeedAfterIt() {
         val task = planted(WhenChoices.thisWeek(friday, utc)) // planted Friday 14:50, due Sunday night
 
-        assertEquals("seed", FarmRules.stage(task, friday))
-        assertEquals("sprout", FarmRules.stage(task, at(16, 23)))
-        assertEquals("growing", FarmRules.stage(task, at(17, 12)))
-        assertEquals("ripe", FarmRules.stage(task, at(18, 12)))
-        assertEquals("ripe", FarmRules.stage(task, at(18, 23, 59)))
-        assertEquals("overripe", FarmRules.stage(task, at(19, 9)))
+        assertEquals("seed", FarmRules.stage(task, friday, utc))
+        assertEquals("seed", FarmRules.stage(task, at(16, 23), utc)) // under a quarter of the way
+        assertEquals("sprout", FarmRules.stage(task, at(17, 6), utc))
+        assertEquals("growing", FarmRules.stage(task, at(17, 22), utc)) // past halfway, but not its day yet
+        assertEquals("ripe", FarmRules.stage(task, at(18, 0), utc)) // ripe on the day it's due
+        assertEquals("ripe", FarmRules.stage(task, at(18, 12), utc))
+        assertEquals("ripe", FarmRules.stage(task, at(18, 23, 59), utc))
+        assertEquals("overripe", FarmRules.stage(task, at(19, 9), utc))
     }
 
     @Test
@@ -73,9 +76,9 @@ class FarmRulesTest {
         val task = planted(WhenChoices.today(friday, utc))
         val dueAsPlanted = Task(id = "n", title = "Now", createdAt = friday, dueAt = friday, dueHasTime = true)
 
-        assertEquals("ripe", FarmRules.stage(task, task.dueAt))
-        assertEquals("overripe", FarmRules.stage(task, task.dueAt + 1))
-        assertEquals("ripe", FarmRules.stage(dueAsPlanted, friday))
+        assertEquals("ripe", FarmRules.stage(task, task.dueAt, utc))
+        assertEquals("overripe", FarmRules.stage(task, task.dueAt + 1, utc))
+        assertEquals("ripe", FarmRules.stage(dueAsPlanted, friday, utc))
     }
 
     @Test
@@ -86,8 +89,8 @@ class FarmRulesTest {
         val gym = TaskRules.withWhen(sunflower, WhenParser.parse("Gym on Monday", friday, utc).window, friday)
 
         assertEquals("lettuce", FarmRules.crop(lettuce, utc))
-        assertEquals("seed", FarmRules.stage(lettuce, friday))
-        assertEquals("carrot", FarmRules.crop(gym, utc))
+        assertEquals("seed", FarmRules.stage(lettuce, friday, utc))
+        assertEquals("lettuce", FarmRules.crop(gym, utc))
         assertEquals(sunflower.createdAt, lettuce.createdAt)
     }
 
@@ -97,20 +100,28 @@ class FarmRulesTest {
 
         assertEquals(
             listOf("seed", "sprout", "growing", "ripe", "overripe"),
-            listOf(friday, at(16, 22), at(17, 12), at(18, 9), at(19, 9)).map { FarmRules.stage(carrot, it) },
+            listOf(friday, at(17, 6), at(17, 22), at(18, 9), at(19, 9)).map { FarmRules.stage(carrot, it, utc) },
         )
-        assertEquals("seed", FarmRules.stage(planted(null), friday))
+        assertEquals("seed", FarmRules.stage(planted(null), friday, utc))
     }
 
     @Test
     fun aCropIsReadyToHarvestOnceItIsRipe() {
         val carrot = planted(WhenChoices.thisWeek(friday, utc))
 
-        assertFalse(FarmRules.isReady(carrot, friday))
-        assertFalse(FarmRules.isReady(carrot, at(17, 12)))
-        assertTrue(FarmRules.isReady(carrot, at(18, 9)))
-        assertTrue(FarmRules.isReady(carrot, at(19, 9))) // gone to seed: still harvested
-        assertTrue(FarmRules.isReady(planted(null), at(19, 15)))
+        assertFalse(FarmRules.isReady(carrot, friday, utc))
+        assertFalse(FarmRules.isReady(carrot, at(17, 12), utc))
+        assertTrue(FarmRules.isReady(carrot, at(18, 9), utc))
+        assertTrue(FarmRules.isReady(carrot, at(19, 9), utc)) // gone to seed: still harvested
+        assertTrue(FarmRules.isReady(planted(null), at(19, 15), utc))
+    }
+
+    @Test
+    fun aCropForADayFarOffStaysGrowingUntilItsDay() {
+        val form = planted(WhenParser.parse("Form on November 10th", friday, utc).window)
+
+        assertEquals("growing", FarmRules.stage(form, at(31, 12), utc)) // 60% of the way, but not its day yet
+        assertEquals("ripe", FarmRules.stage(form, at(41, 9), utc)) // 10 November
     }
 
     @Test
@@ -138,17 +149,17 @@ class FarmRulesTest {
         val monday = WhenParser.parse("Gym on Monday", friday, utc).window!!
         val gym = planted(monday)
 
-        assertEquals("growing", FarmRules.stage(gym, monday.start - 60_000))
-        assertEquals("ripe", FarmRules.stage(gym, monday.start))
+        assertEquals("growing", FarmRules.stage(gym, monday.start - 60_000, utc))
+        assertEquals("ripe", FarmRules.stage(gym, monday.start, utc))
     }
 
     @Test
     fun aSunflowerBloomsAfterAFewDaysAndStaysInBloom() {
         val task = planted(null)
 
-        assertEquals("seed", FarmRules.stage(task, friday))
-        assertEquals("growing", FarmRules.stage(task, at(18, 0)))
-        assertEquals("bloom", FarmRules.stage(task, at(19, 15)))
-        assertEquals("bloom", FarmRules.stage(task, at(30, 15)))
+        assertEquals("seed", FarmRules.stage(task, friday, utc))
+        assertEquals("growing", FarmRules.stage(task, at(18, 5), utc))
+        assertEquals("bloom", FarmRules.stage(task, at(19, 15), utc))
+        assertEquals("bloom", FarmRules.stage(task, at(30, 15), utc))
     }
 }

@@ -1,6 +1,20 @@
 package com.example.projdiic
 
 import android.content.ActivityNotFoundException
+import android.text.format.DateFormat
+import android.view.LayoutInflater
+import android.widget.TimePicker
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Switch
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.viewinterop.AndroidView
+import com.example.projdiic.ui.theme.Clay
+import java.util.Calendar
 import android.content.Intent
 import android.speech.RecognizerIntent
 import android.widget.Toast
@@ -10,6 +24,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,7 +107,7 @@ fun PlantFlow(
     var draft by rememberSaveable { mutableStateOf("") }
     var via by rememberSaveable { mutableStateOf(Task.VIA_TEXT) }
     var seedsAt by rememberSaveable { mutableLongStateOf(0L) }
-    var picked by rememberSaveable { mutableIntStateOf(-1) }
+    var pick by rememberSaveable(stateSaver = PickSaver) { mutableStateOf<SeedPackets.Pick?>(null) }
     var plantedId by rememberSaveable { mutableStateOf<String?>(null) }
 
     // The text, not the screen's last look at it: a voice result arrives and moves on in one go.
@@ -99,7 +115,7 @@ fun PlantFlow(
         val now = System.currentTimeMillis()
         val planting = SeedPackets.planting(text, now) ?: return
         seedsAt = now
-        picked = planting.picked
+        pick = planting.said
         step = SEEDS
     }
 
@@ -132,15 +148,16 @@ fun PlantFlow(
             }
             SeedsStep(
             title = planting.title,
-            packets = planting.packets,
+            seeds = remember(seedsAt) { SeedPackets.seeds(seedsAt) },
+            pick = pick,
             now = seedsAt,
-            picked = picked,
-            onPick = { picked = it },
+            onPick = { pick = it },
             onBack = { step = NAME },
             onPlant = {
-                val chosen = planting.packets.getOrNull(picked) ?: return@SeedsStep
-                val packet = SeedPackets.current(chosen, System.currentTimeMillis())
-                val task = onPlant(planting.title, packet.window, via)
+                val chosen = pick ?: return@SeedsStep
+                val at = System.currentTimeMillis()
+                if (SeedPackets.isPast(chosen, at)) return@SeedsStep
+                val task = onPlant(planting.title, SeedPackets.window(chosen, at), via)
                 if (task == null) {
                     Toast.makeText(context, "Your field is full. Harvest one to plant another.", Toast.LENGTH_SHORT).show()
                     onClose()
@@ -259,28 +276,51 @@ private fun NameStep(
     }
 }
 
+/** Keeps the seed picked, with its day and time, across a rotation. */
+private val PickSaver = Saver<SeedPackets.Pick?, List<Any>>(
+    save = { pick ->
+        pick?.let { listOf(it.seed.name, it.seed.crop, it.seed.firstDay, it.seed.lastDay, it.day, it.minute ?: -1, it.said, it.startsAt) }
+    },
+    restore = { saved ->
+        SeedPackets.Pick(
+            SeedPackets.Seed(saved[0] as String, saved[1] as String, saved[2] as Int, saved[3] as Int),
+            day = saved[4] as Int,
+            minute = (saved[5] as Int).takeIf { it >= 0 },
+            said = saved[6] as Boolean,
+            startsAt = saved[7] as Long,
+        )
+    },
+)
+
+/**
+ * Four seeds, one per stretch of days. Tapping one moves it up where the time said would be, hides the others and opens
+ * its days on a calendar and a time; the time said in the task opens that way already.
+ */
 @Composable
 private fun SeedsStep(
     title: String,
-    packets: List<SeedPackets.Packet>,
+    seeds: List<SeedPackets.Seed>,
+    pick: SeedPackets.Pick?,
     now: Long,
-    picked: Int,
-    onPick: (Int) -> Unit,
+    onPick: (SeedPackets.Pick?) -> Unit,
     onBack: () -> Unit,
     onPlant: () -> Unit,
 ) {
     val context = LocalContext.current
     val formats = remember { whenFormats(context) }
-    fun label(packet: SeedPackets.Packet) = WhenText.label(packet.window, now, TimeZone.getDefault(), formats)
-    val choice = packets.getOrNull(picked)
+    val zone = TimeZone.getDefault()
+    val window = pick?.let { SeedPackets.window(it, now, zone) }
+    val gone = pick != null && SeedPackets.isPast(pick, System.currentTimeMillis(), zone)
+    // Set by hand: no longer the time said, so it starts now.
+    fun change(next: SeedPackets.Pick) = onPick(next.copy(said = false, startsAt = 0L))
     StepScreen(
         pane = "When should it be ripe?",
         top = { StepBar(back = "Name", onBack = onBack, step = 2) },
         bottom = {
             PrimaryButton(
-                text = choice?.let { "Plant the " + FarmViews.cropName(it.crop).lowercase() } ?: "Pick the seeds",
-                enabled = choice != null,
-                packet = choice?.crop,
+                text = pick?.let { "Plant the " + FarmViews.cropName(it.seed.crop).lowercase() } ?: "Pick the seeds",
+                enabled = pick != null && !gone,
+                packet = pick?.seed?.crop,
                 onClick = onPlant,
             )
         },
@@ -295,78 +335,193 @@ private fun SeedsStep(
                 .padding(horizontal = 14.dp, vertical = 6.dp)
         )
         Heading("When should it be ripe?")
-        Body("Each time grows its own crop. Sooner things grow as smaller crops.")
-        val said = packets.indexOfFirst { it.said }
-        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (said >= 0) {
-            val packet = packets[said]
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = if (picked == said) LeafContainer else MaterialTheme.colorScheme.surface,
-                border = if (picked == said) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp)
-                    .selectable(selected = picked == said, role = Role.RadioButton, onClick = { onPick(said) })
-            ) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Image(painterResource(CropArt.seedPacket(packet.crop)), contentDescription = null, modifier = Modifier.size(60.dp))
-                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                        Text(
-                            "YOU SAID",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 0.8.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(label(packet), fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-                        Text(FarmViews.cropName(packet.crop), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (pick == null) {
+            Body("Each seed grows its own crop. Sooner things grow as smaller crops.")
+            Column(Modifier.selectableGroup().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                seeds.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        row.forEach { seed -> SeedCard(seed, onClick = { onPick(SeedPackets.pick(seed)) }, modifier = Modifier.weight(1f)) }
                     }
-                    if (picked == said) Check()
                 }
             }
-        }
-        val others = packets.indices.filter { it != said }
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 4.dp)) {
-            others.chunked(3).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    row.forEach { index ->
-                        PacketCard(packets[index], label(packets[index]), picked == index, { onPick(index) }, Modifier.weight(1f))
-                    }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                }
+        } else {
+            PickedCard(pick, onChange = { onPick(null) })
+            if (pick.seed.lastDay > 0) SeedCalendarView(pick.seed, pick.day, now, onDay = { change(pick.copy(day = it)) })
+            TimeRow(
+                value = if (pick.minute == null) "Any time" else formats.time(window!!.end),
+                on = pick.minute != null,
+                onSwitch = { on ->
+                    change(pick.copy(minute = if (on) SeedPackets.defaultMinute(pick.day, System.currentTimeMillis(), zone) else null))
+                },
+            )
+            pick.minute?.let { minute -> TimeWheel(minute) { if (it != pick.minute) change(pick.copy(minute = it)) } }
+            // Turned on, the wheels open under the fold: bring them, and the line under them, into view.
+            val ripeLine = remember { BringIntoViewRequester() }
+            val timed = pick.minute != null
+            var wasTimed by remember { mutableStateOf(timed) }
+            LaunchedEffect(timed) {
+                if (timed && !wasTimed) ripeLine.bringIntoView()
+                wasTimed = timed
             }
-        }
+            Text(
+                text = if (gone) "That time has gone today. Pick a later one." else "Ripe " + (WhenText.due(window, now, zone, formats) ?: ""),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (gone) Clay else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp).bringIntoViewRequester(ripeLine)
+            )
         }
     }
 }
 
 @Composable
-private fun PacketCard(packet: SeedPackets.Packet, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun SeedCard(seed: SeedPackets.Seed, onClick: () -> Unit, modifier: Modifier) {
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (selected) LeafContainer else MaterialTheme.colorScheme.surface,
-        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-        modifier = modifier.selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+        color = MaterialTheme.colorScheme.surface,
+        modifier = modifier.selectable(selected = false, role = Role.RadioButton, onClick = onClick)
     ) {
-        Column(Modifier.padding(top = 10.dp, bottom = 12.dp, start = 4.dp, end = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(painterResource(CropArt.seedPacket(packet.crop)), contentDescription = null, modifier = Modifier.size(68.dp))
-            Text(
-                label,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-            Text(
-                FarmViews.cropName(packet.crop),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
+        Column(Modifier.padding(top = 12.dp, bottom = 14.dp, start = 4.dp, end = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(painterResource(CropArt.seedPacket(seed.crop)), contentDescription = null, modifier = Modifier.size(72.dp))
+            Text(seed.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+            Text(FarmViews.cropName(seed.crop), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
     }
+}
+
+/** The seed picked, where the time said sits: its packet, its name and crop, and Change to see the others again. */
+@Composable
+private fun PickedCard(pick: SeedPackets.Pick, onChange: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = LeafContainer,
+        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+    ) {
+        Row(Modifier.padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Image(painterResource(CropArt.seedPacket(pick.seed.crop)), contentDescription = null, modifier = Modifier.size(60.dp))
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(
+                    (if (pick.said) "You said · " + pick.seed.name else pick.seed.name).uppercase(),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.8.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(FarmViews.cropName(pick.seed.crop), fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+            }
+            TextButton(onClick = onChange) { Text("Change", fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+        }
+    }
+}
+
+/** The seed's days, a month at a time; only they can be picked. */
+@Composable
+private fun SeedCalendarView(seed: SeedPackets.Seed, picked: Int, now: Long, onDay: (Int) -> Unit) {
+    val zone = TimeZone.getDefault()
+    val firstDayOfWeek = remember { Calendar.getInstance(zone).firstDayOfWeek }
+    val months = remember(seed, now) { SeedCalendar.months(seed, now, zone, firstDayOfWeek) }
+    var shown by rememberSaveable(seed.name) {
+        mutableIntStateOf(months.indexOfFirst { month -> month.weeks.flatten().any { it?.day == picked } }.coerceAtLeast(0))
+    }
+    val month = months[shown.coerceIn(0, months.lastIndex)]
+    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 44.dp)) {
+                Text(
+                    SeedCalendar.title(month, now, zone),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.weight(1f).padding(start = 6.dp).semantics { heading() }
+                )
+                if (months.size > 1) {
+                    IconButton(onClick = { shown-- }, enabled = shown > 0) {
+                        Icon(painterResource(R.drawable.ic_back), contentDescription = "Previous month")
+                    }
+                    IconButton(onClick = { shown++ }, enabled = shown < months.lastIndex) {
+                        Icon(painterResource(R.drawable.ic_back), contentDescription = "Next month", modifier = Modifier.graphicsLayer(scaleX = -1f))
+                    }
+                }
+            }
+            Row(Modifier.padding(top = 6.dp).clearAndSetSemantics {}) {
+                SeedCalendar.weekdayLetters(firstDayOfWeek).forEach {
+                    Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                }
+            }
+            month.weeks.forEach { week ->
+                Row {
+                    week.forEach { day ->
+                        Box(Modifier.weight(1f).height(44.dp), contentAlignment = Alignment.Center) {
+                            if (day != null) DayCell(day, selected = day.day == picked, now = now, onClick = { onDay(day.day) })
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayCell(day: SeedCalendar.Day, selected: Boolean, now: Long, onClick: () -> Unit) {
+    val circle = Modifier.size(40.dp).clip(CircleShape).background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+    val modifier = if (day.open) {
+        circle
+            .selectable(selected = selected, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = SeedCalendar.spoken(day.day, now) }
+    } else {
+        circle.clearAndSetSemantics {}
+    }
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Text(
+            day.dayOfMonth.toString(),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = when {
+                selected -> MaterialTheme.colorScheme.onPrimary
+                day.open -> MaterialTheme.colorScheme.onSurface
+                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+            }
+        )
+    }
+}
+
+/** Any time that day, or a time: the switch shows Android's wheels under it. */
+@Composable
+private fun TimeRow(value: String, on: Boolean, onSwitch: (Boolean) -> Unit) {
+    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .toggleable(value = on, role = Role.Switch, onValueChange = onSwitch)
+                .heightIn(min = 56.dp)
+                .padding(start = 16.dp, end = 12.dp)
+        ) {
+            Text("Time", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f).padding(start = 12.dp))
+            Switch(checked = on, onCheckedChange = null)
+        }
+    }
+}
+
+/** Android's time wheels ([R.layout.view_time_wheel]), the same as over Instagram. */
+@Composable
+private fun TimeWheel(minute: Int, onMinute: (Int) -> Unit) {
+    val latest by rememberUpdatedState(onMinute)
+    AndroidView(
+        factory = { context ->
+            (LayoutInflater.from(context).inflate(R.layout.view_time_wheel, null) as TimePicker).apply {
+                setIs24HourView(DateFormat.is24HourFormat(context))
+                hour = minute / 60
+                this.minute = minute % 60
+                setOnTimeChangedListener { _, h, m -> latest(h * 60 + m) }
+            }
+        },
+        update = { wheel ->
+            if (wheel.hour != minute / 60) wheel.hour = minute / 60
+            if (wheel.minute != minute % 60) wheel.minute = minute % 60
+        },
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
@@ -520,14 +675,4 @@ private fun Heading(text: String) {
 @Composable
 private fun Body(text: String) {
     Text(text, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
-@Composable
-private fun Check() {
-    Box(
-        Modifier.size(28.dp).background(MaterialTheme.colorScheme.primary, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
-    }
 }

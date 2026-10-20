@@ -34,9 +34,20 @@ internal object DayMath {
         return endOfDay(midnight(time, zone, day.getActualMaximum(Calendar.DAY_OF_MONTH) - day.get(Calendar.DAY_OF_MONTH)), zone)
     }
 
+    /** Midnight on the 1st of the month of [time]. */
+    fun startOfMonth(time: Long, zone: TimeZone): Long =
+        midnight(time, zone, plusDays = 1 - calendar(time, zone).get(Calendar.DAY_OF_MONTH))
+
+    /** Midnight on the same date a month after [time], or the month's last day when it is shorter (31 Oct: 30 Nov). */
+    fun oneMonthOn(time: Long, zone: TimeZone): Long =
+        midnight(calendar(midnight(time, zone), zone).apply { add(Calendar.MONTH, 1) }.timeInMillis, zone)
+
     fun dayOfWeek(time: Long, zone: TimeZone): Int = calendar(time, zone).get(Calendar.DAY_OF_WEEK)
 
     fun hourOf(time: Long, zone: TimeZone): Int = calendar(time, zone).get(Calendar.HOUR_OF_DAY)
+
+    /** Minutes since midnight at [time]: 15:30 is 930. */
+    fun minuteOf(time: Long, zone: TimeZone): Int = calendar(time, zone).let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
 
     /** Days from [weekday] to the next one ([Calendar.MONDAY] and so on), 0 when it is today. */
     fun daysUntil(weekday: Int, from: Long, zone: TimeZone): Int = (weekday - dayOfWeek(from, zone) + 7) % 7
