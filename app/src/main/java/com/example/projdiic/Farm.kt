@@ -20,17 +20,21 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -87,7 +91,7 @@ fun Farm(
     onTitleLongPress: (() -> Unit)? = null,
     header: @Composable ColumnScope.() -> Unit = {},
     footer: @Composable ColumnScope.() -> Unit = {},
-    buttons: @Composable ColumnScope.(plant: () -> Unit, harvesting: Boolean) -> Unit,
+    buttons: @Composable ColumnScope.(plant: () -> Unit, harvesting: Boolean, celebration: Long) -> Unit,
 ) {
     var planting by rememberSaveable { mutableStateOf(false) }
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -95,8 +99,14 @@ fun Farm(
     // The last harvest or removal, which Undo can take back for a few seconds.
     var undo by remember { mutableStateOf<Undo?>(null) }
     val context = LocalContext.current
+    // When the day's last dry bed was watered (0: not yet here): the field sparkles and the buttons may cheer.
+    var celebration by remember { mutableLongStateOf(0L) }
+    val haptics = LocalHapticFeedback.current
     // Beds being watered: the can's frame on each.
     var splashes by remember { mutableStateOf(mapOf<String, Int>()) }
+    // The crops and the time as of the latest frame, for a can that finishes after the field has changed.
+    val latest by rememberUpdatedState(tasks)
+    val latestNow by rememberUpdatedState(now)
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
 
@@ -136,6 +146,18 @@ fun Farm(
         return true
     }
 
+    // The day's last dry bed watered: the field sparkles once and the phone gives a success tick; then it's over, so
+    // coming back to the field (after planting, say) doesn't play it again.
+    fun celebrate() {
+        val stamp = System.currentTimeMillis()
+        celebration = stamp
+        haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+        scope.launch {
+            delay(CELEBRATION_MS)
+            if (celebration == stamp) celebration = 0L
+        }
+    }
+
     // A dry bed tapped, or Water it in its sheet: watered at once, then the can pours over the bed.
     fun water(task: Task, via: String) {
         openId = null
@@ -148,6 +170,8 @@ fun Farm(
                     splashes = splashes + (task.id to frame)
                     delay(1000L / CropMotion.FPS)
                 }
+                // The last can still pouring, and no bed dry any more: the day's watering is done.
+                if (splashes.keys == setOf(task.id) && !FarmRules.needsWater(latest, latestNow)) celebrate()
             } finally {
                 splashes = splashes - task.id
             }
@@ -221,9 +245,12 @@ fun Farm(
                         now = now,
                         reap = reap,
                         splashes = splashes,
-                        onOpen = ::open,
-                        onWater = ::water,
-                        onPlant = ::plant,
+                        celebration = celebration,
+                        // Lambdas, not ::water: a reference to a local function equals every other one to it, whatever
+                        // it captured, so the field's rememberUpdatedState would keep the first, with its old tasks.
+                        onOpen = { open(it) },
+                        onWater = { task, via -> water(task, via) },
+                        onPlant = { plant() },
                         modifier = Modifier.bleed(20.dp),
                     )
                     CropCards(
@@ -253,7 +280,7 @@ fun Farm(
             Column(
                 Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) { buttons(::plant, reap != null) }
+            ) { buttons(::plant, reap != null, celebration) }
         }
 
         tasks.firstOrNull { it.id == openId }?.let { task ->
@@ -301,6 +328,9 @@ private fun UndoBar(undo: Undo, onUndo: () -> Unit, onGone: () -> Unit) {
         )
     }
 }
+
+/** How long the all-watered sparkles and the button's pulse take. */
+private const val CELEBRATION_MS = 1800L
 
 /** How long Undo stays offered. */
 private const val UNDO_MS = 5000L

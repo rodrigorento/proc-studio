@@ -9,6 +9,9 @@ import android.speech.SpeechRecognizer
 import android.widget.Toast
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.OnBackPressedDispatcherOwner
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +31,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -104,8 +108,17 @@ fun OverlayFarm(actions: GateOverlay.Actions) {
             }
         },
         // While a harvest plays, the screen stays: it's done (and logged) before the feed comes back.
-        buttons = { plant, harvesting ->
+        buttons = { plant, harvesting, celebration ->
             PlantButton(full = tasks.size >= TaskRules.MAX_TASKS, onPlant = plant)
+            // The day's watering done: Back to the feed pulses once, the way out now.
+            val pulse = remember { Animatable(1f) }
+            LaunchedEffect(celebration) {
+                if (celebration != 0L && motionOn(context)) {
+                    delay(500L)
+                    pulse.animateTo(1.06f, tween(160))
+                    pulse.animateTo(1f, spring(dampingRatio = 0.4f))
+                }
+            }
             Button(
                 onClick = actions::onAddTasksClosed,
                 enabled = !harvesting,
@@ -114,7 +127,7 @@ fun OverlayFarm(actions: GateOverlay.Actions) {
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).graphicsLayer { scaleX = pulse.value; scaleY = pulse.value }
             ) {
                 Text(if (tasks.isEmpty()) "Not now" else "Back to the feed", fontSize = 17.sp, fontWeight = FontWeight.Bold)
             }

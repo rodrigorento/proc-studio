@@ -9,34 +9,36 @@ import android.os.Build
 import android.text.format.DateFormat
 import android.util.Log
 import android.view.ContextThemeWrapper
-import android.widget.FrameLayout
-import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
-import androidx.compose.ui.platform.ComposeView
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import com.example.projdiic.ui.theme.ProjDIICTheme
-import kotlin.math.roundToInt
-import androidx.annotation.DrawableRes
-import androidx.core.content.ContextCompat
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.animation.DecelerateInterpolator
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
+import androidx.annotation.DrawableRes
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.platform.ComposeView
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.example.projdiic.ui.theme.ProjDIICTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.roundToInt
 
 /**
  * Draws Task Farm's pause screens over Instagram, one at a time, and reports
@@ -85,6 +87,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
     /** Harvest it was tapped and its animation is playing; it takes effect when that ends or the screen goes. */
     private var pending: (() -> Unit)? = null
+
+    /** Set when a pause opens (not when it's shown again): the next farm built slides in. */
+    var slideIn = false
 
     /** The farm's Compose host while the farm is up over Instagram (the ask for tasks). */
     private var farmOwner: OverlayOwner? = null
@@ -195,6 +200,19 @@ class GateOverlay(service: Context, private val actions: Actions) {
             addView(farm, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
         fitSystemBars(root, bottom = root)
+        // A farm just opened slides up over the feed rather than cutting to it; one shown again (back from another app)
+        // is simply there. It starts below the window, set just before its first frame.
+        if (slideIn && motionOn(context)) {
+            root.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    root.viewTreeObserver.removeOnPreDrawListener(this)
+                    root.translationY = root.height.toFloat()
+                    root.animate().translationY(0f).setDuration(FARM_SLIDE_MS).setInterpolator(DecelerateInterpolator(2f)).start()
+                    return true
+                }
+            })
+        }
+        slideIn = false
         return root
     }
 
@@ -394,5 +412,6 @@ class GateOverlay(service: Context, private val actions: Actions) {
     companion object {
         private const val TAG = "ReelsBlocker"
         private const val BLUR_RADIUS = 40
+        private const val FARM_SLIDE_MS = 320L
     }
 }

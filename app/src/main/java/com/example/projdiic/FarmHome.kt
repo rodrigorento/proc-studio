@@ -6,7 +6,9 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
@@ -53,20 +55,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
@@ -92,6 +99,8 @@ import java.util.Date
 import java.util.TimeZone
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 
 /**
  * The share of the lawn image's height the field gives back to the screen above it: the top of the back plot's card,
@@ -122,21 +131,38 @@ fun Field(
     onWater: (task: Task, via: String) -> Unit,
     onPlant: () -> Unit,
     modifier: Modifier = Modifier,
+    celebration: Long = 0L,
 ) {
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    // Each bed squashes a little when tapped and springs back.
+    val bounces = remember { List(FieldArt.PLOTS.size) { Animatable(1f) } }
+    val moving = remember { motionOn(context) }
     val planted by rememberUpdatedState(tasks)
     val open by rememberUpdatedState(onOpen)
     val water by rememberUpdatedState(onWater)
     val plant by rememberUpdatedState(onPlant)
     val time by rememberUpdatedState(now)
     val watering by rememberUpdatedState(splashes)
-    // A dry bed waters; a watered one opens. One being watered takes no taps while the can pours.
-    fun tapped(task: Task) {
-        when {
-            task.id in watering -> Unit
-            FarmRules.isWatered(task, time) -> open(task)
-            else -> water(task, "bed")
+    val harvesting by rememberUpdatedState(reap)
+    // A dry bed waters; a watered one opens (not while a harvest plays). One being watered takes no taps while the can
+    // pours. A tap that does something squashes the bed and ticks.
+    fun tapped(plot: Int, task: Task) {
+        val action: (() -> Unit)? = when {
+            task.id in watering || harvesting?.taskId == task.id -> null
+            FarmRules.isWatered(task, time) -> if (harvesting == null) ({ open(task) }) else null
+            else -> ({ water(task, "bed") })
         }
+        action ?: return
+        haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+        if (moving) {
+            scope.launch {
+                bounces[plot].animateTo(0.93f, tween(70))
+                bounces[plot].animateTo(1f, spring(dampingRatio = 0.35f, stiffness = Spring.StiffnessMedium))
+            }
+        }
+        action()
     }
     // Each bed's picture, to tell which bed a tap is on: a tall crop in front covers the bed behind it.
     val pictures by rememberUpdatedState(
@@ -153,7 +179,7 @@ fun Field(
                         val plot = FieldPlots.at(at.x / size.width, (at.y + full * SKY) / full, planted.size) { i, u, v ->
                             pictures.getOrNull(i)?.let { solid(it, u, v) } ?: false
                         } ?: return@detectTapGestures
-                        planted.getOrNull(plot)?.let(::tapped) ?: plant()
+                        planted.getOrNull(plot)?.let { tapped(plot, it) } ?: plant()
                     }
                 }
                 .layout { measurable, constraints ->
@@ -173,7 +199,12 @@ fun Field(
             FieldArt.PLOTS.take(tasks.size).forEach { plot -> Box(Modifier.over(plot.shadow)) { Layer(FieldArt.BED_SHADOW) } }
             FieldArt.PLOTS.forEachIndexed { i, plot ->
                 val task = tasks.getOrNull(i)
-                Box(Modifier.over(plot.card)) {
+                // Squashed about the bed's front corner, where it meets the grass.
+                val pivot = TransformOrigin(
+                    (plot.front.x - plot.card.left) / plot.card.width,
+                    (plot.front.y - plot.card.top) / plot.card.height,
+                )
+                Box(Modifier.over(plot.card).graphicsLayer { scaleX = bounces[i].value; scaleY = bounces[i].value; transformOrigin = pivot }) {
                     val splash = task?.let { splashes[it.id] }
                     when {
                         task == null -> Layer(FieldArt.MARKED_PLOT)
@@ -196,6 +227,27 @@ fun Field(
                 val task = tasks.getOrNull(i) ?: return@forEachIndexed
                 val frame = splashes[task.id]?.takeIf { reap?.taskId != task.id } ?: return@forEachIndexed
                 Box(Modifier.over(plot.card)) { Layer(can[frame]) }
+            }
+            // Over each bed: a drop bobbing while it's dry, a glint now and then once its crop is due.
+            val bob = rememberBob(moving && tasks.any { !FarmRules.isWatered(it, now) })
+            FieldArt.PLOTS.forEachIndexed { i, plot ->
+                val task = tasks.getOrNull(i)?.takeIf { it.id !in splashes && it.id != reap?.taskId } ?: return@forEachIndexed
+                val top = plot.middle.y - FieldArt.FOOTPRINT_HALF_HEIGHT - FieldArt.TAP_HEIGHT * 0.2f
+                if (!FarmRules.isWatered(task, now)) {
+                    ThirstyDrop(bob, Modifier.anchorAt(width * plot.middle.x, height * top))
+                } else if (FarmRules.isDue(task, now)) {
+                    Glint(i, Modifier.anchorAt(width * (plot.middle.x + 0.04f), height * (plot.middle.y - FieldArt.FOOTPRINT_HALF_HEIGHT * 0.5f)))
+                }
+            }
+            // The day's watering done: sparkles over every bed, left to right.
+            if (celebration != 0L) {
+                FieldArt.PLOTS.take(tasks.size).forEach { plot ->
+                    SparkleBurst(
+                        celebration,
+                        delayMs = (plot.middle.x * 500).toLong(),
+                        Modifier.anchorAt(width * plot.middle.x, height * plot.middle.y, alignY = 0.6f),
+                    )
+                }
             }
             // Screen readers hear the latest watering from one node that stays put: a live region speaks when it
             // changes, not when it first appears.
@@ -271,6 +323,15 @@ private fun SwipeableCropCard(task: Task, now: Long, enabled: Boolean, onSwiped:
     // A resting crop (on its 5 more minutes) isn't offered a harvest, as on the gate.
     val harvests = FarmRules.isDue(task, now) && !resting(task, now)
     val state = rememberSwipeToDismissBoxState()
+    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val moving = remember { motionOn(context) }
+    // A tick the moment letting go would do it, as Gmail has.
+    LaunchedEffect(state) {
+        snapshotFlow { state.targetValue != SwipeToDismissBoxValue.Settled }
+            .drop(1)
+            .collect { armed -> if (armed) haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate) }
+    }
     // What the swipe showed behind the card, kept from the moment it went: that's what happens.
     var gone by remember { mutableStateOf<Boolean?>(null) }
     var done by remember { mutableStateOf(false) }
@@ -303,7 +364,13 @@ private fun SwipeableCropCard(task: Task, now: Long, enabled: Boolean, onSwiped:
         ) {
             CropCard(
                 task, now, onOpen,
-                Modifier.semantics {
+                Modifier
+                    // Tilting a little with the drag, as a card held by one edge would.
+                    .graphicsLayer {
+                        val offset = runCatching { state.requireOffset() }.getOrDefault(0f)
+                        rotationZ = if (moving && size.width > 0f) (offset / size.width).coerceIn(-1f, 1f) * 3f else 0f
+                    }
+                    .semantics {
                     if (enabled) customActions = listOf(CustomAccessibilityAction(if (harvests) "Harvest it" else "Remove it") { gone = harvests; true })
                 },
             )

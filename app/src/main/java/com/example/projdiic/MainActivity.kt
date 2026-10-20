@@ -230,7 +230,7 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                 )
             }
         },
-        buttons = { plant, _ -> PlantButton(full = tasks.size >= TaskRules.MAX_TASKS, onPlant = plant) },
+        buttons = { plant, _, _ -> PlantButton(full = tasks.size >= TaskRules.MAX_TASKS, onPlant = plant) },
     )
 }
 

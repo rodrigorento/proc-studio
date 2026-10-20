@@ -201,6 +201,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         val wordings = resources.getStringArray(R.array.gate_eyebrows)
         overlay.eyebrow = wordings[settings.nextWordingIndex() % wordings.size]
         screen = opened
+        overlay.slideIn = true
         if (!render()) {
             trigger.startCooldown(now, settings.triggerConfig())
             return

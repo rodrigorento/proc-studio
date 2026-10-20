@@ -16,5 +16,6 @@ val Leaf = Color(0xFF8FD06A)
 val LeafContainer = Color(0xFF1D3319)
 val Wood = Color(0xFFD79A5E)
 val Water = Color(0xFF6DBBFF)  // the watering can's blue
+val Bark = Color(0xFF251803)  // the farm art's ink outline
 val Clay = Color(0xFFE8A06A)
 val Danger = Color(0xFFFF6B6B)  // removing something for good: outline and text, 6.3:1 on the sheet's surface
