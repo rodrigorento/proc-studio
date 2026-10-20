@@ -19,21 +19,6 @@ class InstagramSessionTest {
     }
 
     @Test
-    fun nodsAtACropStillGrowingOncePerSession() {
-        val session = InstagramSession(gapMs = 10 * minute)
-        session.seen(now = 0)
-
-        assertTrue(session.mayNod)
-        session.nodded()
-        assertFalse(session.mayNod)
-        assertTrue(session.mayAskForTasks)
-
-        session.left(now = 1 * minute)
-        session.seen(now = 12 * minute)
-        assertTrue(session.mayNod)
-    }
-
-    @Test
     fun aQuickTripAwayKeepsTheSession() {
         val session = InstagramSession(gapMs = 10 * minute)
         session.seen(now = 0)

@@ -22,10 +22,8 @@
     <color name="sg_accent_soft">#248FD06A</color>
     <color name="sg_leaf_container">#FF1D3319</color>
     <color name="sg_wood">#FFD79A5E</color>
-    <color name="sg_water">#FF6DBBFF</color>
     <color name="sg_on_accent">#FF0B0B0D</color>
     <color name="sg_scrim">#B80B0B0D</color>
-    <color name="sg_scrim_light">#590B0B0D</color>
     <color name="sg_pill">#E618191D</color>
     <color name="sg_dot_muted">#FF4A4D54</color>
     <color name="sg_ripple_dark">#1F000000</color>

@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,9 +31,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.projdiic.ui.theme.Water
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -45,10 +49,14 @@ interface Farmer {
 
     /** Remove it, on a crop not due yet. */
     fun removed(task: Task)
+
+    /** [task] watered today, by a tap on its dry bed or Water it in its sheet ([via]: "bed" or "sheet"). */
+    fun watered(task: Task, via: String)
 }
 
 /**
- * The farm: the title, the field and a card per crop, a crop's sheet (Harvest it or Remove it) and planting; the same
+ * The farm: the title, the field and a card per crop, a crop's sheet (Harvest it, Water it or Remove it) and planting,
+ * and each day's watering (a tap on a dry bed waters it); the same
  * in the app and over Instagram. [header] and [footer] add what only one of them has, above and under the field, and
  * [buttons] what stays at the foot of the screen, given a way to start planting and whether a harvest is playing (Back
  * waits for it too, so it's done before the screen goes). Over Instagram ([overFeed]) the crop's sheet is drawn in the
@@ -71,6 +79,8 @@ fun Farm(
     var planting by rememberSaveable { mutableStateOf(false) }
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
     var reap by remember { mutableStateOf<Reap?>(null) }
+    // Beds being watered: the can's frame on each.
+    var splashes by remember { mutableStateOf(mapOf<String, Int>()) }
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
 
@@ -87,14 +97,15 @@ fun Farm(
         val crop = FarmRules.crop(task)
         val stage = CropMotion.harvestedAs(crop, FarmRules.stage(task, at))
         val ripe = FarmRules.isReady(task, at)
-        reap = Reap(task.id, crop, stage, frame = -1)
+        val wet = FarmRules.isWatered(task, at)
+        reap = Reap(task.id, crop, stage, frame = -1, wet = wet)
         // The harvest plays on the field: bring it into view from a card further down.
         scope.launch { scroll.animateScrollTo(0) }
         scope.launch {
             try {
                 delay(FarmViews.RIPEN_MS)
                 for (frame in CropMotion.harvest(crop, stage).indices) {
-                    reap = Reap(task.id, crop, stage, frame)
+                    reap = Reap(task.id, crop, stage, frame, wet)
                     delay(1000L / CropMotion.FPS)
                 }
             } finally {
@@ -102,6 +113,24 @@ fun Farm(
                 reap = null
                 farmer.harvested(task, ripe)
                 Toast.makeText(context, R.string.toast_done, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // A dry bed tapped, or Water it in its sheet: watered at once, then the can pours over the bed.
+    fun water(task: Task, via: String) {
+        openId = null
+        if (task.id in splashes || reap?.taskId == task.id) return
+        farmer.watered(task, via)
+        scope.launch { scroll.animateScrollTo(0) }
+        scope.launch {
+            try {
+                for (frame in CropMotion.water().indices) {
+                    splashes = splashes + (task.id to frame)
+                    delay(1000L / CropMotion.FPS)
+                }
+            } finally {
+                splashes = splashes - task.id
             }
         }
     }
@@ -138,12 +167,26 @@ fun Farm(
                         )
                 )
                 header()
+                // The day's watering: what's left to do, then done (one line either way, so the field doesn't jump).
+                if (tasks.isNotEmpty()) {
+                    val thirsty = FarmRules.needsWater(tasks, now)
+                    Text(
+                        text = if (thirsty) "Tap each dry bed to water it." else "All watered for today.",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (thirsty) Water else MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Field(
                         tasks = tasks,
                         now = now,
                         reap = reap,
+                        splashes = splashes,
                         onOpen = ::open,
+                        onWater = ::water,
                         onPlant = { planting = true },
                         modifier = Modifier.bleed(20.dp),
                     )
@@ -163,10 +206,11 @@ fun Farm(
                 farmer.removed(task)
                 openId = null
             }
+            val onWater = { water(task, "sheet") }.takeUnless { FarmRules.isWatered(task, now) }
             if (overFeed) {
-                InScreenPlotSheet(task, now, onHarvest = { harvest(task) }, onRemove = onRemove, onDismiss = { openId = null })
+                InScreenPlotSheet(task, now, onHarvest = { harvest(task) }, onWater = onWater, onRemove = onRemove, onDismiss = { openId = null })
             } else {
-                PlotSheet(task, now, onHarvest = { harvest(task) }, onRemove = onRemove, onDismiss = { openId = null })
+                PlotSheet(task, now, onHarvest = { harvest(task) }, onWater = onWater, onRemove = onRemove, onDismiss = { openId = null })
             }
         }
     }

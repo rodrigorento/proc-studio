@@ -96,7 +96,7 @@ animations:
     model: art/farmkit/anim.py
     outputs: [app/src/main/res/drawable-nodpi/anim_water_can_*.webp]
     status: in_app
-    notes: Water it on the light pause; plays over the bed, which stays as it is (only time grows a crop)
+    notes: watering a dry bed on the field (a tap, or Water it in its sheet); the bed fades from dry to wet under it (only time grows a crop)
   rain:
     concepts: [art/concepts/animations/water_cloud.png]
     model: art/farmkit/anim.py

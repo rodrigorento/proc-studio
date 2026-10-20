@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- The light pause's card: rounded on every corner, floating above the feed. -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <solid android:color="@color/sg_surface" />
-    <corners android:radius="24dp" />
-</shape>

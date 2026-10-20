@@ -15,20 +15,12 @@ sealed interface GateScreen {
         override val overFeed get() = true
     }
 
-    /**
-     * The light pause for a crop that isn't due yet, once a session: a small card over the lightly dimmed feed with
-     * the time left and Water it. Walking away from it isn't passing on the task.
-     */
-    data class Nod(override val taskId: String) : GateScreen {
-        override val logName get() = "nod"
-    }
-
     /** After two passes on the same task, when he has switched check-ins on. */
     data class CheckIn(override val taskId: String) : GateScreen {
         override val logName get() = "check_in"
     }
 
-    /** Shown instead of the gate while the list is empty. */
+    /** The farm itself: while a crop is still dry today, or with nothing for now on the list (see [PauseRules]). */
     data object AddTasks : GateScreen {
         override val taskId: String? get() = null
         override val logName get() = "add_tasks"

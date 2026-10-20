@@ -77,12 +77,6 @@ class WhenChoicesTest {
     }
 
     @Test
-    fun snoozingTheAppLastsUntilMidnight() {
-        assertEquals(at(17, 0), WhenChoices.startOfTomorrow(friday, utc))
-        assertEquals(at(17, 0), WhenChoices.startOfTomorrow(at(16, 23, 59), utc))
-    }
-
-    @Test
     fun timeLeftIsInDaysAndHoursThenMinutes() {
         val sunday = at(18, 23, 59) + 59_999 // the end of this week
 

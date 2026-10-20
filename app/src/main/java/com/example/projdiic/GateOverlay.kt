@@ -48,8 +48,6 @@ class GateOverlay(service: Context, private val actions: Actions) {
         /** Harvest it, tapped at [tappedAt] on the gate or the check-in ([where]), once its harvest has played. */
         fun onHarvested(task: Task, where: String, tappedAt: Long)
 
-        /** Water it, tapped at [tappedAt] on the gate or the check-in ([where]), once the can has poured. */
-        fun onWatered(task: Task, where: String, tappedAt: Long)
         fun onSnooze(task: Task)
         fun onCheckInAccepted(task: Task)
         fun onCheckInOff(task: Task)
@@ -60,6 +58,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
         /** A crop harvested on the farm over Instagram, once its harvest has played. */
         fun onFieldHarvested(task: Task, ripe: Boolean)
+
+        /** A crop watered on the farm over Instagram, by tapping its bed or Water it in its sheet ([via]). */
+        fun onFieldWatered(task: Task, via: String)
         fun onAddTasksClosed()
 
         /** "Close the gate until tomorrow" on the ask-for-tasks screen: no gates until midnight. */
@@ -79,7 +80,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private var view: View? = null
     private var shown: GateScreen? = null
 
-    /** Harvest it or Water it was tapped and its animation is playing; it takes effect when that ends or the screen goes. */
+    /** Harvest it was tapped and its animation is playing; it takes effect when that ends or the screen goes. */
     private var pending: (() -> Unit)? = null
 
     /** The farm's Compose host while the farm is up over Instagram (the ask for tasks). */
@@ -87,7 +88,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
     private var focusRequest: AudioFocusRequest? = null
     private val focusListener = AudioManager.OnAudioFocusChangeListener { }
 
-    /** A harvest or a watering is playing, so walking away isn't passing on its task: it happens either way. */
+    /** A harvest is playing, so walking away isn't passing on its task: it happens either way. */
     val busy: Boolean
         get() = pending != null
 
@@ -104,7 +105,6 @@ class GateOverlay(service: Context, private val actions: Actions) {
         }
         val next = when (screen) {
             is GateScreen.Gate -> task?.let(::buildGate)
-            is GateScreen.Nod -> task?.let(::buildNod)
             is GateScreen.CheckIn -> task?.let(::buildCheckIn)
             GateScreen.AddTasks -> buildFarm()
         } ?: return false
@@ -202,7 +202,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         root.findViewById<TextView>(R.id.tvEyebrow).text = eyebrow
         root.findViewById<TextView>(R.id.tvTaskTitle).text = task.title
         root.findViewById<TextView>(R.id.tvTaskMeta).text = metaFor(task)
-        // A due crop (a crop still growing gets the light pause instead, buildNod): Harvest it, or 5 more minutes once.
+        // A due crop: Harvest it, or 5 more minutes once.
         val where = GateScreen.Gate(task.id).logName
         val harvest = root.findViewById<Button>(R.id.btnHarvest).apply { withIcon(R.drawable.prop_basket) }
         val snooze = root.findViewById<Button>(R.id.btnSnooze).apply {
@@ -229,39 +229,10 @@ class GateOverlay(service: Context, private val actions: Actions) {
         val crop = FarmRules.crop(task)
         val stage = CropMotion.harvestedAs(crop, FarmRules.stage(task, tappedAt))
         pending = { actions.onHarvested(task, where, tappedAt) }
-        bed.fadeTo(CropArt.bed(crop, stage, true), FarmViews.RIPEN_MS) {
-            bed.harvest(CropArt.emptyBed(true), CropMotion.harvest(crop, stage)) { finishPending() }
+        val wet = FarmRules.isWatered(task, tappedAt)
+        bed.fadeTo(CropArt.bed(crop, stage, wet), FarmViews.RIPEN_MS) {
+            bed.harvest(CropArt.emptyBed(wet), CropMotion.harvest(crop, stage)) { finishPending() }
         }
-    }
-
-    /**
-     * The light pause for a crop still growing: the crop, the time left and Water it. The can pours over the small bed
-     * (only time grows the crop), the card slides away, and the feed opens.
-     */
-    private fun buildNod(task: Task): View {
-        val root = inflater.inflate(R.layout.overlay_nod, null)
-        val now = System.currentTimeMillis()
-        val bed = BedStack(root.findViewById(R.id.bed)).apply { show(FarmViews.bed(task, now)) }
-        root.findViewById<View>(R.id.bed).contentDescription = FarmViews.describe(task, now)
-        root.findViewById<TextView>(R.id.tvNodTitle).text = task.title
-        root.findViewById<TextView>(R.id.tvNodLine).text = FarmViews.nodLine(task, now, TimeZone.getDefault(), formats)
-        val card = root.findViewById<View>(R.id.card)
-        root.findViewById<Button>(R.id.btnNodWater).apply {
-            withIcon(R.drawable.prop_watering_can)
-            setOnClickListener {
-                if (pending != null) return@setOnClickListener
-                isEnabled = false
-                alpha = 0.5f
-                val tappedAt = System.currentTimeMillis()
-                pending = { actions.onWatered(task, GateScreen.Nod(task.id).logName, tappedAt) }
-                bed.water(CropMotion.water()) {
-                    card.animate().translationY(card.height + dp(12).toFloat()).alpha(0f).setDuration(SLIDE_MS)
-                        .withEndAction { finishPending() }.start()
-                }
-            }
-        }
-        fitSystemBars(root, bottom = root)
-        return root
     }
 
     /** Shows [icon] just before the button's text, the two centred together: a platform [Button] has no icon of its own. */
@@ -420,8 +391,5 @@ class GateOverlay(service: Context, private val actions: Actions) {
     companion object {
         private const val TAG = "ReelsBlocker"
         private const val BLUR_RADIUS = 40
-
-        /** How long the light pause's card takes to slide away once watered. */
-        private const val SLIDE_MS = 220L
     }
 }

@@ -86,6 +86,30 @@ object FarmRules {
     fun isDue(task: Task, now: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
         isReady(task, now, zone) || (task.dueAt > 0L && DayMath.daysBetween(now, task.dueAt, zone) <= 0)
 
+    /**
+     * The farm's day starts at this hour, not at midnight: a crop watered late in the evening stays watered through a
+     * night of scrolling.
+     */
+    const val DAY_STARTS_AT_HOUR = 4
+
+    /** When the farm day that [now] falls in started: 4:00 today, or yesterday before 4:00. */
+    fun dayStart(now: Long, zone: TimeZone = TimeZone.getDefault()): Long {
+        val today = DayMath.at(DayMath.midnight(now, zone), zone, DAY_STARTS_AT_HOUR)
+        return if (now >= today) today else DayMath.at(DayMath.midnight(now, zone, plusDays = -1), zone, DAY_STARTS_AT_HOUR)
+    }
+
+    /** When the next farm day starts: 4:00 tomorrow, or tonight when [now] is before 4:00. */
+    fun nextDayStart(now: Long, zone: TimeZone = TimeZone.getDefault()): Long =
+        DayMath.at(DayMath.midnight(dayStart(now, zone), zone, plusDays = 1), zone, DAY_STARTS_AT_HOUR)
+
+    /** Watered this farm day. Each day starts dry; watering only changes the look, and crops never die. */
+    fun isWatered(task: Task, now: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
+        task.wateredAt >= dayStart(now, zone)
+
+    /** Some crop on the field is still dry today: the farm comes up over Instagram until every one is watered. */
+    fun needsWater(tasks: List<Task>, now: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
+        tasks.any { !isWatered(it, now, zone) }
+
     /** When an Anytime task's sunflower blooms. */
     fun bloomsAt(task: Task): Long = plantedAt(task) + SUNFLOWER_BLOOMS_AFTER_MS
 

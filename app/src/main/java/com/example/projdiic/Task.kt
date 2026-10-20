@@ -22,6 +22,8 @@ data class Task(
     val whenKey: String = "",
     /** When its crop was planted: when its time was last set, or 0 to count from [createdAt]. See [FarmRules]. */
     val plantedAt: Long = 0L,
+    /** When its crop was last watered; it's dry again from the next farm day ([FarmRules.isWatered]). 0: never. */
+    val wateredAt: Long = 0L,
 ) {
     companion object {
         const val VIA_TEXT = "text"
@@ -95,13 +97,19 @@ object TaskRules {
         )
     }
 
+    /** A new task with its crop planted for [window] (null: Anytime) at [now]. It starts dry, to be watered like the rest. */
+    fun planted(id: String, title: String, via: String, window: TimeWindow?, now: Long): Task =
+        withWhen(Task(id = id, title = title, createdAt = now, addedVia = via), window, now)
+
+    fun water(task: Task, now: Long): Task = task.copy(wateredAt = now)
+
     fun snooze(task: Task, now: Long): Task =
         task.copy(deferredUntil = now + SNOOZE_MS, deferredBy = Task.BY_SNOOZE, snoozeUsed = true)
 
     /** The gate ended without the task being done. */
     fun pass(task: Task): Task = task.copy(passes = task.passes + 1, deferredUntil = 0L, deferredBy = "")
 
-    /** Passed twice, check-ins on, and the crop is due: a crop not due yet only gets the light pause. */
+    /** Passed twice, check-ins on, and the crop is due: a crop not due yet gets no firm pause. */
     fun needsCheckIn(task: Task, checkInEnabled: Boolean, now: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
         checkInEnabled && task.passes >= CHECK_IN_AFTER_PASSES && FarmRules.isDue(task, now, zone)
 

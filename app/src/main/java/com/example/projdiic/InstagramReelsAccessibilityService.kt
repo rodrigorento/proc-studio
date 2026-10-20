@@ -23,6 +23,9 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     private var leftInstagramAt = 0L
     private var gateOpenedAt = 0L
     private var passCounted = false
+
+    /** Why the farm over Instagram opened ([PauseRules.Pick.why]), for the log when it closes. */
+    private var farmOpenedFor: String? = null
     private val session = InstagramSession(SESSION_GAP_MS)
 
     companion object {
@@ -127,9 +130,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     private fun onLeftInstagram(pkg: String, className: String?, windowType: Int?) {
         val current = screen ?: return
         val task = current.taskId?.let { TaskCache.find(this, it) }
-        // Walking away from a gate counts as passing on its task (unless it is being harvested). Not from the light
-        // pause: a crop still growing isn't being walked past.
-        if (task != null && !overlay.busy && current !is GateScreen.Nod) TaskCache.update(this, passOnce(task))
+        // Walking away from a gate counts as passing on its task (unless it is being harvested).
+        if (task != null && !overlay.busy) TaskCache.update(this, passOnce(task))
         EventLog.log(
             this, "left_instagram",
             "screen" to current.logName,
@@ -175,27 +177,16 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     private fun openGate(reason: TriggerReason, now: Long, confirmActive: Boolean = true) {
         val tasks = TaskCache.getTasks(this)
         val next = TaskRules.next(tasks, now)
-        val ask = TaskRules.shouldAskForTasks(tasks, now)
-        val growing = next != null && !FarmRules.isDue(next, now)
-        // The ask and the light pause come once a session; the facilitator's pause still shows them, for testing.
-        val facilitator = reason == TriggerReason.FACILITATOR
-        val opened = when {
-            ask && (session.mayAskForTasks || facilitator) -> GateScreen.AddTasks
-            next == null -> null
-            growing && (session.mayNod || facilitator) -> GateScreen.Nod(next.id)
-            growing -> null
-            TaskRules.needsCheckIn(next, settings.checkInEnabled, now) -> GateScreen.CheckIn(next.id)
-            else -> GateScreen.Gate(next.id)
-        }
+        val pick = PauseRules.pick(
+            tasks, now,
+            mayAskForTasks = session.mayAskForTasks,
+            facilitator = reason == TriggerReason.FACILITATOR,
+            checkInEnabled = settings.checkInEnabled,
+        )
+        val opened = pick.screen
         if (opened == null) {
-            // A full list, all of it for later, or tasks asked for or a crop nodded at already this session: let him scroll.
-            val why = when {
-                ask -> "asked_this_session"
-                growing -> "nodded_this_session"
-                tasks.any { TaskRules.onFiveMoreMinutes(it, now) } -> "on_five_more_minutes"
-                else -> "full_list_all_for_later"
-            }
-            EventLog.log(this, "gate_skipped", "trigger" to reason.logName, "why" to why)
+            // Every crop watered and none due, tasks asked for already this session, or all for later: let him scroll.
+            EventLog.log(this, "gate_skipped", "trigger" to reason.logName, "why" to pick.why)
             trigger.startCooldown(now, settings.triggerConfig())
             return
         }
@@ -214,17 +205,21 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             trigger.startCooldown(now, settings.triggerConfig())
             return
         }
-        if (opened == GateScreen.AddTasks) session.askedForTasks()
-        if (opened is GateScreen.Nod) session.nodded()
+        // The farm with nothing for now on it is the ask for tasks too, watering or not: once a session.
+        if (pick.asks) session.askedForTasks()
+        farmOpenedFor = pick.why
+        val firm = opened.taskId != null
         EventLog.log(
             this, "gate_shown",
             "trigger" to reason.logName,
             "screen" to opened.logName,
-            "task" to next?.title,
-            "passes" to next?.passes,
-            "due" to next?.let { FarmRules.isDue(it, now) },
-            "snooze_left" to next?.let { opened is GateScreen.Gate && !it.snoozeUsed },
+            "why" to pick.why,
+            "task" to next?.title?.takeIf { firm },
+            "passes" to next?.passes?.takeIf { firm },
+            "due" to next?.let { FarmRules.isDue(it, now) }?.takeIf { firm },
+            "snooze_left" to next?.let { opened is GateScreen.Gate && !it.snoozeUsed }?.takeIf { firm },
             "tasks" to tasks.size,
+            "dry" to tasks.count { !FarmRules.isWatered(it, now) },
             "sound_paused" to overlay.holdsAudioFocus,
         )
     }
@@ -307,21 +302,6 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         backToFeed()
     }
 
-    override fun onWatered(task: Task, where: String, tappedAt: Long) {
-        val current = latest(task) ?: return backToFeed()
-        // A nod to a crop not due yet, not walking past it: watering never counts toward a check-in.
-        EventLog.log(
-            this, "choice",
-            "choice" to "water",
-            "screen" to where,
-            "task" to task.title,
-            "stage" to FarmRules.stage(current, tappedAt),
-            "ms_on_gate" to tappedAt - gateOpenedAt,
-        )
-        Toast.makeText(this, R.string.toast_watered, Toast.LENGTH_SHORT).show()
-        backToFeed()
-    }
-
     override fun onSnooze(task: Task) {
         val current = latest(task) ?: return backToFeed()
         if (current.snoozeUsed) return
@@ -375,8 +355,24 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         EventLog.log(this, "task_done", "task" to task.title, "screen" to GateScreen.AddTasks.logName, "ripe" to ripe)
     }
 
+    override fun onFieldWatered(task: Task, via: String) {
+        val now = System.currentTimeMillis()
+        val current = latest(task) ?: return
+        TaskCache.update(this, TaskRules.water(current, now))
+        EventLog.log(
+            this, "watered",
+            "where" to "overlay",
+            "via" to via,
+            "task" to task.title,
+            "stage" to FarmRules.stage(current, now),
+            "dry_left" to TaskCache.getTasks(this).count { !FarmRules.isWatered(it, now) },
+            "ms_on_gate" to now - gateOpenedAt,
+        )
+    }
+
     override fun onSnoozeAppUntilTomorrow() {
-        val until = WhenChoices.startOfTomorrow(System.currentTimeMillis())
+        // Until the next farm day (4:00), not midnight: closed late at night, the crops would be dry again at once.
+        val until = FarmRules.nextDayStart(System.currentTimeMillis())
         settings.snoozedUntil = until
         EventLog.log(this, "app_snoozed", "until_ms" to until, "tasks" to TaskCache.getTasks(this).size)
         Toast.makeText(this, R.string.toast_app_snoozed, Toast.LENGTH_LONG).show()
@@ -384,8 +380,16 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     }
 
     override fun onAddTasksClosed() {
-        EventLog.log(this, "add_tasks_closed", "tasks" to TaskCache.getTasks(this).size)
-        // No cooldown: it won't ask again this session, but a task planted for now pauses after the usual swipes.
+        val tasks = TaskCache.getTasks(this)
+        val now = System.currentTimeMillis()
+        EventLog.log(
+            this, "add_tasks_closed",
+            "why" to farmOpenedFor,
+            "tasks" to tasks.size,
+            "dry" to tasks.count { !FarmRules.isWatered(it, now) },
+        )
+        // No cooldown: while a crop is still dry the farm comes back after the usual swipes; it won't ask for tasks
+        // again this session.
         backToFeed(withCooldown = false)
     }
 

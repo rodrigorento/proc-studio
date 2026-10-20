@@ -8,9 +8,10 @@ object FarmViews {
     /** How long a crop that isn't ripe yet takes to ripen before its harvest. */
     const val RIPEN_MS = 300L
 
-    /** The task's bed as it looks at [now]: its crop at its stage. */
+    /** The task's bed as it looks at [now]: its crop at its stage, watered today or dry. */
     @DrawableRes
-    fun bed(task: Task, now: Long): Int = CropArt.bed(FarmRules.crop(task), FarmRules.stage(task, now), true)
+    fun bed(task: Task, now: Long): Int =
+        CropArt.bed(FarmRules.crop(task), FarmRules.stage(task, now), FarmRules.isWatered(task, now))
 
     /** For screen readers, in the words the gate shows: "Radish seeds", "Carrot, ripe". */
     fun describe(task: Task, now: Long): String =
@@ -45,9 +46,12 @@ object FarmViews {
             ?: blooms(bloomDays(task, now, zone)).replaceFirstChar { it.uppercaseChar() }
     }
 
-    /** "Carrots growing · 2 days, 9 hours left", "Sunflower growing · blooms in 2 days": the light pause's line. */
-    fun nodLine(task: Task, now: Long, zone: TimeZone, formats: WhenText.Formats): String {
-        val growing = when (FarmRules.crop(task)) {
+    /**
+     * "Carrots growing · 2 days, 9 hours left", "Radishes ripe · 5 hours left", "Sunflower growing · blooms in 2 days":
+     * shown over a bed just watered, under its task's name.
+     */
+    fun wateredLine(task: Task, now: Long, zone: TimeZone, formats: WhenText.Formats): String {
+        val crop = when (FarmRules.crop(task)) {
             FarmRules.RADISH -> "Radishes"
             FarmRules.LETTUCE -> "Lettuce"
             FarmRules.CARROT -> "Carrots"
@@ -56,8 +60,14 @@ object FarmViews {
             FarmRules.GRAPE -> "Grapes"
             else -> "Sunflower"
         }
+        val doing = when (FarmRules.stage(task, now, zone)) {
+            "ripe" -> "ripe"
+            "overripe" -> "gone to seed"
+            "bloom" -> "in bloom"
+            else -> "growing"
+        }
         val left = WhenText.gateLine(TaskRules.window(task), now, zone, formats) ?: blooms(bloomDays(task, now, zone))
-        return "$growing growing · $left"
+        return "$crop $doing · $left"
     }
 
     /** Calendar days from [now] until an Anytime task's sunflower blooms. */

@@ -41,11 +41,7 @@ object TaskCache {
         val title = TaskRules.cleanTitle(rawTitle) ?: return null
         val tasks = getTasks(context)
         if (tasks.size >= TaskRules.MAX_TASKS) return null
-        val task = TaskRules.withWhen(
-            Task(id = UUID.randomUUID().toString(), title = title, createdAt = now, addedVia = via),
-            window,
-            now,
-        )
+        val task = TaskRules.planted(UUID.randomUUID().toString(), title, via, window, now)
         saveTasks(context, tasks + task)
         return task
     }
@@ -87,6 +83,7 @@ object TaskCache {
         .put("dueHasTime", task.dueHasTime)
         .put("whenKey", task.whenKey)
         .put("plantedAt", task.plantedAt)
+        .put("wateredAt", task.wateredAt)
 
     private fun fromJson(json: JSONObject) = Task(
         id = json.getString("id"),
@@ -101,6 +98,7 @@ object TaskCache {
         dueHasTime = json.optBoolean("dueHasTime"),
         whenKey = json.optString("whenKey"),
         plantedAt = json.optLong("plantedAt"),
+        wateredAt = json.optLong("wateredAt"),
     )
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

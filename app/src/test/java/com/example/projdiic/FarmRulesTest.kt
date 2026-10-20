@@ -162,6 +162,49 @@ class FarmRulesTest {
     }
 
     @Test
+    fun aFarmDayStartsAtFourInTheMorning() {
+        assertEquals(at(16, 4), FarmRules.dayStart(friday, utc))
+        assertEquals(at(16, 4), FarmRules.dayStart(at(17, 3, 59), utc)) // still Friday's night
+        assertEquals(at(17, 4), FarmRules.dayStart(at(17, 4), utc))
+    }
+
+    @Test
+    fun theNextFarmDayStartsAtFourTomorrowOrThisNight() {
+        assertEquals(at(17, 4), FarmRules.nextDayStart(friday, utc))
+        assertEquals(at(17, 4), FarmRules.nextDayStart(at(16, 23, 50), utc))
+        assertEquals(at(17, 4), FarmRules.nextDayStart(at(17, 2), utc)) // still Friday's farm day
+    }
+
+    @Test
+    fun aCropWateredStaysWateredUntilTheNextFarmDay() {
+        val watered = planted(WhenChoices.thisWeek(friday, utc)).copy(wateredAt = at(16, 23, 30))
+
+        assertTrue(FarmRules.isWatered(watered, at(17, 1), utc))
+        assertFalse(FarmRules.isWatered(watered, at(17, 4), utc))
+        assertFalse(FarmRules.isWatered(watered.copy(wateredAt = 0L), friday, utc))
+    }
+
+    @Test
+    fun theFieldNeedsWaterUntilEveryCropIsWatered() {
+        val dry = planted(WhenChoices.thisWeek(friday, utc)).copy(id = "dry")
+        val wet = TaskRules.water(dry.copy(id = "wet"), friday)
+
+        assertTrue(FarmRules.needsWater(listOf(dry, wet), friday, utc))
+        assertFalse(FarmRules.needsWater(listOf(wet), friday, utc))
+        assertFalse(FarmRules.needsWater(emptyList(), friday, utc)) // nothing to water: the ask for tasks covers it
+    }
+
+    @Test
+    fun aCropStartsDry() {
+        val task = TaskRules.planted("id", "Gym", Task.VIA_TEXT, WhenChoices.thisWeek(friday, utc), friday)
+
+        assertEquals(0L, task.wateredAt)
+        assertFalse(FarmRules.isWatered(task, friday, utc))
+        assertEquals("Gym", task.title)
+        assertEquals(friday, task.plantedAt)
+    }
+
+    @Test
     fun aSunflowerBloomsAfterAFewDaysAndStaysInBloom() {
         val task = planted(null)
 

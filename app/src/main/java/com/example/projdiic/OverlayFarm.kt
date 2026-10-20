@@ -66,6 +66,11 @@ fun OverlayFarm(actions: GateOverlay.Actions) {
                 tasks = TaskCache.getTasks(context)
             }
 
+            override fun watered(task: Task, via: String) {
+                actions.onFieldWatered(task, via)
+                tasks = TaskCache.getTasks(context)
+            }
+
             override fun removed(task: Task) {
                 actions.onTaskRemoved(task)
                 tasks = TaskCache.getTasks(context)
@@ -79,18 +84,21 @@ fun OverlayFarm(actions: GateOverlay.Actions) {
         hearing = RecognizerHearing,
         overFeed = true,
         header = {
-            Text(
-                text = when {
-                    tasks.isEmpty() -> "What needs planting?"
-                    // Planted here for today: it's due already.
-                    tasks.any { FarmRules.isDue(it, now) } -> "Something's ready to harvest."
-                    else -> "Nothing's ripe right now."
-                },
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+            // The farm itself says how the watering is going, under this.
+            when {
+                tasks.isEmpty() -> "What needs planting?"
+                // Planted here for today: it's due already.
+                tasks.any { FarmRules.isDue(it, now) } -> "Something's ready to harvest."
+                else -> null
+            }?.let { line ->
+                Text(
+                    text = line,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         },
         // While a harvest plays, the screen stays: it's done (and logged) before the feed comes back.
         buttons = { plant, harvesting ->

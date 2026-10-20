@@ -114,6 +114,21 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                 tasks = TaskCache.getTasks(context)
             }
 
+            override fun watered(task: Task, via: String) {
+                val now = System.currentTimeMillis()
+                val current = TaskCache.find(context, task.id) ?: return
+                TaskCache.update(context, TaskRules.water(current, now))
+                tasks = TaskCache.getTasks(context)
+                EventLog.log(
+                    context, "watered",
+                    "where" to "app",
+                    "via" to via,
+                    "task" to task.title,
+                    "stage" to FarmRules.stage(current, now),
+                    "dry_left" to tasks.count { !FarmRules.isWatered(it, now) },
+                )
+            }
+
             override fun removed(task: Task) {
                 TaskCache.remove(context, task.id)
                 EventLog.log(

@@ -22,7 +22,6 @@
     <string name="day_yesterday">yesterday</string>
 
     <string name="toast_done">Harvested. It\'s off your field.</string>
-    <string name="toast_watered">Watered.</string>
 
     <!-- Trusted-person check-in -->
     <string name="check_in_title">This crop keeps waiting</string>

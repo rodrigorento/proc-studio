@@ -48,9 +48,6 @@ class BedStack(root: View) {
         }.start()
     }
 
-    /** The can pours over the bed ([frames]); only time grows the crop, so the bed stays as it is. */
-    fun water(frames: List<Int>, onEnd: () -> Unit) = play(frames, onEnd = onEnd)
-
     /** The crop flies out ([frames]) and leaves [emptyBed]. */
     fun harvest(@DrawableRes emptyBed: Int, frames: List<Int>, onEnd: () -> Unit) {
         play(frames, onEnd = onEnd) // first, so the empty bed never shows on its own

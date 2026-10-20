@@ -319,11 +319,13 @@ class SeedPacketsTest {
     }
 
     @Test
-    fun theLightPauseSaysTheCropIsGrowingAndTheTimeLeft() {
+    fun aBedJustWateredSaysHowItsCropIsDoingAndTheTimeLeft() {
         fun planted(window: TimeWindow?) = TaskRules.withWhen(Task(id = "t", title = "Gym", createdAt = friday), window, friday)
-        fun line(task: Task) = FarmViews.nodLine(task, friday, utc, formats)
+        fun line(task: Task, now: Long = friday) = FarmViews.wateredLine(task, now, utc, formats)
 
-        assertEquals("Carrots growing · 2 days, 9 hours left", line(planted(WhenChoices.thisWeek(friday, utc))))
+        val gym = planted(WhenChoices.thisWeek(friday, utc))
+        assertEquals("Carrots growing · 2 days, 9 hours left", line(gym))
+        assertEquals("Carrots ripe · 14 hours left", line(gym, at(18, 10)))
         assertEquals("Pumpkin growing · 15 days, 9 hours left", line(planted(WhenChoices.thisMonth(friday, utc))))
         assertEquals("Sunflower growing · blooms in 2 days", line(planted(null)))
     }
