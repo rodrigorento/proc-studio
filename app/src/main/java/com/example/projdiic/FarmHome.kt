@@ -201,7 +201,6 @@ private fun CropCard(task: Task, isNext: Boolean, now: Long, onOpen: () -> Unit)
     Surface(
         shape = shape,
         color = MaterialTheme.colorScheme.surface,
-        border = if (isNext) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
