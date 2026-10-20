@@ -213,4 +213,23 @@ class FarmRulesTest {
         assertEquals("bloom", FarmRules.stage(task, at(19, 15), utc))
         assertEquals("bloom", FarmRules.stage(task, at(30, 15), utc))
     }
+
+    @Test
+    fun growthRunsFromPlantingToHarvest() {
+        val task = Task(id = "t", title = "Gym", createdAt = at(12, 0), dueAt = at(16, 0))
+
+        assertEquals(0f, FarmRules.growth(task, at(12, 0)), 0.001f)
+        assertEquals(0.5f, FarmRules.growth(task, at(14, 0)), 0.001f)
+        assertEquals(1f, FarmRules.growth(task, at(16, 0)), 0.001f)
+        assertEquals(1f, FarmRules.growth(task, at(20, 0)), 0.001f) // gone to seed stays full
+        assertEquals(0f, FarmRules.growth(task, at(11, 0)), 0.001f) // a clock set back
+    }
+
+    @Test
+    fun aSunflowerGrowsTowardsItsBloom() {
+        val task = planted(null)
+
+        assertEquals(0.5f, FarmRules.growth(task, friday + FarmRules.SUNFLOWER_BLOOMS_AFTER_MS / 2), 0.001f)
+        assertEquals(1f, FarmRules.growth(task, friday + FarmRules.SUNFLOWER_BLOOMS_AFTER_MS), 0.001f)
+    }
 }

@@ -52,6 +52,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         super.onCreate()
         settings = GateSettings(this)
         overlay = GateOverlay(this, this)
+        // Loaded now, so the pause's first harvest pops.
+        FarmSounds.warmUp(this)
         isServiceEnabled = true
     }
 
@@ -298,6 +300,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             "ms_on_gate" to tappedAt - gateOpenedAt,
         )
         TaskCache.remove(this, task.id)
+        FarmTally.Store(this).harvested(task, tappedAt)
         EventLog.log(this, "task_done", "task" to task.title, "screen" to where)
         Toast.makeText(this, R.string.toast_done, Toast.LENGTH_SHORT).show()
         backToFeed()
@@ -353,6 +356,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
 
     override fun onFieldHarvested(task: Task, ripe: Boolean) {
         TaskCache.remove(this, task.id)
+        FarmTally.Store(this).harvested(task, System.currentTimeMillis())
         EventLog.log(this, "task_done", "task" to task.title, "screen" to GateScreen.AddTasks.logName, "ripe" to ripe)
     }
 
@@ -373,6 +377,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
 
     override fun onTaskRestored(task: Task, index: Int, after: String): Boolean {
         if (!TaskCache.restore(this, task, index)) return false
+        if (after == "harvest") FarmTally.Store(this).unharvested(task)
         val now = System.currentTimeMillis()
         EventLog.log(
             this, "task_restored",
@@ -383,6 +388,10 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             "ms_on_gate" to now - gateOpenedAt,
         )
         return true
+    }
+
+    override fun onGrowthNews(task: Task, stage: String) {
+        EventLog.log(this, "growth_news", "where" to "overlay", "task" to task.title, "crop" to FarmRules.crop(task), "stage" to stage)
     }
 
     override fun onSnoozeAppUntilTomorrow() {

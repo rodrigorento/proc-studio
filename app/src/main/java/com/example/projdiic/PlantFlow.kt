@@ -637,11 +637,14 @@ private fun PlantedStep(task: Task, hasRoom: Boolean, onAnother: () -> Unit, onC
 /** The seeds pouring into an empty bed, which turns into the crop's seed bed as they land; played once. */
 @Composable
 private fun PlantingBed(crop: String, modifier: Modifier) {
+    val context = LocalContext.current
     val frames = remember(crop) { CropMotion.plant(crop) }
     var frame by remember { mutableStateOf<Int?>(0) }
     LaunchedEffect(crop) {
         delay(200L) // the screen has just come in
         for (i in frames.indices) {
+            // The seeds rattle as they pour out of the packet.
+            if (i == SEEDS_SOUND_FRAME) FarmSounds.play(context, FarmSound.SEEDS)
             frame = i
             delay(1000L / CropMotion.FPS)
         }
@@ -726,3 +729,6 @@ private fun Heading(text: String) {
 private fun Body(text: String) {
     Text(text, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
+
+/** The planting's frame where the seeds start to pour, for their rattle. */
+private const val SEEDS_SOUND_FRAME = 3

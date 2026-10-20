@@ -78,6 +78,14 @@ object FarmRules {
         return listOf("seed", "sprout", "growing", if (sunflower) "bloom" else "ripe")[grown]
     }
 
+    /** How far the crop has come from planting to its due time (a sunflower: to its bloom), from 0 to 1. */
+    fun growth(task: Task, now: Long): Float {
+        val planted = plantedAt(task)
+        val end = if (task.dueAt <= 0L) bloomsAt(task) else task.dueAt
+        if (end <= planted) return 1f
+        return ((now - planted).toFloat() / (end - planted)).coerceIn(0f, 1f)
+    }
+
     /** Ripe (or gone to seed, or in bloom): its harvest needn't ripen it first. */
     fun isReady(task: Task, now: Long, zone: TimeZone = TimeZone.getDefault()): Boolean =
         stage(task, now, zone) in setOf("ripe", "overripe", "bloom")

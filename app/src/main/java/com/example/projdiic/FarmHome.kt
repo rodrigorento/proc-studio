@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -79,11 +81,13 @@ import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -115,11 +119,15 @@ private const val SKY = 0.1f
  */
 class Reap(val taskId: String, val crop: String, val stage: String, val frame: Int, val wet: Boolean)
 
+/** Crops that have just appeared on the field ([taskIds]: planted, or brought back by Undo); each one its own landing. */
+class Landing(val taskIds: Set<String>)
+
 /**
  * The home screen's field: one lawn with four plots, back to front, a task's bed in each planted one and pegs and
  * string marking out the empty ones. Tapping a dry bed waters it ([onWater]), a watered one opens its crop
- * ([onOpen]); tapping an empty plot plants ([onPlant]). While [reap] is on, that crop is harvested on its bed; each
- * bed in [splashes] is being watered (the can's frame).
+ * ([onOpen]); tapping an empty plot plants ([onPlant]). While [reap] is on, that crop is harvested on its bed, and the
+ * basket catches it; each bed in [splashes] is being watered (the can's frame). The beds of [landing], new on the field,
+ * drop onto their plots; the crops of [popping], which have grown since they were last seen, pop.
  */
 @Composable
 fun Field(
@@ -132,6 +140,8 @@ fun Field(
     onPlant: () -> Unit,
     modifier: Modifier = Modifier,
     celebration: Long = 0L,
+    landing: Landing? = null,
+    popping: Set<String> = emptySet(),
 ) {
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
@@ -139,6 +149,56 @@ fun Field(
     // Each bed squashes a little when tapped and springs back.
     val bounces = remember { List(FieldArt.PLOTS.size) { Animatable(1f) } }
     val moving = remember { motionOn(context) }
+    // The new beds falling onto their plots: how high they still are, from 1 down to 0.
+    val fallPlots = remember(landing) {
+        landing?.let { new -> tasks.indices.filter { tasks[it].id in new.taskIds && it in FieldArt.PLOTS.indices }.toSet() }.orEmpty()
+    }
+    val fall = remember(landing) { Animatable(if (fallPlots.isNotEmpty() && moving) 1f else 0f) }
+    // Where and when beds landed, for their puffs of soil; where and when crops popped, for their sparkles.
+    var landed by remember { mutableStateOf<Pair<Set<Int>, Long>?>(null) }
+    var popped by remember { mutableStateOf<Pair<List<Int>, Long>?>(null) }
+    LaunchedEffect(landing) {
+        if (fallPlots.isEmpty() || !moving) return@LaunchedEffect
+        fall.animateTo(0f, tween(LAND_MS, easing = FastOutLinearInEasing))
+        landed = fallPlots to System.currentTimeMillis()
+        haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+        fallPlots.forEach { plot ->
+            launch {
+                bounces[plot].animateTo(0.92f, tween(60))
+                bounces[plot].animateTo(1f, spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMedium))
+            }
+        }
+    }
+    LaunchedEffect(popping) {
+        val plots = tasks.indices.filter { tasks[it].id in popping && it in FieldArt.PLOTS.indices }
+        if (plots.isEmpty()) return@LaunchedEffect
+        popped = plots to System.currentTimeMillis()
+        if (moving) {
+            plots.forEach { plot ->
+                launch {
+                    bounces[plot].animateTo(1.08f, tween(140))
+                    bounces[plot].animateTo(1f, spring(dampingRatio = 0.35f, stiffness = Spring.StiffnessMediumLow))
+                }
+            }
+        }
+    }
+    // The basket over the plot whose crops are flying out (and whose they are), and whether they're all in.
+    var basketAt by remember { mutableStateOf<Pair<Int, String>?>(null) }
+    var caught by remember { mutableStateOf(false) }
+    val flyingFrom = reap?.takeIf { it.frame >= BASKET_FROM_FRAME }?.let { r ->
+        tasks.indexOfFirst { it.id == r.taskId }.takeIf { it in FieldArt.PLOTS.indices }?.let { it to r.taskId }
+    }
+    LaunchedEffect(flyingFrom) {
+        if (flyingFrom != null) {
+            basketAt = flyingFrom
+            caught = false
+        } else if (basketAt != null) {
+            caught = true
+            delay(BASKET_LINGER_MS)
+            basketAt = null
+            caught = false
+        }
+    }
     val planted by rememberUpdatedState(tasks)
     val open by rememberUpdatedState(onOpen)
     val water by rememberUpdatedState(onWater)
@@ -196,7 +256,17 @@ fun Field(
 
             Layer(FieldArt.MEADOW)
             // Every shadow first, so none falls on a bed in front of the one casting it.
-            FieldArt.PLOTS.take(tasks.size).forEach { plot -> Box(Modifier.over(plot.shadow)) { Layer(FieldArt.BED_SHADOW) } }
+            // A falling bed's shadow starts small and faint, and grows as the bed comes down.
+            FieldArt.PLOTS.take(tasks.size).forEachIndexed { i, plot ->
+                Box(Modifier.over(plot.shadow).graphicsLayer {
+                    val up = if (i in fallPlots) fall.value else 0f
+                    alpha = 1f - up * 0.8f
+                    scaleX = 1f - up * 0.3f
+                    scaleY = 1f - up * 0.3f
+                }) { Layer(FieldArt.BED_SHADOW) }
+            }
+            // The crops sway in one breeze, each bed a little behind the last.
+            val breeze = rememberBreeze(moving && tasks.isNotEmpty())
             FieldArt.PLOTS.forEachIndexed { i, plot ->
                 val task = tasks.getOrNull(i)
                 // Squashed about the bed's front corner, where it meets the grass.
@@ -204,7 +274,22 @@ fun Field(
                     (plot.front.x - plot.card.left) / plot.card.width,
                     (plot.front.y - plot.card.top) / plot.card.height,
                 )
-                Box(Modifier.over(plot.card).graphicsLayer { scaleX = bounces[i].value; scaleY = bounces[i].value; transformOrigin = pivot }) {
+                // Swaying above the bed's back corner on the grass: the crops move, the bed doesn't.
+                val rim = (plot.middle.y - FieldArt.FOOTPRINT_HALF_HEIGHT - plot.card.top) / plot.card.height
+                Box(
+                    Modifier
+                        .over(plot.card)
+                        .graphicsLayer {
+                            scaleX = bounces[i].value
+                            scaleY = bounces[i].value
+                            transformOrigin = pivot
+                            if (i in fallPlots) {
+                                translationY = -fall.value * LAND_HEIGHT.toPx()
+                                alpha = 1f - fall.value * 0.35f
+                            }
+                        }
+                        .sway(breeze.takeIf { task != null }, phase = i * 0.27f, line = rim)
+                ) {
                     val splash = task?.let { splashes[it.id] }
                     when {
                         task == null -> Layer(FieldArt.MARKED_PLOT)
@@ -214,6 +299,18 @@ fun Field(
                     }
                 }
             }
+            // Where new beds landed, a puff of soil around each one's foot.
+            landed?.let { (plots, at) ->
+                plots.forEach { plot ->
+                    val spot = FieldArt.PLOTS[plot]
+                    SoilPuff(
+                        at,
+                        Modifier
+                            .anchorAt(width * spot.middle.x, height * spot.middle.y, alignY = 0.5f)
+                            .size(width * FieldArt.FOOTPRINT_HALF_WIDTH * 2, height * FieldArt.FOOTPRINT_HALF_HEIGHT * 2),
+                    )
+                }
+            }
             // The harvest after all the beds, so no bed in front cuts off the crop flying up.
             reap?.takeIf { it.frame >= 0 }?.let { reap ->
                 val plot = tasks.indexOfFirst { it.id == reap.taskId }
@@ -221,22 +318,33 @@ fun Field(
                     Box(Modifier.over(FieldArt.PLOTS[plot].card)) { Layer(CropMotion.harvest(reap.crop, reap.stage)[reap.frame]) }
                 }
             }
+            // The basket hanging from the top of the card the crops fly out of: they go behind it as they leave, into it.
+            basketAt?.let { (plot, taskId) ->
+                val spot = FieldArt.PLOTS[plot]
+                key(taskId) { BasketCatch(caught, Modifier.anchorAt(width * spot.middle.x, height * spot.card.top, alignY = 0f)) }
+            }
             // The can over each bed being watered, after all the beds so none in front cuts it off.
             val can = CropMotion.water()
             FieldArt.PLOTS.forEachIndexed { i, plot ->
                 val task = tasks.getOrNull(i) ?: return@forEachIndexed
                 val frame = splashes[task.id]?.takeIf { reap?.taskId != task.id } ?: return@forEachIndexed
                 Box(Modifier.over(plot.card)) { Layer(can[frame]) }
+                // Drops spring off the bed as the water reaches it.
+                if (frame >= CropMotion.WET_FROM) {
+                    key(task.id) { SplashBurst(Modifier.anchorAt(width * plot.middle.x, height * plot.middle.y)) }
+                }
             }
             // Over each bed: a drop bobbing while it's dry, a glint now and then once its crop is due.
             val bob = rememberBob(moving && tasks.any { !FarmRules.isWatered(it, now) })
             FieldArt.PLOTS.forEachIndexed { i, plot ->
                 val task = tasks.getOrNull(i)?.takeIf { it.id !in splashes && it.id != reap?.taskId } ?: return@forEachIndexed
                 val top = plot.middle.y - FieldArt.FOOTPRINT_HALF_HEIGHT - FieldArt.TAP_HEIGHT * 0.2f
+                // Not over a bed still falling onto its plot: the drop waits for it there.
+                val waits = Modifier.graphicsLayer { if (i in fallPlots && fall.value > 0f) alpha = 0f }
                 if (!FarmRules.isWatered(task, now)) {
-                    ThirstyDrop(bob, Modifier.anchorAt(width * plot.middle.x, height * top))
+                    ThirstyDrop(bob, Modifier.anchorAt(width * plot.middle.x, height * top).then(waits))
                 } else if (FarmRules.isDue(task, now)) {
-                    Glint(i, Modifier.anchorAt(width * (plot.middle.x + 0.04f), height * (plot.middle.y - FieldArt.FOOTPRINT_HALF_HEIGHT * 0.5f)))
+                    Glint(i, Modifier.anchorAt(width * (plot.middle.x + 0.04f), height * (plot.middle.y - FieldArt.FOOTPRINT_HALF_HEIGHT * 0.5f)).then(waits))
                 }
             }
             // The day's watering done: sparkles over every bed, left to right.
@@ -249,6 +357,14 @@ fun Field(
                     )
                 }
             }
+            // Crops with news sparkle as they pop.
+            popped?.let { (plots, at) ->
+                plots.forEach { plot ->
+                    val spot = FieldArt.PLOTS[plot]
+                    SparkleBurst(at, 0L, Modifier.anchorAt(width * spot.middle.x, height * spot.middle.y, alignY = 0.6f))
+                }
+            }
+            Butterfly()
             // Screen readers hear the latest watering from one node that stays put: a live region speaks when it
             // changes, not when it first appears.
             val latest = splashes.keys.lastOrNull()
@@ -283,6 +399,13 @@ fun Field(
         }
     }
 }
+
+/** How high a new bed starts above its plot, and how long it takes to come down. */
+private val LAND_HEIGHT = 34.dp
+private const val LAND_MS = 300
+
+/** The harvest frame the basket comes up at, as the first crop nears the top of its card. */
+private const val BASKET_FROM_FRAME = 2
 
 /** Whether [picture] is drawn at ([u], [v]), from (0, 0) at its top left to (1, 1). */
 private fun solid(picture: ImageBitmap, u: Float, v: Float): Boolean {
@@ -426,11 +549,14 @@ private fun CropCard(task: Task, now: Long, onOpen: () -> Unit, modifier: Modifi
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                 Text(task.title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (FarmRules.isDue(task, now) && !resting(task, now)) {
-                    // Harvest now, Harvest by tonight: a green pill with the basket, so it can't be missed.
+                    // Harvest now, Harvest by tonight: a green pill with the basket, so it can't be missed; a light
+                    // crosses it now and then.
+                    val pill = RoundedCornerShape(50)
                     Row(
                         Modifier
                             .padding(top = 4.dp)
-                            .background(Leaf, RoundedCornerShape(50))
+                            .background(Leaf, pill)
+                            .shine(rememberShine(phase = task.id.hashCode().mod(4)), pill)
                             .padding(start = 6.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -440,12 +566,31 @@ private fun CropCard(task: Task, now: Long, onOpen: () -> Unit, modifier: Modifi
                     }
                 } else {
                     Text(line, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    GrowthBar(FarmRules.growth(task, now), Modifier.padding(top = 6.dp, bottom = 2.dp))
                 }
                 if (!FarmRules.isWatered(task, now)) {
                     Text("Needs water", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Water)
                 }
             }
         }
+    }
+}
+
+/** How far a crop has come towards its harvest ([growth], 0 to 1): a thin green bar on its card. */
+@Composable
+private fun GrowthBar(growth: Float, modifier: Modifier = Modifier) {
+    val track = RoundedCornerShape(50)
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(5.dp)
+            .clip(track)
+            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f))
+            // In whole percent, so it changes now and then, not with every tick of the clock.
+            .semantics { progressBarRangeInfo = ProgressBarRangeInfo((growth * 100).roundToInt() / 100f, 0f..1f) }
+    ) {
+        // A sliver from the start, so a crop just planted shows where its bar is.
+        Box(Modifier.fillMaxWidth(growth.coerceAtLeast(0.04f)).fillMaxHeight().clip(track).background(Leaf))
     }
 }
 

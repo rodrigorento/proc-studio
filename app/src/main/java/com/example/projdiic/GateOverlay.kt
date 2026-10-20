@@ -66,6 +66,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
         /** Undo on the farm over Instagram: [task], just harvested or removed ([after]), back at [index]; false if it couldn't be. */
         fun onTaskRestored(task: Task, index: Int, after: String): Boolean
+
+        /** The farm over Instagram told that [task]'s crop has grown to [stage] since it was last seen. */
+        fun onGrowthNews(task: Task, stage: String)
         fun onAddTasksClosed()
 
         /** "Close the gate until tomorrow" on the ask-for-tasks screen: no gates until midnight. */
@@ -252,6 +255,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
         pending = { actions.onHarvested(task, where, tappedAt) }
         val wet = FarmRules.isWatered(task, tappedAt)
         bed.fadeTo(CropArt.bed(crop, stage, wet), FarmViews.RIPEN_MS) {
+            FarmSounds.play(context, FarmSound.POP)
             bed.harvest(CropArt.emptyBed(wet), CropMotion.harvest(crop, stage)) { finishPending() }
         }
     }

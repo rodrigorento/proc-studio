@@ -31,6 +31,7 @@ class FarmWateringTest {
         override fun harvested(task: Task, ripe: Boolean) {}
         override fun removed(task: Task) {}
         override fun restored(task: Task, index: Int, after: String) = false
+        override fun noticed(task: Task, stage: String) {}
         override fun watered(task: Task, via: String) {
             tasks = tasks.map { if (it.id == task.id) TaskRules.water(it, System.currentTimeMillis()) else it }
         }

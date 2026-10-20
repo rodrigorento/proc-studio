@@ -82,6 +82,8 @@ fun OverlayFarm(actions: GateOverlay.Actions) {
                 actions.onTaskRemoved(task)
                 tasks = TaskCache.getTasks(context)
             }
+
+            override fun noticed(task: Task, stage: String) = actions.onGrowthNews(task, stage)
         }
     }
     Farm(

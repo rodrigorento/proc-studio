@@ -2,8 +2,18 @@ package com.example.projdiic
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -19,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -29,14 +40,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -46,6 +61,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.withResumed
 import com.example.projdiic.ui.theme.Leaf
 import com.example.projdiic.ui.theme.Water
 import kotlinx.coroutines.delay
@@ -70,11 +87,15 @@ interface Farmer {
      * it couldn't be (the field has filled up since).
      */
     fun restored(task: Task, index: Int, after: String): Boolean
+
+    /** [task]'s crop was shown to have grown to [stage] since it was last seen ("Your carrots sprouted!"). */
+    fun noticed(task: Task, stage: String)
 }
 
 /**
- * The farm: the title, the field and a card per crop, a crop's sheet (Harvest it, Water it or Remove it) and planting,
- * and each day's watering (a tap on a dry bed waters it); the same
+ * The farm: the title and the week's harvests, the field and a card per crop, a
+ * crop's sheet (Harvest it, Water it or Remove it) and planting, news of crops that have grown, and each day's watering
+ * (a tap on a dry bed waters it); the same
  * in the app and over Instagram. [header] and [footer] add what only one of them has, above and under the field, and
  * [buttons] what stays at the foot of the screen, given a way to start planting and whether a harvest is playing (Back
  * waits for it too, so it's done before the screen goes). Over Instagram ([overFeed]) the crop's sheet is drawn in the
@@ -109,6 +130,13 @@ fun Farm(
     val latestNow by rememberUpdatedState(now)
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
+    // The crops on the field as of the last time it was drawn, to tell which have just appeared. Kept while planting.
+    val known = remember { Known(tasks.map { it.id }.toSet()) }
+    // Crops that have grown since they were last seen, told one at a time.
+    var news by remember { mutableStateOf<List<GrowthNews.Told>>(emptyList()) }
+    val seen = remember { GrowthNews.Seen(context) }
+    val tally = remember { FarmTally.Store(context) }
+    LaunchedEffect(Unit) { FarmSounds.warmUp(context) }
 
     // Not while a crop is being harvested: its Harvest it would wait for nothing.
     fun open(task: Task) {
@@ -132,6 +160,7 @@ fun Farm(
         scope.launch {
             try {
                 delay(FarmViews.RIPEN_MS)
+                FarmSounds.play(context, FarmSound.POP)
                 for (frame in CropMotion.harvest(crop, stage).indices) {
                     reap = Reap(task.id, crop, stage, frame, wet)
                     delay(1000L / CropMotion.FPS)
@@ -167,6 +196,7 @@ fun Farm(
         scope.launch {
             try {
                 for (frame in CropMotion.water().indices) {
+                    if (frame == POUR_FRAME) FarmSounds.play(context, FarmSound.POUR)
                     splashes = splashes + (task.id to frame)
                     delay(1000L / CropMotion.FPS)
                 }
@@ -204,6 +234,42 @@ fun Farm(
         return
     }
 
+    // Crops new since the field was last drawn (planted, or back by Undo) land on their plots. Worked out as it's drawn,
+    // not after, so a new bed never shows at rest first; the same landing stays until the crops change again.
+    val ids = tasks.map { it.id }.toSet()
+    val landing = remember(ids) { (ids - known.ids).takeIf { it.isNotEmpty() }?.let { Landing(it) } }
+    SideEffect { known.ids = ids }
+    // What has grown since the farm last showed it: queued to tell. A crop with nothing to tell is seen as it is now;
+    // one with news is seen once its news has shown.
+    val stages = GrowthNews.seen(tasks, now)
+    LaunchedEffect(stages) {
+        val last = seen.get()
+        val fresh = GrowthNews.news(tasks, last, now)
+        val telling = fresh.map { it.task.id }.toSet()
+        seen.set(stages.mapValues { (id, stage) -> if (id in telling) last.getValue(id) else stage })
+        val queued = news.flatMap { it.taskIds }.toSet()
+        val told = GrowthNews.told(fresh.filter { it.task.id !in queued })
+        if (told.isNotEmpty()) news = news + told
+    }
+    // Each piece of news in turn, while the farm is on screen: seen and logged as it shows.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    // The news this frame shows, taken here: the effect starts a moment later, when the queue may already hold more.
+    val showing = news.firstOrNull()
+    LaunchedEffect(showing) {
+        showing ?: return@LaunchedEffect
+        lifecycle.withResumed {}
+        val crops = latest.filter { it.id in showing.taskIds }
+        if (crops.isNotEmpty()) {
+            val grown = GrowthNews.seen(crops, latestNow)
+            seen.set(seen.get() + grown)
+            crops.forEach { farmer.noticed(it, grown.getValue(it.id)) }
+            delay(NEWS_MS)
+        }
+        if (news.firstOrNull() === showing) news = news.drop(1)
+    }
+    // Read as the farm is drawn, each second: a harvest, an Undo or a reset changes it.
+    val harvests = FarmTally.harvestsThisWeek(tally.harvests, now)
+
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Column(
@@ -214,30 +280,54 @@ fun Farm(
                     .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .semantics { heading() }
-                        .then(
-                            if (onTitleLongPress == null) Modifier
-                            else Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onTitleLongPress() }) }
-                        )
-                )
-                header()
-                // The day's watering: what's left to do, then done (one line either way, so the field doesn't jump).
-                if (tasks.isNotEmpty()) {
-                    val thirsty = FarmRules.needsWater(tasks, now)
+                Column(
+                    Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
                     Text(
-                        text = if (thirsty) "Tap each dry bed to water it." else "All watered for today.",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (thirsty) Water else MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        text = stringResource(R.string.app_name),
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier
+                            .semantics { heading() }
+                            .then(
+                                if (onTitleLongPress == null) Modifier
+                                else Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onTitleLongPress() }) }
+                            )
                     )
+                    Tally(harvests)
+                }
+                header()
+                // The day's watering: what's left to do, then done; news of a crop that has grown takes its place for a
+                // moment. One line either way, so the field doesn't jump.
+                if (tasks.isNotEmpty()) {
+                    val told = news.firstOrNull()
+                    val line = when {
+                        told != null -> Line(told.headline, Leaf)
+                        FarmRules.needsWater(tasks, now) -> Line("Tap each dry bed to water it.", Water)
+                        else -> Line("All watered for today.", MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    // News is heard from one node that stays put: a live region speaks when it changes, not when it
+                    // first appears. The line itself reads as one text, not the two of a crossfade.
+                    Box(Modifier.size(1.dp).semantics { liveRegion = LiveRegionMode.Polite; contentDescription = told?.headline.orEmpty() })
+                    AnimatedContent(
+                        targetState = line,
+                        transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(220)) },
+                        label = "watering line",
+                        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = line.text },
+                    ) { shown ->
+                        Text(
+                            text = shown.text,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = shown.color,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Field(
@@ -252,6 +342,8 @@ fun Farm(
                         onWater = { task, via -> water(task, via) },
                         onPlant = { plant() },
                         modifier = Modifier.bleed(20.dp),
+                        landing = landing,
+                        popping = news.firstOrNull()?.taskIds.orEmpty(),
                     )
                     CropCards(
                         tasks = tasks,
@@ -295,6 +387,27 @@ fun Farm(
     }
 }
 
+/** The ids of the crops on the field as of the last time it was drawn. */
+private class Known(var ids: Set<String>)
+
+/** The line under the title: its words and their colour. */
+private data class Line(val text: String, val color: Color)
+
+/** "3 harvests this week", with the basket; nothing before the week's first. */
+@Composable
+private fun Tally(harvests: Int) {
+    val line = FarmTally.harvestLine(harvests) ?: return
+    Row(
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+    ) {
+        Image(painterResource(R.drawable.prop_basket), contentDescription = null, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(line, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
 /** Widens the content by [by] on each side, over the screen's side padding. */
 private fun Modifier.bleed(by: Dp): Modifier = layout { measurable, constraints ->
     val extra = if (constraints.hasBoundedWidth) by.roundToPx() * 2 else 0
@@ -334,3 +447,9 @@ private const val CELEBRATION_MS = 1800L
 
 /** How long Undo stays offered. */
 private const val UNDO_MS = 5000L
+
+/** How long each piece of growth news stays under the title. */
+private const val NEWS_MS = 3200L
+
+/** The can's frame where it starts to pour, for the sound of the water. */
+private const val POUR_FRAME = 5

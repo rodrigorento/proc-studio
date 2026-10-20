@@ -110,6 +110,7 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
 
             override fun harvested(task: Task, ripe: Boolean) {
                 TaskCache.remove(context, task.id)
+                FarmTally.Store(context).harvested(task, System.currentTimeMillis())
                 EventLog.log(context, "task_done", "task" to task.title, "screen" to "app", "ripe" to ripe)
                 tasks = TaskCache.getTasks(context)
             }
@@ -131,6 +132,7 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
 
             override fun restored(task: Task, index: Int, after: String): Boolean {
                 if (!TaskCache.restore(context, task, index)) return false
+                if (after == "harvest") FarmTally.Store(context).unharvested(task)
                 EventLog.log(
                     context, "task_restored",
                     "where" to "app",
@@ -140,6 +142,10 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                 )
                 tasks = TaskCache.getTasks(context)
                 return true
+            }
+
+            override fun noticed(task: Task, stage: String) {
+                EventLog.log(context, "growth_news", "where" to "app", "task" to task.title, "crop" to FarmRules.crop(task), "stage" to stage)
             }
 
             override fun removed(task: Task) {
@@ -221,6 +227,8 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                         TaskCache.clear(context)
                         // Left by versions that watered the field.
                         context.deleteSharedPreferences("farm_prefs")
+                        FarmTally.Store(context).clear()
+                        GrowthNews.Seen(context).set(emptyMap())
                         EventLog.clear(context)
                         EventLog.log(context, "data_reset")
                         tasks = TaskCache.getTasks(context)
@@ -271,6 +279,7 @@ private fun FacilitatorPanel(settings: GateSettings, swipesSincePause: Int, logC
     var minutes by remember { mutableIntStateOf(settings.minutesThreshold) }
     var cooldown by remember { mutableIntStateOf(settings.cooldownMinutes) }
     var checkIn by remember { mutableStateOf(settings.checkInEnabled) }
+    var sounds by remember { mutableStateOf(settings.soundsEnabled) }
     var person by remember { mutableStateOf(settings.trustedPerson) }
     var confirmReset by remember { mutableStateOf(false) }
 
@@ -346,6 +355,33 @@ private fun FacilitatorPanel(settings: GateSettings, swipesSincePause: Int, logC
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
         )
+    }
+
+    Section("Facilitator · farm sounds") {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 64.dp)
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                Text("Farm sounds", fontSize = 16.sp)
+                Text(
+                    text = "A pop on a harvest, water pouring, seeds going in. The phone's silent and vibrate modes mute them too.",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = sounds,
+                onCheckedChange = {
+                    settings.soundsEnabled = it
+                    sounds = it
+                    EventLog.log(context, "setting_changed", "sounds" to it)
+                }
+            )
+        }
     }
 
     Section("Facilitator · farm art preview") {
