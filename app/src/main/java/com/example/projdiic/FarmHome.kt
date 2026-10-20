@@ -181,12 +181,12 @@ private fun solid(picture: ImageBitmap, u: Float, v: Float): Boolean {
     return android.graphics.Color.alpha(bitmap.getPixel(x, y)) > 64
 }
 
-/** Every crop in the field as a card, the one the next pause shows first: its bed, its name and when to harvest it. */
+/** Every crop in the field as a card, in the order they come up: its bed, its name and when to harvest it. */
 @Composable
 fun CropCards(tasks: List<Task>, now: Long, onOpen: (Task) -> Unit) {
     val next = TaskRules.next(tasks, now)
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        (listOfNotNull(next) + tasks.filter { it.id != next?.id }).forEach { task ->
+        TaskRules.inOrder(tasks, now).forEach { task ->
             CropCard(task, task.id == next?.id, now) { onOpen(task) }
         }
     }

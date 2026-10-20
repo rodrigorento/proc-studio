@@ -38,6 +38,23 @@ class TaskRulesTest {
     }
 
     @Test
+    fun aTaskDueSoonerGoesBeforeOneBackFromItsFiveMoreMinutes() {
+        val tonight = task("a", 1, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE, dueAt = 1_000)
+        val atEleven = task("b", 2).copy(dueAt = 500, dueHasTime = true)
+
+        assertEquals("b", TaskRules.next(listOf(tonight, atEleven), now = 50)?.id)
+    }
+
+    @Test
+    fun theCropsGoInTheOrderTheyComeUp() {
+        val friday = task("dentist", 1).copy(dueAt = 5 * 86_400_000L)
+        val tonight = task("tonight", 2, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE, dueAt = 1_000)
+        val atEleven = task("eleven", 3).copy(dueAt = 500, dueHasTime = true)
+
+        assertEquals(listOf("eleven", "tonight", "dentist"), TaskRules.inOrder(listOf(friday, tonight, atEleven), now = 50).map { it.id })
+    }
+
+    @Test
     fun theTaskDueSoonestGoesFirst() {
         val anytime = task("a", 1)
         val thisWeek = task("b", 2).copy(dueAt = 900)

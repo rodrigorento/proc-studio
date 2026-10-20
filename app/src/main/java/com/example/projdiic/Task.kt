@@ -41,12 +41,24 @@ object TaskRules {
 
     /**
      * The one task the gate shows, among those whose time has started: a crop that is due ([FarmRules.isDue]) first,
-     * so a ripe one is never hidden behind one still growing; then the one due soonest (one back from its 5 more
-     * minutes counts as due then), then the oldest.
+     * so a ripe one is never hidden behind one still growing; then the one due soonest; then, among those with no due
+     * time, one back from its 5 more minutes; then the oldest.
      */
     fun next(tasks: List<Task>, now: Long, zone: TimeZone = TimeZone.getDefault()): Task? =
-        tasks.filter { it.deferredUntil <= now }
-            .minWithOrNull(compareBy<Task>({ !FarmRules.isDue(it, now, zone) }, { dueBy(it) }, { it.createdAt }))
+        tasks.filter { it.deferredUntil <= now }.minWithOrNull(order(now, zone))
+
+    /** Every task in the order they come up, as the field's cards list them: the [next] one, then the rest. */
+    fun inOrder(tasks: List<Task>, now: Long, zone: TimeZone = TimeZone.getDefault()): List<Task> {
+        val next = next(tasks, now, zone)
+        return listOfNotNull(next) + tasks.filter { it.id != next?.id }.sortedWith(order(now, zone))
+    }
+
+    private fun order(now: Long, zone: TimeZone) = compareBy<Task>(
+        { !FarmRules.isDue(it, now, zone) },
+        { it.dueAt.takeIf { due -> due > 0L } ?: Long.MAX_VALUE },
+        { it.deferredUntil.takeIf { _ -> it.deferredBy == Task.BY_SNOOZE } ?: Long.MAX_VALUE },
+        { it.createdAt },
+    )
 
     /**
      * Nothing on the list is for now (or there is no list): the gate asks for tasks instead.
@@ -57,11 +69,6 @@ object TaskRules {
 
     /** Back at a pause once its 5 more minutes are up: still something to do now, not a task for later. */
     fun onFiveMoreMinutes(task: Task, now: Long): Boolean = task.deferredBy == Task.BY_SNOOZE && task.deferredUntil > now
-
-    private fun dueBy(task: Task): Long {
-        val picked = if (task.deferredBy != Task.BY_WHEN) task.deferredUntil else 0L
-        return listOf(task.dueAt, picked).filter { it > 0L }.minOrNull() ?: Long.MAX_VALUE
-    }
 
     /** The time window the task was given, or null for Anytime. */
     fun window(task: Task): TimeWindow? {
