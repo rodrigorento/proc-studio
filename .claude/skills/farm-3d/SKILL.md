@@ -69,7 +69,8 @@ status, and `art/farmkit/style.py` holds the numbers (palette, bed, camera, ligh
 
 - Cel-shaded toon, three bands, warm dark-brown ink (`#251803`), strict isometric orthographic camera, 640 px cards.
 - Nothing underground shows, except roots pulled out in a harvest.
-- The smaller the crop, the more per bed: radish 9, lettuce 4, carrot 2, pumpkin 1, sunflower 1.
+- The smaller the crop, the more per bed: radish 9, lettuce 4, carrot 2, pumpkin 1, sunflower 1. Corn (3 stalks) and grapes
+  (1 vine on a T trellis) were picked from concepts and are the exception to the count.
 - Stages: seed, sprout, growing, ripe, overripe (gone to seed); the sunflower stops at bloom. Every stage has a
   watered and a dry version: dry is pale cracked soil and drooping olive leaves, thirsty but never dead.
 - The app shows everything in the day light (`LIGHT` in `art/export_android.py`). farmkit still renders the four

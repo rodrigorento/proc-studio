@@ -36,19 +36,27 @@ class FarmRulesTest {
     }
 
     @Test
-    fun aSpokenTimeGrowsTheCropForHowFarAwayItIs() {
-        fun spoken(text: String) = crop(WhenParser.parse(text, friday, utc).window)
+    fun aPickedDayGrowsTheCropOfItsWeek() {
+        fun on(day: Int, month: Int = Calendar.OCTOBER) = crop(TimeWindow(WhenChoices.CUSTOM, friday, at(day, 23, month = month)))
 
-        assertEquals("radish", spoken("Dentist at 3pm"))
-        assertEquals("lettuce", spoken("Dentist tomorrow at 3pm"))
-        assertEquals("lettuce", spoken("Gym on Monday"))
-        assertEquals("carrot", spoken("Form on October 25th"))
-        assertEquals("pumpkin", spoken("Form on November 10th"))
+        assertEquals("radish", on(16)) // today
+        assertEquals("lettuce", on(17)) // the rest of this week, to Sunday
+        assertEquals("lettuce", on(18))
+        assertEquals("carrot", on(19)) // next week, Monday to Sunday
+        assertEquals("carrot", on(25))
+        assertEquals("corn", on(26)) // the week after
+        assertEquals("corn", on(1, Calendar.NOVEMBER))
+        assertEquals("pumpkin", on(2, Calendar.NOVEMBER)) // three weeks on
+        assertEquals("pumpkin", on(8, Calendar.NOVEMBER))
+        assertEquals("grape", on(9, Calendar.NOVEMBER)) // and later
+        assertEquals("grape", on(25, Calendar.DECEMBER))
     }
 
     @Test
     fun everyCropHasArtForEveryStageItCanReach() {
-        for (window in listOf(null, WhenChoices.today(friday, utc), WhenChoices.thisMonth(friday, utc))) {
+        val corn = TimeWindow(WhenChoices.CUSTOM, friday, at(30, 23))
+        val grapes = TimeWindow(WhenChoices.CUSTOM, friday, at(30, 23, month = Calendar.NOVEMBER))
+        for (window in listOf(null, WhenChoices.today(friday, utc), WhenChoices.thisMonth(friday, utc), corn, grapes)) {
             val task = planted(window)
             val stages = CropArt.STAGES.getValue(FarmRules.crop(task, utc))
             for (hours in listOf(0, 1, 5, 30, 200, 2000)) {
@@ -90,7 +98,7 @@ class FarmRulesTest {
 
         assertEquals("lettuce", FarmRules.crop(lettuce, utc))
         assertEquals("seed", FarmRules.stage(lettuce, friday, utc))
-        assertEquals("lettuce", FarmRules.crop(gym, utc))
+        assertEquals("carrot", FarmRules.crop(gym, utc)) // next week
         assertEquals(sunflower.createdAt, lettuce.createdAt)
     }
 

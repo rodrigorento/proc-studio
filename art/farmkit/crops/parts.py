@@ -148,3 +148,16 @@ def palmate(bm: bmesh.types.BMesh, base: Vector, along: Vector, up: Vector, size
         ring.append(bm.verts.new(centre + (along * math.cos(a) + side * math.sin(a)) * r - UP * (sag * r)))
     for k in range(steps):
         bm.faces.new((middle, ring[k], ring[(k + 1) % steps]))
+
+
+def tendril(bm: bmesh.types.BMesh, start: Vector, direction: Vector, size: float, turns: float = 1.7) -> None:
+    """A curly tendril: it leaves the vine and winds into a shrinking spiral facing the camera."""
+    side = direction.cross(TO_CAMERA).normalized()
+    centre = start + side * size
+    points = []
+    for i in range(28):
+        t = i / 27
+        angle = t * turns * 2 * math.pi
+        r = size * (1 - 0.8 * t)
+        points.append(centre - side * (r * math.cos(angle)) + direction * (r * math.sin(angle)))
+    tube(bm, points, 0.009, taper=0.5)

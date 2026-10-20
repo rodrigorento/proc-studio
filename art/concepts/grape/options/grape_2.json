@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "Keep everything else exactly the same: the same low wooden bed with thin planks and short corner posts, the same tilled soil, the same strict isometric camera and framing, the same cel-shaded toon style with three shading bands and crisp warm dark-brown ink outlines, the same daylight and the same plain background. Change only the crop: remove the two carrots and grow a grape vine climbing a small wooden arch that spans the bed from one end to the other, with green vine leaves and three bunches of ripe purple grapes hanging from it.",
+  "refs": [
+    "/Users/arthurchau/Projects/proc-studio/art/build/renders/crop_carrot_ripe_wet_day.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-20T01:53:32"
+}

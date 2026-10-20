@@ -19,6 +19,8 @@ object CropMotion {
     /** The stages each crop is harvested from, the usual one first. */
     val HARVEST_STAGES: Map<String, List<String>> = mapOf(
         "carrot" to listOf("ripe", "overripe"),
+        "corn" to listOf("ripe", "overripe"),
+        "grape" to listOf("ripe", "overripe"),
         "lettuce" to listOf("ripe", "overripe"),
         "pumpkin" to listOf("ripe", "overripe"),
         "radish" to listOf("ripe", "overripe"),
@@ -66,6 +68,18 @@ object CropMotion {
             R.drawable.anim_plant_carrot_08, R.drawable.anim_plant_carrot_09, R.drawable.anim_plant_carrot_10, R.drawable.anim_plant_carrot_11,
             R.drawable.anim_plant_carrot_12, R.drawable.anim_plant_carrot_13, R.drawable.anim_plant_carrot_14, R.drawable.anim_plant_carrot_15,
         ),
+        "plant_corn" to listOf(
+            R.drawable.anim_plant_corn_00, R.drawable.anim_plant_corn_01, R.drawable.anim_plant_corn_02, R.drawable.anim_plant_corn_03,
+            R.drawable.anim_plant_corn_04, R.drawable.anim_plant_corn_05, R.drawable.anim_plant_corn_06, R.drawable.anim_plant_corn_07,
+            R.drawable.anim_plant_corn_08, R.drawable.anim_plant_corn_09, R.drawable.anim_plant_corn_10, R.drawable.anim_plant_corn_11,
+            R.drawable.anim_plant_corn_12, R.drawable.anim_plant_corn_13, R.drawable.anim_plant_corn_14, R.drawable.anim_plant_corn_15,
+        ),
+        "plant_grape" to listOf(
+            R.drawable.anim_plant_grape_00, R.drawable.anim_plant_grape_01, R.drawable.anim_plant_grape_02, R.drawable.anim_plant_grape_03,
+            R.drawable.anim_plant_grape_04, R.drawable.anim_plant_grape_05, R.drawable.anim_plant_grape_06, R.drawable.anim_plant_grape_07,
+            R.drawable.anim_plant_grape_08, R.drawable.anim_plant_grape_09, R.drawable.anim_plant_grape_10, R.drawable.anim_plant_grape_11,
+            R.drawable.anim_plant_grape_12, R.drawable.anim_plant_grape_13, R.drawable.anim_plant_grape_14, R.drawable.anim_plant_grape_15,
+        ),
         "plant_lettuce" to listOf(
             R.drawable.anim_plant_lettuce_00, R.drawable.anim_plant_lettuce_01, R.drawable.anim_plant_lettuce_02, R.drawable.anim_plant_lettuce_03,
             R.drawable.anim_plant_lettuce_04, R.drawable.anim_plant_lettuce_05, R.drawable.anim_plant_lettuce_06, R.drawable.anim_plant_lettuce_07,
@@ -101,6 +115,30 @@ object CropMotion {
             R.drawable.anim_harvest_carrot_overripe_04, R.drawable.anim_harvest_carrot_overripe_05, R.drawable.anim_harvest_carrot_overripe_06, R.drawable.anim_harvest_carrot_overripe_07,
             R.drawable.anim_harvest_carrot_overripe_08, R.drawable.anim_harvest_carrot_overripe_09, R.drawable.anim_harvest_carrot_overripe_10, R.drawable.anim_harvest_carrot_overripe_11,
             R.drawable.anim_harvest_carrot_overripe_12, R.drawable.anim_harvest_carrot_overripe_13,
+        ),
+        "harvest_corn_ripe" to listOf(
+            R.drawable.anim_harvest_corn_ripe_00, R.drawable.anim_harvest_corn_ripe_01, R.drawable.anim_harvest_corn_ripe_02, R.drawable.anim_harvest_corn_ripe_03,
+            R.drawable.anim_harvest_corn_ripe_04, R.drawable.anim_harvest_corn_ripe_05, R.drawable.anim_harvest_corn_ripe_06, R.drawable.anim_harvest_corn_ripe_07,
+            R.drawable.anim_harvest_corn_ripe_08, R.drawable.anim_harvest_corn_ripe_09, R.drawable.anim_harvest_corn_ripe_10, R.drawable.anim_harvest_corn_ripe_11,
+            R.drawable.anim_harvest_corn_ripe_12, R.drawable.anim_harvest_corn_ripe_13,
+        ),
+        "harvest_corn_overripe" to listOf(
+            R.drawable.anim_harvest_corn_overripe_00, R.drawable.anim_harvest_corn_overripe_01, R.drawable.anim_harvest_corn_overripe_02, R.drawable.anim_harvest_corn_overripe_03,
+            R.drawable.anim_harvest_corn_overripe_04, R.drawable.anim_harvest_corn_overripe_05, R.drawable.anim_harvest_corn_overripe_06, R.drawable.anim_harvest_corn_overripe_07,
+            R.drawable.anim_harvest_corn_overripe_08, R.drawable.anim_harvest_corn_overripe_09, R.drawable.anim_harvest_corn_overripe_10, R.drawable.anim_harvest_corn_overripe_11,
+            R.drawable.anim_harvest_corn_overripe_12, R.drawable.anim_harvest_corn_overripe_13,
+        ),
+        "harvest_grape_ripe" to listOf(
+            R.drawable.anim_harvest_grape_ripe_00, R.drawable.anim_harvest_grape_ripe_01, R.drawable.anim_harvest_grape_ripe_02, R.drawable.anim_harvest_grape_ripe_03,
+            R.drawable.anim_harvest_grape_ripe_04, R.drawable.anim_harvest_grape_ripe_05, R.drawable.anim_harvest_grape_ripe_06, R.drawable.anim_harvest_grape_ripe_07,
+            R.drawable.anim_harvest_grape_ripe_08, R.drawable.anim_harvest_grape_ripe_09, R.drawable.anim_harvest_grape_ripe_10, R.drawable.anim_harvest_grape_ripe_11,
+            R.drawable.anim_harvest_grape_ripe_12, R.drawable.anim_harvest_grape_ripe_13,
+        ),
+        "harvest_grape_overripe" to listOf(
+            R.drawable.anim_harvest_grape_overripe_00, R.drawable.anim_harvest_grape_overripe_01, R.drawable.anim_harvest_grape_overripe_02, R.drawable.anim_harvest_grape_overripe_03,
+            R.drawable.anim_harvest_grape_overripe_04, R.drawable.anim_harvest_grape_overripe_05, R.drawable.anim_harvest_grape_overripe_06, R.drawable.anim_harvest_grape_overripe_07,
+            R.drawable.anim_harvest_grape_overripe_08, R.drawable.anim_harvest_grape_overripe_09, R.drawable.anim_harvest_grape_overripe_10, R.drawable.anim_harvest_grape_overripe_11,
+            R.drawable.anim_harvest_grape_overripe_12, R.drawable.anim_harvest_grape_overripe_13,
         ),
         "harvest_lettuce_ripe" to listOf(
             R.drawable.anim_harvest_lettuce_ripe_00, R.drawable.anim_harvest_lettuce_ripe_01, R.drawable.anim_harvest_lettuce_ripe_02, R.drawable.anim_harvest_lettuce_ripe_03,

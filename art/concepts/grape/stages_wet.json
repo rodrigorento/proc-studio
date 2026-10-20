@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image is a game asset for a mobile farming app: a low wooden raised garden bed with thin planks and short corner posts, filled with tilled soil, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Keep the same style, bed, colours, angle and lighting. Only the parts of crops above the soil are visible; nothing underground is shown. No text. Show five copies of this bed side by side in one row, evenly spaced and the same size, left to right showing the grape vine's growth stages; the small wooden T-shaped trellis stands in the middle of the bed in all five: 1) seed: a small soil mound at the foot of the bare trellis, nothing growing yet; 2) sprout: a tiny green vine shoot with two small lobed leaves at the foot of the trellis; 3) growing: a young vine climbing the trellis post with a few lobed leaves and curly tendrils, only tiny hard green berry clusters; 4) ripe: the vine exactly like the reference, big green leaves and two hanging bunches of ripe purple grapes; 5) overripe: the same vine with leaves turning yellow and orange at the edges and the two bunches shrivelled into dark wrinkled raisin-like grapes, a few fallen on the soil. The soil is dark and freshly watered in all five.",
+  "refs": [
+    "art/concepts/grape/ripe.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-20T01:56:17"
+}

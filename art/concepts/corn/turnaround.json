@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image shows three corn stalks in a raised bed, in cel-shaded toon 3D with crisp warm dark-brown ink outlines. Make a modeling reference sheet for one of those ripe corn stalks, shown whole above the ground: stalk, arching leaves, tassel and the cob with its husk peeled half back; no bed and no soil. Three orthographic views side by side at the same scale on one baseline: front, side and top. Same style, colours and outlines, soft even daylight, plain flat dark charcoal background (#16171A). No text.",
+  "refs": [
+    "art/concepts/corn/ripe.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-20T01:56:19"
+}

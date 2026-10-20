@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "Keep everything else exactly the same: the same low wooden bed with thin planks and short corner posts, the same tilled soil, the same strict isometric camera and framing, the same cel-shaded toon style with three shading bands and crisp warm dark-brown ink outlines, the same daylight and the same plain background. Change only the crop: remove the two carrots and grow two short, stylised toy-like corn stalks (no taller than the bed is wide) with wide curling leaves and one fat ripe cob each, husk opened like petals around yellow kernels.",
+  "refs": [
+    "/Users/arthurchau/Projects/proc-studio/art/build/renders/crop_carrot_ripe_wet_day.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-20T01:53:31"
+}

@@ -10,7 +10,9 @@ object FarmRules {
     const val RADISH = "radish"
     const val LETTUCE = "lettuce"
     const val CARROT = "carrot"
+    const val CORN = "corn"
     const val PUMPKIN = "pumpkin"
+    const val GRAPE = "grape"
     const val SUNFLOWER = "sunflower"
 
     /** The span a sunflower (Anytime, no due time) grows over, as planting to the due time is for the other crops. */
@@ -27,8 +29,8 @@ object FarmRules {
     val SUNFLOWER_BLOOMS_AFTER_MS: Long = (SUNFLOWER_GROWS_OVER_MS * SUNFLOWER_BLOOMS_FROM).toLong()
 
     /**
-     * The crop a task grows: the smaller the crop, the sooner it's due. A chip picks its own crop; a spoken time
-     * picks by how many days away it was when planted.
+     * The crop a task grows: the smaller the crop, the sooner it's due. A seed's day grows that seed's crop (see
+     * [SeedPackets.seeds]); tasks saved with the old time choices keep the crops those gave.
      */
     fun crop(task: Task, zone: TimeZone = TimeZone.getDefault()): String = crop(TaskRules.window(task), plantedAt(task), zone)
 
@@ -40,12 +42,16 @@ object FarmRules {
             WhenChoices.TOMORROW -> LETTUCE
             WhenChoices.THIS_WEEK -> CARROT
             WhenChoices.THIS_MONTH -> PUMPKIN
-            // The seeds' days (SeedPackets.seeds): today, then up to 7, 15 and a month on.
-            else -> when (DayMath.daysBetween(plantedAt, window.end, zone)) {
-                in Int.MIN_VALUE..0 -> RADISH
-                in 1..7 -> LETTUCE
-                in 8..15 -> CARROT
-                else -> PUMPKIN
+            // The seeds' days: today, the rest of this week, then a week each (Monday to Sunday), then later.
+            else -> when {
+                DayMath.daysBetween(plantedAt, window.end, zone) <= 0 -> RADISH
+                else -> when (DayMath.weeksBetween(plantedAt, window.end, zone)) {
+                    0 -> LETTUCE
+                    1 -> CARROT
+                    2 -> CORN
+                    3 -> PUMPKIN
+                    else -> GRAPE
+                }
             }
         }
     }

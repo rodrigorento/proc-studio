@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image is a game asset for a mobile farming app: a low wooden raised garden bed with thin planks and short corner posts, filled with tilled soil, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Keep the same style, bed, colours, angle and lighting. Only the parts of crops above the soil are visible; nothing underground is shown. No text. Show five copies of this bed side by side in one row, evenly spaced and the same size, left to right showing the three corn plants' growth stages: 1) seed: three small soil mounds in a row where seeds were planted, nothing growing yet; 2) sprout: three tiny bright-green shoots with two narrow leaves each; 3) growing: three young corn stalks about half as tall as in the reference, with arching leaves, no cobs and no tassels yet; 4) ripe: three corn stalks exactly like the reference, each with a ripe cob whose husk is peeled half back to show yellow kernels; 5) overripe, gone past its best: the same three stalks dried to straw-tan with drooping papery leaves, the husks dry and brown, the cobs dull orange-brown. The soil is dark and freshly watered in all five.",
+  "refs": [
+    "art/concepts/corn/ripe.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-20T01:56:15"
+}

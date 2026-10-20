@@ -13,20 +13,20 @@ import bpy
 from mathutils import Matrix, Vector
 
 from . import bed, props, scene, style, toon
-from .crops import parts, pumpkin, sunflower
+from .crops import corn, grape, parts, pumpkin, sunflower
 from .crops.parts import ACROSS, DEPTH, TO_CAMERA, UP
 
 SIZE = 512  # pixels; props show at button and badge sizes
 MARGIN = 0.08  # of the frame, on each side
 COLLECTION = "Prop"
-SEEDS = ("radish", "lettuce", "carrot", "pumpkin", "sunflower")
+SEEDS = ("radish", "lettuce", "carrot", "corn", "pumpkin", "grape", "sunflower")
 FRONT = Matrix.Rotation(math.pi / 4, 4, "Z")  # turns a model's -Y front to face the camera
 # Degrees about the vertical, for props that read better a little side on. Seed packets turn their printed front
 # towards the day sun, which comes from the camera's left: facing the camera square on, they would sit in shade.
 TURNS = {"gate": -28.0, **{f"seed_{crop}": -30.0 for crop in SEEDS}}
 # Each crop's picture on its packet: (scale, height of its base), so each fills the front below the fold.
-PACKET_PICTURES = {"radish": (1.55, 0.2), "lettuce": (1.65, 0.2), "carrot": (1.3, 0.11), "pumpkin": (1.9, 0.2),
-                   "sunflower": (1.5, 0.17)}
+PACKET_PICTURES = {"radish": (1.55, 0.2), "lettuce": (1.65, 0.2), "carrot": (1.3, 0.11), "corn": (1.5, 0.08),
+                   "pumpkin": (1.9, 0.2), "grape": (1.6, 0.06), "sunflower": (1.5, 0.17)}
 
 
 def build(collection: bpy.types.Collection, name: str) -> None:
@@ -294,6 +294,17 @@ def _pumpkin(collection) -> None:
                   "pumpkin_groove")
 
 
+def _corn(collection) -> None:
+    corn.cob(collection, "Emblem.Corn", Vector((0, 0, 0)), UP, "corn", "husk", length=0.27, radius=0.06)
+
+
+def _grape(collection) -> None:
+    leaf = bmesh.new()
+    parts.palmate(leaf, Vector((0.02, 0.02, 0.27)), Vector((0.6, 0, 0.8)).normalized(), Vector((0, -1, 0)), 0.17, tip=0.25)
+    parts.flat(parts.mesh_object("Emblem.GrapeLeaf", leaf, collection, "leaf_broad"))
+    grape.bunch(collection, "Emblem.Grape", Vector((0, -0.02, 0.3)), "grape")
+
+
 def _sunflower(collection) -> None:
     stem = bmesh.new()
     parts.tube(stem, [Vector((0, 0, 0)), Vector((0, 0, 0.1)), Vector((0, 0, 0.18))], 0.018)
@@ -301,7 +312,8 @@ def _sunflower(collection) -> None:
     sunflower.head(collection, "Emblem.Sunflower", Vector((0, 0, 0.2)), Vector((0, -1, 0.15)).normalized(), 0.17)
 
 
-EMBLEMS = {"radish": _radish, "lettuce": _lettuce, "carrot": _carrot, "pumpkin": _pumpkin, "sunflower": _sunflower}
+EMBLEMS = {"radish": _radish, "lettuce": _lettuce, "carrot": _carrot, "corn": _corn, "pumpkin": _pumpkin,
+           "grape": _grape, "sunflower": _sunflower}
 BUILDERS = {"watering_can": _can, "basket": _basket, "gate": _gate, "mailbox": _mailbox, "pulled": _pulled, "icon": _icon}
 NAMES = ["watering_can"] + [f"seed_{crop}" for crop in SEEDS] + ["basket", "gate", "mailbox", "pulled", "icon"]
 

@@ -6,10 +6,10 @@ the day light's and drops the light from the name (art/export_android.py, LIGHT)
 import os
 
 from . import bed, scene, style, toon
-from .crops import carrot, lettuce, pumpkin, radish, sunflower
+from .crops import carrot, corn, grape, lettuce, pumpkin, radish, sunflower
 
-CROPS = {"radish": radish, "lettuce": lettuce, "carrot": carrot, "pumpkin": pumpkin,
-         "sunflower": sunflower}
+CROPS = {"radish": radish, "lettuce": lettuce, "carrot": carrot, "corn": corn, "pumpkin": pumpkin,
+         "grape": grape, "sunflower": sunflower}
 
 
 def card_name(crop: str, stage: str, wet: bool, light: str) -> str:

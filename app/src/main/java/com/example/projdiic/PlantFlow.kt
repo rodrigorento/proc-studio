@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.projdiic.ui.theme.Clay
-import java.util.Calendar
 import android.content.Intent
 import android.speech.RecognizerIntent
 import android.widget.Toast
@@ -173,18 +172,39 @@ fun PlantFlow(
                 LaunchedEffect(Unit) { step = NAME }
                 return
             }
+            // The clock, for a time going while the step is open; past midnight, the step moves to the new day, the
+            // date picked with it.
+            var clock by remember { mutableLongStateOf(System.currentTimeMillis()) }
+            LaunchedEffect(Unit) {
+                while (true) {
+                    delay(15_000L)
+                    clock = System.currentTimeMillis()
+                }
+            }
+            // A pick for a day that has gone (today's, after midnight) is dropped: the seeds show again.
+            fun newDay(at: Long): Boolean {
+                if (DayMath.daysBetween(seedsAt, at, TimeZone.getDefault()) == 0) return false
+                pick = pick?.let { SeedPackets.rebase(it, from = seedsAt, to = at) }?.takeIf { it.day >= 0 }
+                seedsAt = at
+                return true
+            }
+            LaunchedEffect(clock) { newDay(clock) }
             SeedsStep(
             title = planting.title,
             seeds = remember(seedsAt) { SeedPackets.seeds(seedsAt) },
             pick = pick,
             now = seedsAt,
+            clock = clock,
             onPick = { pick = it },
             onBack = { step = NAME },
             onPlant = {
-                val chosen = pick ?: return@SeedsStep
                 val at = System.currentTimeMillis()
-                if (SeedPackets.isPast(chosen, at)) return@SeedsStep
-                val task = onPlant(planting.title, SeedPackets.window(chosen, at), via)
+                clock = at
+                // A new day first shows its seeds: the crop may be another by now (Monday's lettuce was Sunday's carrot).
+                if (newDay(at)) return@SeedsStep
+                val chosen = pick ?: return@SeedsStep
+                if (SeedPackets.isPast(chosen, at, shownAt = seedsAt)) return@SeedsStep
+                val task = onPlant(planting.title, SeedPackets.window(chosen, at, shownAt = seedsAt), via)
                 if (task == null) {
                     Toast.makeText(context, "Your field is full. Harvest one to plant another.", Toast.LENGTH_SHORT).show()
                     onClose()
@@ -296,22 +316,28 @@ private fun NameStep(
 /** Keeps the seed picked, with its day and time, across a rotation. */
 private val PickSaver = Saver<SeedPackets.Pick?, List<Any>>(
     save = { pick ->
-        pick?.let { listOf(it.seed.name, it.seed.crop, it.seed.firstDay, it.seed.lastDay, it.day, it.minute ?: -1, it.said, it.startsAt) }
+        pick?.let { listOf(it.seed.crop, it.seed.firstDay, it.seed.lastDay, it.day, it.minute ?: -1, it.said, it.startsAt) }
     },
     restore = { saved ->
-        SeedPackets.Pick(
-            SeedPackets.Seed(saved[0] as String, saved[1] as String, saved[2] as Int, saved[3] as Int),
-            day = saved[4] as Int,
-            minute = (saved[5] as Int).takeIf { it >= 0 },
-            said = saved[6] as Boolean,
-            startsAt = saved[7] as Long,
-        )
+        // Saved by an older version, which kept the seed's name: pick again.
+        if (saved.size != 7) {
+            null
+        } else {
+            SeedPackets.Pick(
+                SeedPackets.Seed(saved[0] as String, saved[1] as Int, saved[2] as Int),
+                day = saved[3] as Int,
+                minute = (saved[4] as Int).takeIf { it >= 0 },
+                said = saved[5] as Boolean,
+                startsAt = saved[6] as Long,
+            )
+        }
     },
 )
 
 /**
- * Four seeds, one per stretch of days. Tapping one moves it up where the time said would be, hides the others and opens
- * its days on a calendar and a time; the time said in the task opens that way already.
+ * The seeds, one per stretch of days, each saying its days. Tapping one moves it up where the time said would be, hides
+ * the others and opens its days on a calendar and a time; the time said in the task opens that way already. [now] is
+ * when the step was shown, which the days count from; [clock] the time now, for a time that has gone.
  */
 @Composable
 private fun SeedsStep(
@@ -319,6 +345,7 @@ private fun SeedsStep(
     seeds: List<SeedPackets.Seed>,
     pick: SeedPackets.Pick?,
     now: Long,
+    clock: Long,
     onPick: (SeedPackets.Pick?) -> Unit,
     onBack: () -> Unit,
     onPlant: () -> Unit,
@@ -327,7 +354,7 @@ private fun SeedsStep(
     val formats = remember { whenFormats(context) }
     val zone = TimeZone.getDefault()
     val window = pick?.let { SeedPackets.window(it, now, zone) }
-    val gone = pick != null && SeedPackets.isPast(pick, System.currentTimeMillis(), zone)
+    val gone = pick != null && SeedPackets.isPast(pick, clock, zone, shownAt = now)
     // Set by hand: no longer the time said, so it starts now.
     fun change(next: SeedPackets.Pick) = onPick(next.copy(said = false, startsAt = 0L))
     StepScreen(
@@ -357,13 +384,16 @@ private fun SeedsStep(
             Column(Modifier.selectableGroup().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 seeds.chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        row.forEach { seed -> SeedCard(seed, onClick = { onPick(SeedPackets.pick(seed)) }, modifier = Modifier.weight(1f)) }
+                        row.forEach { seed ->
+                            SeedCard(seed, SeedPackets.label(seed, now, formats), onClick = { onPick(SeedPackets.pick(seed)) }, modifier = Modifier.weight(1f))
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
         } else {
-            PickedCard(pick, onChange = { onPick(null) })
-            if (pick.seed.lastDay > 0) SeedCalendarView(pick.seed, pick.day, now, onDay = { change(pick.copy(day = it)) })
+            PickedCard(pick, SeedPackets.label(pick.seed, now, formats), onChange = { onPick(null) })
+            if (pick.seed.lastDay > pick.seed.firstDay) SeedCalendarView(pick.seed, pick.day, now, onDay = { change(pick.copy(day = it)) })
             TimeRow(
                 value = if (pick.minute == null) "Any time" else formats.time(window!!.end),
                 on = pick.minute != null,
@@ -392,7 +422,7 @@ private fun SeedsStep(
 }
 
 @Composable
-private fun SeedCard(seed: SeedPackets.Seed, onClick: () -> Unit, modifier: Modifier) {
+private fun SeedCard(seed: SeedPackets.Seed, days: String, onClick: () -> Unit, modifier: Modifier) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -400,15 +430,16 @@ private fun SeedCard(seed: SeedPackets.Seed, onClick: () -> Unit, modifier: Modi
     ) {
         Column(Modifier.padding(top = 12.dp, bottom = 14.dp, start = 4.dp, end = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Image(painterResource(CropArt.seedPacket(seed.crop)), contentDescription = null, modifier = Modifier.size(72.dp))
-            Text(seed.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+            Text(days, fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
             Text(FarmViews.cropName(seed.crop), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
     }
 }
 
-/** The seed picked, where the time said sits: its packet, its name and crop, and Change to see the others again. */
+/** The seed picked, where the time said sits: its packet, its days and crop, and Change to see the others again. */
 @Composable
-private fun PickedCard(pick: SeedPackets.Pick, onChange: () -> Unit) {
+private fun PickedCard(pick: SeedPackets.Pick, label: String, onChange: () -> Unit) {
+    val days = if (pick.said) "You said · $label" else label
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = LeafContainer,
@@ -419,11 +450,13 @@ private fun PickedCard(pick: SeedPackets.Pick, onChange: () -> Unit) {
             Image(painterResource(CropArt.seedPacket(pick.seed.crop)), contentDescription = null, modifier = Modifier.size(60.dp))
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
                 Text(
-                    (if (pick.said) "You said · " + pick.seed.name else pick.seed.name).uppercase(),
+                    days.uppercase(),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 0.8.sp,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    // Read as written, not letter by letter.
+                    modifier = Modifier.semantics { contentDescription = days }
                 )
                 Text(FarmViews.cropName(pick.seed.crop), fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
             }
@@ -432,13 +465,13 @@ private fun PickedCard(pick: SeedPackets.Pick, onChange: () -> Unit) {
     }
 }
 
-/** The seed's days, a month at a time; only they can be picked. */
+/** The seed's week, or the grapes' months a page at a time; only the seed's days can be picked. */
 @Composable
 private fun SeedCalendarView(seed: SeedPackets.Seed, picked: Int, now: Long, onDay: (Int) -> Unit) {
     val zone = TimeZone.getDefault()
-    val firstDayOfWeek = remember { Calendar.getInstance(zone).firstDayOfWeek }
-    val months = remember(seed, now) { SeedCalendar.months(seed, now, zone, firstDayOfWeek) }
-    var shown by rememberSaveable(seed.name) {
+    val months = remember(seed, now) { SeedCalendar.pages(seed, now, zone) }
+    // Keyed on the seed's days too: the grapes' first week moves on a day at a time, and their pages with it.
+    var shown by rememberSaveable(seed.crop, seed.firstDay) {
         mutableIntStateOf(months.indexOfFirst { month -> month.weeks.flatten().any { it?.day == picked } }.coerceAtLeast(0))
     }
     val month = months[shown.coerceIn(0, months.lastIndex)]
@@ -461,7 +494,7 @@ private fun SeedCalendarView(seed: SeedPackets.Seed, picked: Int, now: Long, onD
                 }
             }
             Row(Modifier.padding(top = 6.dp).clearAndSetSemantics {}) {
-                SeedCalendar.weekdayLetters(firstDayOfWeek).forEach {
+                SeedCalendar.weekdayLetters().forEach {
                     Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 }
             }
@@ -616,7 +649,7 @@ private fun PlantingBed(crop: String, modifier: Modifier) {
     }
     val shown = frame
     val seeded = if (shown == null) 1f else ((shown - CropMotion.SEED_FROM).toFloat() / (CropMotion.SEED_TO - CropMotion.SEED_FROM)).coerceIn(0f, 1f)
-    Box(modifier.aspectRatio(1f).semantics { contentDescription = FarmViews.cropName(crop) + " seeds, just planted" }) {
+    Box(modifier.aspectRatio(1f).semantics { contentDescription = FarmViews.cropAndStage(crop, "seed").replaceFirstChar { it.uppercaseChar() } + ", just planted" }) {
         if (seeded < 1f) Layer(CropArt.emptyBed(true))
         if (seeded > 0f) Layer(CropArt.bed(crop, "seed", true), seeded)
         shown?.let { Layer(frames[it]) }

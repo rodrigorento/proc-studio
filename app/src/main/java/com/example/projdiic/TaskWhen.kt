@@ -58,10 +58,12 @@ object WhenChoices {
 
 /** Short words for a window, for the task list and the gate. */
 object WhenText {
+    /** [date] says the year when it isn't this one; [range] is two dates as one span, "2 – 8 Nov" (both days in it). */
     class Formats(
         val time: (Long) -> String,
         val weekday: (Long) -> String,
         val date: (Long) -> String,
+        val range: (Long, Long) -> String = { first, last -> date(first) + " – " + date(last) },
     )
 
     private val relativeWords = setOf("Today", "Tonight", "Tomorrow", "Yesterday", "This week", "This month")

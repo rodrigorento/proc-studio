@@ -24,10 +24,12 @@ bed:
 
 crops:  # the smaller the crop, the more of them in a bed
   radish: {when: today, count: 9, layout: 3x3, reference: references/bed_radish.png}
-  lettuce: {when: tomorrow, count: 4, layout: 2x2, reference: references/bed_lettuce.png}
-  carrot: {when: this_week, count: 2, layout: side by side, reference: references/bed_carrot.png}
-  pumpkin: {when: this_month, count: 1, layout: centered, with vine and leaves, reference: references/bed_pumpkin.png}
-  sunflower: {when: anytime, count: 1, layout: centered, shape: one big head and two side blooms, reference: references/bed_sunflower.png}
+  lettuce: {when: rest of this week, count: 4, layout: 2x2, reference: references/bed_lettuce.png}
+  carrot: {when: next week, count: 2, layout: side by side, reference: references/bed_carrot.png}
+  corn: {when: week after next, count: 3, layout: a row across the bed, reference: ../concepts/corn/ripe.png}
+  pumpkin: {when: three weeks on, count: 1, layout: centered, with vine and leaves, reference: references/bed_pumpkin.png}
+  grape: {when: later, count: 1, layout: centered vine on a wooden T trellis (bar on top, never a cross), reference: ../concepts/grape/ripe.png}
+  sunflower: {when: anytime (no longer offered), count: 1, layout: centered, shape: one big head and two side blooms, reference: references/bed_sunflower.png}
 
 stages:
   timed: [seed, sprout, growing, ripe, overripe]  # seed shows one small mound per crop
@@ -36,7 +38,9 @@ stages:
     radish: leaves yellow; 5 of the 9 (corners and centre) bolt with pink four-petal flowers
     lettuce: each head stretches into a tall cone of pointed leaves with yellow flowers
     carrot: leaves yellow; a tall stalk with a white umbrella of flowers
+    corn: stalks, leaves and husks dry to straw; the kernels dull
     pumpkin: the orange dulls with pale speckles, some leaves yellow, the vine dries
+    grape: leaves turn yellow and orange, the bunches shrivel to raisins, a few drop on the soil
   variants: [dry, wet]  # dry: pale cracked soil, drooping olive leaves; crops keep their colour
   early: a task done before its crop is ripe ripens it quickly, then the normal harvest plays
 

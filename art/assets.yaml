@@ -27,7 +27,7 @@ crops:
     status: exported
     notes: gone to seed, the corners and centre (5 of 9) bolt with pink flowers
   lettuce:
-    when: tomorrow
+    when: the rest of this week
     count: 4 in a 2x2 grid
     reference: art/style/references/bed_lettuce.png
     concepts: [art/concepts/lettuce/stages_wet.png, art/concepts/lettuce/stages_dry.png,
@@ -39,15 +39,26 @@ crops:
     status: exported
     notes: gone to seed, each head stretches into a tall cone with yellow flowers
   carrot:
-    when: this week
+    when: next week
     count: 2 side by side
     reference: art/style/references/bed_carrot.png
     concepts: [art/concepts/carrot/stages_wet.png, art/concepts/carrot/stages_dry.png, art/concepts/carrot/turnaround.png]
     model: art/farmkit/crops/carrot.py
     outputs: [app/src/main/res/drawable-nodpi/crop_carrot_*.webp]
     status: exported
+  corn:
+    when: the week after next
+    count: 3 stalks in a row across the bed
+    reference: art/concepts/corn/ripe.png
+    concepts: [art/concepts/corn/stages_wet.png, art/concepts/corn/turnaround.png]
+    options: [art/concepts/corn/options/corn_1.png, art/concepts/corn/options/corn_3.png,
+              art/concepts/corn/options/corn_4.png, art/concepts/corn/options/sheet_corn_and_grape.png]
+    model: art/farmkit/crops/corn.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_corn_*.webp]
+    status: in_app
+    notes: picked 2026-10-20 (option 2, three stalks with half-peeled cobs); overripe, stalks, leaves and husks dry to straw
   pumpkin:
-    when: this month
+    when: three weeks on
     count: 1 in the middle, with its vine
     reference: art/style/references/bed_pumpkin.png
     concepts: [art/concepts/pumpkin/stages_wet.png, art/concepts/pumpkin/stages_dry.png, art/concepts/pumpkin/turnaround.png]
@@ -55,6 +66,17 @@ crops:
     outputs: [app/src/main/res/drawable-nodpi/crop_pumpkin_*.webp]
     status: exported
     notes: overripe, the orange dulls with pale speckles
+  grape:
+    when: later than three weeks on
+    count: 1 vine on a wooden T trellis, two bunches
+    reference: art/concepts/grape/ripe.png
+    concepts: [art/concepts/grape/stages_wet.png, art/concepts/grape/turnaround.png]
+    options: [art/concepts/grape/options/grape_2.png, art/concepts/grape/options/grape_3.png,
+              art/concepts/grape/options/grape_4.png]
+    model: art/farmkit/crops/grape.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_grape_*.webp]
+    status: in_app
+    notes: picked 2026-10-20 (option 1); the trellis is a true T (bar on top), as a cross read like a grave marker; overripe, autumn leaves and raisin bunches, a few fallen; the harvest takes the bunches and the vine sinks away
   sunflower:
     when: anytime
     count: 1, a big head and two side blooms

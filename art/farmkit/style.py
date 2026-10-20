@@ -32,6 +32,17 @@ PALETTE = {
     "petal_back": ("#FFC93A", "#F2A30F", "#B06A05"),
     "seed_disc": ("#8A4A1E", "#6A3412", "#401E08"),
     "seed_dot": ("#E8892A", "#C96A18", "#8A440A"),
+    "corn": ("#FFE45A", "#F7C21E", "#B5800B"),  # kernels
+    "corn_cob": ("#E8A21A", "#C9800E", "#8A5206"),  # between the kernels
+    "corn_old": ("#E0A048", "#C07A2C", "#7E4A16"),
+    "husk": ("#CDEB72", "#9FCC3E", "#5C8C1C"),
+    "husk_old": ("#D2A066", "#AE7A40", "#6E4A1C"),
+    "straw": ("#F2D492", "#D8AE62", "#9A7034"),  # corn gone past its best
+    "tassel": ("#F8DE72", "#E2B63E", "#9C761A"),
+    "grape": ("#C467E6", "#9632C0", "#55137A"),
+    "grape_young": ("#C8E67A", "#A0CC4A", "#5E8A22"),
+    "grape_old": ("#7E4A6E", "#5A2C4E", "#2E1028"),
+    "leaf_autumn": ("#FFB23E", "#EE8A1C", "#A4520A"),
     "can": ("#6DBBFF", "#3B8EF2", "#1E56B4"),
     "can_rose": ("#B9E2FF", "#82C0F2", "#3F7CC4"),
     "water": ("#D2F0FF", "#8CD0F7", "#4596D2"),
@@ -48,6 +59,8 @@ PALETTE = {
     "packet_carrot": ("#FFC77E", "#F7A64A", "#BE6A1C"),
     "packet_pumpkin": ("#F8A688", "#E9805F", "#A84A32"),
     "packet_sunflower": ("#FFE584", "#F7CC48", "#C08F12"),
+    "packet_corn": ("#AEE3D6", "#7FC9B8", "#3F8C7B"),  # not yellow: the cob would vanish on it
+    "packet_grape": ("#DCC0F4", "#BC92E2", "#7C52A8"),
     "label": ("#FFFAEE", "#F3E7CE", "#C2B08E"),
     "wicker": ("#EDB76A", "#CF8F41", "#8A5420"),
     "metal": ("#E3E6EA", "#B2B8C1", "#646C78"),
@@ -66,7 +79,9 @@ TINT_STRENGTH = {name: 0.35 for name in ("carrot", "radish", "radish_tail", "lea
                                          "lettuce_heart", "lettuce_heart_dry", "flower", "blossom",
                                          "yellow_flower", "pumpkin", "pumpkin_old", "pumpkin_young",
                                          "pumpkin_groove", "pumpkin_old_groove", "leaf_broad", "petal",
-                                         "petal_back", "seed_disc", "seed_dot", "can", "can_rose", "water",
+                                         "petal_back", "seed_disc", "seed_dot", "corn", "corn_cob", "corn_old",
+                                         "husk", "husk_old", "straw", "tassel", "grape", "grape_young",
+                                         "grape_old", "leaf_autumn", "can", "can_rose", "water",
                                          "cloud", "sparkle", "seed")}
 
 # Direction from the scene towards the isometric camera: leaves are turned to face it so they read.

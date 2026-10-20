@@ -79,7 +79,7 @@ def _plant(collection, name: str, growth: float, thirst: float, old: bool, rng: 
     for at in TENDRILS:
         if at <= reach:
             start = parts.along(vine, at / reach)
-            _tendril(stems, start, (UP * 0.8 + ACROSS * rng.uniform(-0.4, 0.4)).normalized(), 0.05 + 0.04 * growth)
+            parts.tendril(stems, start, (UP * 0.8 + ACROSS * rng.uniform(-0.4, 0.4)).normalized(), 0.05 + 0.04 * growth)
     toon.outline(parts.mesh_object(f"{name}.Vine", stems, collection, vine_green), style.LEAF_OUTLINE_WIDTH)
     parts.flat(parts.mesh_object(f"{name}.Leaves", leaves, collection, green))
     if old_leaves.faces:
@@ -157,19 +157,6 @@ def _surface(theta: float, phi: float, radius: float, height: float) -> Vector:
     dimple = 0.28 * height * math.exp(-(theta / 0.45) ** 2)
     r = radius * math.sin(theta) * rib
     return Vector((r * math.cos(phi), r * math.sin(phi), height * math.cos(theta) - dimple))
-
-
-def _tendril(bm: bmesh.types.BMesh, start: Vector, direction: Vector, size: float, turns: float = 1.7) -> None:
-    """A curly tendril: it leaves the vine and winds into a shrinking spiral facing the camera."""
-    side = direction.cross(TO_CAMERA).normalized()
-    centre = start + side * size
-    points = []
-    for i in range(28):
-        t = i / 27
-        angle = t * turns * 2 * math.pi
-        r = size * (1 - 0.8 * t)
-        points.append(centre - side * (r * math.cos(angle)) + direction * (r * math.sin(angle)))
-    parts.tube(bm, points, 0.009, taper=0.5)
 
 
 def _ground(across: float, depth: float) -> Vector:

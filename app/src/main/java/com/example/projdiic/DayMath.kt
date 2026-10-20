@@ -36,13 +36,24 @@ internal object DayMath {
 
     /** Midnight on the 1st of the month of [time]. */
     fun startOfMonth(time: Long, zone: TimeZone): Long =
-        midnight(time, zone, plusDays = 1 - calendar(time, zone).get(Calendar.DAY_OF_MONTH))
+        midnight(time, zone, plusDays = 1 - dayOfMonth(time, zone))
 
-    /** Midnight on the same date a month after [time], or the month's last day when it is shorter (31 Oct: 30 Nov). */
-    fun oneMonthOn(time: Long, zone: TimeZone): Long =
-        midnight(calendar(midnight(time, zone), zone).apply { add(Calendar.MONTH, 1) }.timeInMillis, zone)
+    /** Midnight on the same date a year after [time], or 28 February for the 29th. */
+    fun oneYearOn(time: Long, zone: TimeZone): Long =
+        midnight(calendar(midnight(time, zone), zone).apply { add(Calendar.YEAR, 1) }.timeInMillis, zone)
 
     fun dayOfWeek(time: Long, zone: TimeZone): Int = calendar(time, zone).get(Calendar.DAY_OF_WEEK)
+
+    fun dayOfMonth(time: Long, zone: TimeZone): Int = calendar(time, zone).get(Calendar.DAY_OF_MONTH)
+
+    /** Days since the Monday of the week of [time]: 0 on a Monday, 6 on a Sunday. */
+    fun daysSinceMonday(time: Long, zone: TimeZone): Int = (dayOfWeek(time, zone) - Calendar.MONDAY + 7) % 7
+
+    /** Midnight on the Monday of the week of [time]. */
+    fun monday(time: Long, zone: TimeZone): Long = midnight(time, zone, plusDays = -daysSinceMonday(time, zone))
+
+    /** Weeks, Monday to Sunday, from the week of [from] to the week of [to]: 0 for the same week, 1 for the next. */
+    fun weeksBetween(from: Long, to: Long, zone: TimeZone): Int = daysBetween(monday(from, zone), monday(to, zone), zone) / 7
 
     fun hourOf(time: Long, zone: TimeZone): Int = calendar(time, zone).get(Calendar.HOUR_OF_DAY)
 

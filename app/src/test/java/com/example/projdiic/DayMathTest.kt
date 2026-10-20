@@ -51,4 +51,17 @@ class DayMathTest {
         assertEquals(1, DayMath.daysBetween(at(utc, 2026, Calendar.OCTOBER, 15, 23), at(utc, 2026, Calendar.OCTOBER, 16, 1), utc))
         assertEquals(3, DayMath.daysBetween(at(utc, 2026, Calendar.OCTOBER, 13, 12), at(utc, 2026, Calendar.OCTOBER, 16, 9), utc))
     }
+
+    @Test
+    fun countsWeeksFromMondayToSunday() {
+        fun weeks(fromDay: Int, toDay: Int, toMonth: Int = Calendar.OCTOBER) =
+            DayMath.weeksBetween(at(london, 2026, Calendar.OCTOBER, fromDay, 22), at(london, 2026, toMonth, toDay, 1), london)
+
+        assertEquals(0, weeks(16, 18)) // Friday to Sunday
+        assertEquals(1, weeks(16, 19)) // Friday to Monday
+        assertEquals(1, weeks(18, 19)) // Sunday to Monday
+        assertEquals(0, weeks(19, 25)) // Monday to Sunday
+        assertEquals(2, weeks(23, 2, Calendar.NOVEMBER)) // over the clocks going back on 25 October
+        assertEquals(-1, weeks(19, 18))
+    }
 }
