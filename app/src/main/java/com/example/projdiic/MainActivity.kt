@@ -129,6 +129,19 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                 )
             }
 
+            override fun restored(task: Task, index: Int, after: String): Boolean {
+                if (!TaskCache.restore(context, task, index)) return false
+                EventLog.log(
+                    context, "task_restored",
+                    "where" to "app",
+                    "task" to task.title,
+                    "after" to after,
+                    "stage" to FarmRules.stage(task, System.currentTimeMillis()),
+                )
+                tasks = TaskCache.getTasks(context)
+                return true
+            }
+
             override fun removed(task: Task) {
                 TaskCache.remove(context, task.id)
                 EventLog.log(

@@ -103,6 +103,15 @@ object TaskRules {
 
     fun water(task: Task, now: Long): Task = task.copy(wateredAt = now)
 
+    /**
+     * [tasks] with [task] put back at [index] (its plot), as Undo after a harvest or a removal; null when it is there
+     * already or the field has filled up meanwhile.
+     */
+    fun restore(tasks: List<Task>, task: Task, index: Int): List<Task>? {
+        if (tasks.size >= MAX_TASKS || tasks.any { it.id == task.id }) return null
+        return tasks.toMutableList().apply { add(index.coerceIn(0, size), task) }
+    }
+
     fun snooze(task: Task, now: Long): Task =
         task.copy(deferredUntil = now + SNOOZE_MS, deferredBy = Task.BY_SNOOZE, snoozeUsed = true)
 

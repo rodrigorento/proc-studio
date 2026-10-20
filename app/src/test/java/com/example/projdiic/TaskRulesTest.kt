@@ -55,6 +55,17 @@ class TaskRulesTest {
     }
 
     @Test
+    fun undoPutsATaskBackInItsPlot() {
+        val list = listOf(task("a", 1), task("c", 3))
+
+        assertEquals(listOf("a", "b", "c"), TaskRules.restore(list, task("b", 2), index = 1)?.map { it.id })
+        assertEquals(listOf("a", "c", "b"), TaskRules.restore(list, task("b", 2), index = 9)?.map { it.id })
+        assertNull(TaskRules.restore(list, task("a", 1), index = 0)) // already back
+        val full = (1..TaskRules.MAX_TASKS).map { task("t$it", it.toLong()) }
+        assertNull(TaskRules.restore(full, task("b", 2), index = 0)) // planted over meanwhile
+    }
+
+    @Test
     fun theTaskDueSoonestGoesFirst() {
         val anytime = task("a", 1)
         val thisWeek = task("b", 2).copy(dueAt = 900)

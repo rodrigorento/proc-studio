@@ -14,8 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,15 +29,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.projdiic.ui.theme.Leaf
 import com.example.projdiic.ui.theme.Water
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -52,6 +60,12 @@ interface Farmer {
 
     /** [task] watered today, by a tap on its dry bed or Water it in its sheet ([via]: "bed" or "sheet"). */
     fun watered(task: Task, via: String)
+
+    /**
+     * Undo: [task], just harvested or removed ([after]: "harvest" or "remove"), back in its plot ([index]). False when
+     * it couldn't be (the field has filled up since).
+     */
+    fun restored(task: Task, index: Int, after: String): Boolean
 }
 
 /**
@@ -75,10 +89,12 @@ fun Farm(
     footer: @Composable ColumnScope.() -> Unit = {},
     buttons: @Composable ColumnScope.(plant: () -> Unit, harvesting: Boolean) -> Unit,
 ) {
-    val context = LocalContext.current
     var planting by rememberSaveable { mutableStateOf(false) }
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
     var reap by remember { mutableStateOf<Reap?>(null) }
+    // The last harvest or removal, which Undo can take back for a few seconds.
+    var undo by remember { mutableStateOf<Undo?>(null) }
+    val context = LocalContext.current
     // Beds being watered: the can's frame on each.
     var splashes by remember { mutableStateOf(mapOf<String, Int>()) }
     val scroll = rememberScrollState()
@@ -89,10 +105,12 @@ fun Farm(
         if (reap == null) openId = task.id
     }
 
-    // Harvest it from the crop's sheet: the crop ripens if it must and flies out of its bed on the field; then it's done.
-    fun harvest(task: Task) {
-        if (reap != null) return
+    // Harvest it, from the crop's sheet or a swipe on its card: the crop ripens if it must and flies out of its bed on
+    // the field; then it's done, and Undo can bring it back.
+    fun harvest(task: Task): Boolean {
+        if (reap != null) return false
         openId = null
+        val index = tasks.indexOfFirst { it.id == task.id }
         val at = System.currentTimeMillis()
         val crop = FarmRules.crop(task)
         val stage = CropMotion.harvestedAs(crop, FarmRules.stage(task, at))
@@ -112,9 +130,10 @@ fun Farm(
                 // Leaving the screen mid-harvest still harvests it, as on the pause.
                 reap = null
                 farmer.harvested(task, ripe)
-                Toast.makeText(context, R.string.toast_done, Toast.LENGTH_SHORT).show()
+                undo = Undo(task, index, harvested = true)
             }
         }
+        return true
     }
 
     // A dry bed tapped, or Water it in its sheet: watered at once, then the can pours over the bed.
@@ -133,6 +152,23 @@ fun Farm(
                 splashes = splashes - task.id
             }
         }
+    }
+
+    // Remove it, from the crop's sheet or a swipe on its card; Undo can bring it back. Not while a harvest plays: the
+    // beds would move under it.
+    fun remove(task: Task): Boolean {
+        if (reap != null) return false
+        openId = null
+        val index = tasks.indexOfFirst { it.id == task.id }
+        farmer.removed(task)
+        undo = Undo(task, index, harvested = false)
+        return true
+    }
+
+    // Planting is a new step: the last harvest or removal can't be undone after it.
+    fun plant() {
+        undo = null
+        planting = true
     }
 
     BackHandler(enabled = reap != null) {}
@@ -187,25 +223,41 @@ fun Farm(
                         splashes = splashes,
                         onOpen = ::open,
                         onWater = ::water,
-                        onPlant = { planting = true },
+                        onPlant = ::plant,
                         modifier = Modifier.bleed(20.dp),
                     )
-                    CropCards(tasks = tasks, now = now, onOpen = ::open)
+                    CropCards(
+                        tasks = tasks,
+                        now = now,
+                        harvesting = reap != null,
+                        // A swipe either way does what the card showed behind it: harvest a due crop, remove the rest.
+                        onSwiped = { task, harvests -> if (harvests) harvest(task) else remove(task) },
+                        onOpen = ::open,
+                    )
                 }
                 footer()
+            }
+            undo?.let { last ->
+                UndoBar(
+                    last,
+                    onUndo = {
+                        undo = null
+                        if (!farmer.restored(last.task, last.index, if (last.harvested) "harvest" else "remove")) {
+                            Toast.makeText(context, "Your field is full, so it can't go back.", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onGone = { if (undo === last) undo = null },
+                )
             }
             // Always in reach at the foot of the screen, whatever is above it.
             Column(
                 Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) { buttons({ planting = true }, reap != null) }
+            ) { buttons(::plant, reap != null) }
         }
 
         tasks.firstOrNull { it.id == openId }?.let { task ->
-            val onRemove = {
-                farmer.removed(task)
-                openId = null
-            }
+            val onRemove: () -> Unit = { remove(task) }
             val onWater = { water(task, "sheet") }.takeUnless { FarmRules.isWatered(task, now) }
             if (overFeed) {
                 InScreenPlotSheet(task, now, onHarvest = { harvest(task) }, onWater = onWater, onRemove = onRemove, onDismiss = { openId = null })
@@ -222,3 +274,33 @@ private fun Modifier.bleed(by: Dp): Modifier = layout { measurable, constraints 
     val placeable = measurable.measure(constraints.copy(minWidth = constraints.minWidth + extra, maxWidth = constraints.maxWidth + extra))
     layout(placeable.width - extra, placeable.height) { placeable.place(-extra / 2, 0) }
 }
+
+/** What Undo would take back: [task], harvested or removed from its plot ([index]). */
+class Undo(val task: Task, val index: Int, val harvested: Boolean)
+
+/** "Harvested · Pay the rent", with Undo, for a few seconds after a harvest or a removal; then [onGone]. */
+@Composable
+private fun UndoBar(undo: Undo, onUndo: () -> Unit, onGone: () -> Unit) {
+    // Longer when a screen reader or the user's accessibility timeout asks for it.
+    val accessibility = LocalAccessibilityManager.current
+    LaunchedEffect(undo) {
+        delay(accessibility?.calculateRecommendedTimeoutMillis(UNDO_MS, containsIcons = false, containsText = true, containsControls = true) ?: UNDO_MS)
+        onGone()
+    }
+    Snackbar(
+        action = { TextButton(onClick = onUndo) { Text("Undo", fontWeight = FontWeight.ExtraBold, color = Leaf) } },
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(horizontal = 20.dp).semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Text(
+            text = (if (undo.harvested) "Harvested · " else "Removed · ") + undo.task.title,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** How long Undo stays offered. */
+private const val UNDO_MS = 5000L

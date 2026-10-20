@@ -50,6 +50,13 @@ object TaskCache {
         saveTasks(context, getTasks(context).map { if (it.id == task.id) task else it })
     }
 
+    /** Puts [task] back at [index], as Undo; false when it couldn't ([TaskRules.restore]). */
+    fun restore(context: Context, task: Task, index: Int): Boolean {
+        val tasks = TaskRules.restore(getTasks(context), task, index) ?: return false
+        saveTasks(context, tasks)
+        return true
+    }
+
     fun remove(context: Context, id: String) {
         saveTasks(context, getTasks(context).filterNot { it.id == id })
     }

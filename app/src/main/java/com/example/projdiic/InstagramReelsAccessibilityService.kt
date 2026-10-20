@@ -370,6 +370,20 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         )
     }
 
+    override fun onTaskRestored(task: Task, index: Int, after: String): Boolean {
+        if (!TaskCache.restore(this, task, index)) return false
+        val now = System.currentTimeMillis()
+        EventLog.log(
+            this, "task_restored",
+            "where" to "overlay",
+            "task" to task.title,
+            "after" to after,
+            "stage" to FarmRules.stage(task, now),
+            "ms_on_gate" to now - gateOpenedAt,
+        )
+        return true
+    }
+
     override fun onSnoozeAppUntilTomorrow() {
         // Until the next farm day (4:00), not midnight: closed late at night, the crops would be dry again at once.
         val until = FarmRules.nextDayStart(System.currentTimeMillis())

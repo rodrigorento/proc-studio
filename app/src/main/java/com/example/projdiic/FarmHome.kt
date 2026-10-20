@@ -4,8 +4,12 @@ import android.content.Context
 import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -35,14 +39,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -50,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
@@ -57,9 +70,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
@@ -70,10 +85,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.projdiic.ui.theme.Danger
+import com.example.projdiic.ui.theme.Ink
+import com.example.projdiic.ui.theme.Leaf
 import com.example.projdiic.ui.theme.Water
 import java.util.Date
 import java.util.TimeZone
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 /**
  * The share of the lawn image's height the field gives back to the screen above it: the top of the back plot's card,
@@ -222,25 +240,116 @@ private fun solid(picture: ImageBitmap, u: Float, v: Float): Boolean {
     return android.graphics.Color.alpha(bitmap.getPixel(x, y)) > 64
 }
 
-/** Every crop in the field as a card, in the order they come up: its bed, its name and when to harvest it. */
+/**
+ * Every crop in the field as a card, in the order they come up: its bed, its name and when to harvest it. Tapping a card
+ * opens the crop ([onOpen]); swiping it away either way, as in Gmail, does what its sheet offers ([onSwiped]: Harvest
+ * it on a due crop, Remove it otherwise) once it has slid off and its gap has closed.
+ */
 @Composable
-fun CropCards(tasks: List<Task>, now: Long, onOpen: (Task) -> Unit) {
-    val next = TaskRules.next(tasks, now)
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+fun CropCards(
+    tasks: List<Task>,
+    now: Long,
+    harvesting: Boolean,
+    onSwiped: (task: Task, harvests: Boolean) -> Boolean,
+    onOpen: (Task) -> Unit,
+) {
+    Column {
         TaskRules.inOrder(tasks, now).forEach { task ->
-            CropCard(task, task.id == next?.id, now) { onOpen(task) }
+            key(task.id) {
+                SwipeableCropCard(task, now, enabled = !harvesting, onSwiped = { onSwiped(task, it) }, onOpen = { onOpen(task) })
+            }
         }
     }
 }
 
+/**
+ * A card that swipes away: [onSwiped] (given whether it harvests) once it has slid off and its gap has closed; false
+ * puts it back. Not while a harvest plays ([enabled]): the beds would move under it.
+ */
 @Composable
-private fun CropCard(task: Task, isNext: Boolean, now: Long, onOpen: () -> Unit) {
+private fun SwipeableCropCard(task: Task, now: Long, enabled: Boolean, onSwiped: (harvests: Boolean) -> Boolean, onOpen: () -> Unit) {
+    // A resting crop (on its 5 more minutes) isn't offered a harvest, as on the gate.
+    val harvests = FarmRules.isDue(task, now) && !resting(task, now)
+    val state = rememberSwipeToDismissBoxState()
+    // What the swipe showed behind the card, kept from the moment it went: that's what happens.
+    var gone by remember { mutableStateOf<Boolean?>(null) }
+    var done by remember { mutableStateOf(false) }
+    val latest by rememberUpdatedState(onSwiped)
+    // Slid off: the gap closes, then it happens; if it can't, the card comes back.
+    LaunchedEffect(gone) {
+        val went = gone ?: return@LaunchedEffect
+        delay(COLLAPSE_MS.toLong())
+        done = true
+        if (!latest(went)) {
+            done = false
+            gone = null
+            state.reset()
+        }
+    }
+    // The screen going mid-collapse (Back to the feed over Instagram) still does it.
+    DisposableEffect(Unit) {
+        onDispose { gone?.let { if (!done) latest(it) } }
+    }
+    AnimatedVisibility(
+        visible = gone == null,
+        exit = shrinkVertically(tween(COLLAPSE_MS)) + fadeOut(tween(COLLAPSE_MS)),
+    ) {
+        SwipeToDismissBox(
+            state = state,
+            gesturesEnabled = enabled,
+            onDismiss = { gone = harvests },
+            backgroundContent = { SwipeBackground(state, harvests) },
+            modifier = Modifier.padding(bottom = 10.dp),
+        ) {
+            CropCard(
+                task, now, onOpen,
+                Modifier.semantics {
+                    if (enabled) customActions = listOf(CustomAccessibilityAction(if (harvests) "Harvest it" else "Remove it") { gone = harvests; true })
+                },
+            )
+        }
+    }
+}
+
+/** What a swipe on a card does, behind it: green with the basket to harvest, red with the pulled sprout to remove. */
+@Composable
+private fun SwipeBackground(state: SwipeToDismissBoxState, harvests: Boolean) {
+    val direction = state.dismissDirection
+    if (direction == SwipeToDismissBoxValue.Settled) return
+    // Past the point where letting go does it, the picture grows, as Gmail's icon does.
+    val armed = state.targetValue != SwipeToDismissBoxValue.Settled
+    val grow by animateFloatAsState(if (armed) 1.15f else 0.85f, label = "swipe icon")
+    Row(
+        Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (harvests) Leaf else Danger)
+            .padding(horizontal = 22.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (direction == SwipeToDismissBoxValue.StartToEnd) Arrangement.Start else Arrangement.End,
+    ) {
+        Image(
+            painterResource(if (harvests) R.drawable.prop_basket else R.drawable.prop_pulled),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp).graphicsLayer(scaleX = grow, scaleY = grow)
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(if (harvests) "Harvest" else "Remove", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
+    }
+}
+
+/** How long a swiped card's gap takes to close. */
+private const val COLLAPSE_MS = 220
+
+@Composable
+private fun CropCard(task: Task, now: Long, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val shape = RoundedCornerShape(20.dp)
+    val line = statusFor(context, task, now) ?: harvestLine(context, task, now)
     Surface(
         shape = shape,
         color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(shape)
             .clickable(onClickLabel = "Open it", role = Role.Button, onClick = onOpen)
@@ -248,14 +357,23 @@ private fun CropCard(task: Task, isNext: Boolean, now: Long, onOpen: () -> Unit)
         Row(Modifier.padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(68.dp)) { Layer(FarmViews.bed(task, now)) }
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                if (isNext) Text("Next up", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
                 Text(task.title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(
-                    text = statusFor(context, task, now) ?: harvestLine(context, task, now),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (FarmRules.isDue(task, now) && !resting(task, now)) {
+                    // Harvest now, Harvest by tonight: a green pill with the basket, so it can't be missed.
+                    Row(
+                        Modifier
+                            .padding(top = 4.dp)
+                            .background(Leaf, RoundedCornerShape(50))
+                            .padding(start = 6.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(painterResource(R.drawable.prop_basket), contentDescription = null, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(line, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
+                    }
+                } else {
+                    Text(line, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 if (!FarmRules.isWatered(task, now)) {
                     Text("Needs water", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Water)
                 }
@@ -424,9 +542,12 @@ private fun PlotSheetContent(task: Task, now: Long, onHarvest: () -> Unit, onWat
 private fun harvestLine(context: Context, task: Task, now: Long): String =
     FarmViews.harvestLine(task, now, TimeZone.getDefault(), whenFormats(context))
 
+/** On its 5 more minutes (or otherwise put off): its card says "Resting till 15:00". */
+private fun resting(task: Task, now: Long): Boolean = task.deferredBy != Task.BY_WHEN && task.deferredUntil > now
+
 /** "Resting till 15:00" while the task is put off, otherwise null. */
 private fun statusFor(context: Context, task: Task, now: Long): String? =
-    if (task.deferredBy != Task.BY_WHEN && task.deferredUntil > now) {
+    if (resting(task, now)) {
         "Resting till " + DateFormat.getTimeFormat(context).format(Date(task.deferredUntil))
     } else null
 

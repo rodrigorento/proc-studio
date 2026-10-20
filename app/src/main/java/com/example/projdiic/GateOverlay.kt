@@ -61,6 +61,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
         /** A crop watered on the farm over Instagram, by tapping its bed or Water it in its sheet ([via]). */
         fun onFieldWatered(task: Task, via: String)
+
+        /** Undo on the farm over Instagram: [task], just harvested or removed ([after]), back at [index]; false if it couldn't be. */
+        fun onTaskRestored(task: Task, index: Int, after: String): Boolean
         fun onAddTasksClosed()
 
         /** "Close the gate until tomorrow" on the ask-for-tasks screen: no gates until midnight. */

@@ -71,6 +71,9 @@ fun OverlayFarm(actions: GateOverlay.Actions) {
                 tasks = TaskCache.getTasks(context)
             }
 
+            override fun restored(task: Task, index: Int, after: String): Boolean =
+                actions.onTaskRestored(task, index, after).also { tasks = TaskCache.getTasks(context) }
+
             override fun removed(task: Task) {
                 actions.onTaskRemoved(task)
                 tasks = TaskCache.getTasks(context)
