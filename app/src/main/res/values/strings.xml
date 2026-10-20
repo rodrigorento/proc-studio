@@ -23,7 +23,6 @@
 
     <string name="toast_done">Harvested. It\'s off your field.</string>
     <string name="toast_watered">Watered.</string>
-    <string name="back">Back</string>
 
     <!-- Trusted-person check-in -->
     <string name="check_in_title">This crop keeps waiting</string>
@@ -37,48 +36,8 @@
     <string name="toast_check_in">Okay. We\'ll get the note to %1$s.</string>
 
     <!-- Add tasks -->
-    <string name="add_title">What needs planting?</string>
-    <string name="add_subtitle">Say one thing at a time, with when it\'s for: “dentist tomorrow at 3”. Only the next crop comes up at a pause.</string>
-    <string name="add_title_nothing_due">Nothing\'s ripe right now</string>
-    <string name="add_subtitle_nothing_due">Plant something else, or tap a crop\'s time to bring it forward.</string>
-    <string name="add_mic">Say what to plant</string>
-    <string name="add_mic_stop">Stop listening</string>
-    <string name="add_mic_idle">Tap and say what to plant</string>
-    <string name="add_listening">Listening…</string>
     <string name="add_voice_retry">Didn\'t catch that. Try again, or type it.</string>
-    <string name="add_transcript">“%1$s”</string>
-    <string name="add_list_title">Your field · %1$d of %2$d</string>
-    <string name="add_type_label">Or type it</string>
-    <string name="add_type_hint">What needs planting?</string>
-    <string name="add_button">Next</string>
-    <string name="plant_seeds_title">When should it be ripe?</string>
-    <string name="plant_seeds_body">Each seed grows its own crop. Sooner things grow as smaller crops.</string>
-    <string name="plant_you_said">You said</string>
-    <string name="plant_you_said_seed">You said · %1$s</string>
-    <string name="plant_change">Change</string>
-    <string name="plant_time">Time</string>
-    <string name="plant_any_time">Any time</string>
-    <string name="plant_set_time">Set a time</string>
-    <string name="plant_ripe_by">Ripe %1$s</string>
-    <string name="plant_time_gone">That time has gone today. Pick a later one.</string>
-    <string name="plant_prev_month">Previous month</string>
-    <string name="plant_next_month">Next month</string>
-    <string name="plant_seed">%1$s: %2$s seeds</string>
-    <string name="plant_pick">Pick the seeds</string>
-    <string name="plant_button">Plant the %1$s</string>
-    <string name="planted_title">Planted!</string>
-    <string name="planted_bed">%1$s seeds, just planted</string>
-    <string name="planted_waits">It comes up at a pause once its time starts.</string>
-    <string name="planted_now">It can come up at your next pause.</string>
-    <string name="plant_another">Plant another</string>
-    <string name="add_list_full">Your field is full. Harvest one to plant another.</string>
-    <string name="add_start_scrolling">Back to the feed</string>
-    <string name="add_not_now">Not now</string>
-    <string name="add_snooze_app">Close the gate until tomorrow</string>
     <string name="toast_app_snoozed">Gate closed until tomorrow.</string>
 
-    <string name="add_remove">Pull up %1$s</string>
-    <string name="when_change">When: %1$s. Tap to change.</string>
 
-    <string name="status_back_at">Resting till %1$s</string>
 </resources>

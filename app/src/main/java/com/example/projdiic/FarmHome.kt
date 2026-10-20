@@ -2,11 +2,13 @@ package com.example.projdiic
 
 import android.content.Context
 import android.text.format.DateFormat
+import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -270,54 +272,85 @@ fun PlantButton(full: Boolean, onPlant: () -> Unit, modifier: Modifier = Modifie
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlotSheet(task: Task, now: Long, onHarvest: () -> Unit, onRemove: () -> Unit, onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val crop = FarmRules.crop(task)
-    val stage = FarmRules.stage(task, now)
     // Never half open: Back, or a swipe down, closes it.
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        Column(
-            Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        PlotSheetContent(task, now, onHarvest, onRemove)
+    }
+}
+
+/**
+ * [PlotSheet] drawn in the screen, over a dimmed farm, for the farm over Instagram: an overlay window can't open the
+ * dialog a [ModalBottomSheet] needs. A tap on the dim, or Back, closes it.
+ */
+@Composable
+fun InScreenPlotSheet(task: Task, now: Long, onHarvest: () -> Unit, onRemove: () -> Unit, onDismiss: () -> Unit) {
+    BackHandler(onBack = onDismiss)
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.55f))
+                .clickable(onClickLabel = "Close", onClick = onDismiss)
+        )
+        Surface(
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(112.dp)) { Layer(CropArt.bed(crop, stage, true)) }
-                Column(Modifier.padding(start = 12.dp)) {
-                    Text(task.title, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(
-                        text = listOfNotNull(cropWords(crop, stage), statusFor(context, task, now) ?: harvestLine(context, task, now))
-                            .joinToString(" · "),
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            Box(Modifier.padding(top = 24.dp)) { PlotSheetContent(task, now, onHarvest, onRemove) }
+        }
+    }
+}
+
+@Composable
+private fun PlotSheetContent(task: Task, now: Long, onHarvest: () -> Unit, onRemove: () -> Unit) {
+    val context = LocalContext.current
+    val crop = FarmRules.crop(task)
+    val stage = FarmRules.stage(task, now)
+    val words = cropWords(crop, stage)
+    // "Sunflower, in bloom", not "Sunflower, in bloom · In bloom".
+    val line = (statusFor(context, task, now) ?: harvestLine(context, task, now)).takeUnless { words.contains(it, ignoreCase = true) }
+    Column(
+        Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(112.dp)) { Layer(CropArt.bed(crop, stage, true)) }
+            Column(Modifier.padding(start = 12.dp)) {
+                Text(task.title, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                Text(
+                    text = listOfNotNull(words, line).joinToString(" · "),
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            Spacer(Modifier.height(4.dp))
-            if (FarmRules.isDue(task, now)) {
-                Button(
-                    onClick = onHarvest,
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                ) {
-                    Image(painterResource(R.drawable.prop_basket), contentDescription = null, modifier = Modifier.size(30.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text("Harvest it", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
-                }
-            } else {
-                OutlinedButton(
-                    onClick = onRemove,
-                    shape = RoundedCornerShape(50),
-                    border = BorderStroke(2.dp, Danger),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                ) {
-                    Image(painterResource(R.drawable.prop_pulled), contentDescription = null, modifier = Modifier.size(30.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text("Remove it", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
-                }
+        }
+        Spacer(Modifier.height(4.dp))
+        if (FarmRules.isDue(task, now)) {
+            Button(
+                onClick = onHarvest,
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+            ) {
+                Image(painterResource(R.drawable.prop_basket), contentDescription = null, modifier = Modifier.size(30.dp))
+                Spacer(Modifier.width(10.dp))
+                Text("Harvest it", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+            }
+        } else {
+            OutlinedButton(
+                onClick = onRemove,
+                shape = RoundedCornerShape(50),
+                border = BorderStroke(2.dp, Danger),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+            ) {
+                Image(painterResource(R.drawable.prop_pulled), contentDescription = null, modifier = Modifier.size(30.dp))
+                Spacer(Modifier.width(10.dp))
+                Text("Remove it", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
             }
         }
     }

@@ -1,40 +1,33 @@
 package com.example.projdiic
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.PixelFormat
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
-import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.text.format.DateFormat
 import android.util.Log
 import android.view.ContextThemeWrapper
+import android.widget.FrameLayout
+import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
+import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import com.example.projdiic.ui.theme.ProjDIICTheme
 import kotlin.math.roundToInt
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import android.view.Gravity
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
-import android.view.accessibility.AccessibilityNodeInfo
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Switch
-import android.widget.TimePicker
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -64,7 +57,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
         /** Plants a task for [window] (null: Anytime). Returns it, or null when it could not (blank, or the field is full). */
         fun onTaskPlanted(title: String, window: TimeWindow?, via: String): Task?
         fun onTaskRemoved(task: Task)
-        fun onWhenChanged(task: Task, window: TimeWindow?)
+
+        /** A crop harvested on the farm over Instagram, once its harvest has played. */
+        fun onFieldHarvested(task: Task, ripe: Boolean)
         fun onAddTasksClosed()
 
         /** "Close the gate until tomorrow" on the ask-for-tasks screen: no gates until midnight. */
@@ -87,9 +82,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
     /** Harvest it or Water it was tapped and its animation is playing; it takes effect when that ends or the screen goes. */
     private var pending: (() -> Unit)? = null
 
-    /** On a later step of planting (the ask-for-tasks screen), Back goes a step back instead of closing. */
-    private var plantBack: (() -> Unit)? = null
-    private var recognizer: SpeechRecognizer? = null
+    /** The farm's Compose host while the farm is up over Instagram (the ask for tasks). */
+    private var farmOwner: OverlayOwner? = null
     private var focusRequest: AudioFocusRequest? = null
     private val focusListener = AudioManager.OnAudioFocusChangeListener { }
 
@@ -112,13 +106,21 @@ class GateOverlay(service: Context, private val actions: Actions) {
             is GateScreen.Gate -> task?.let(::buildGate)
             is GateScreen.Nod -> task?.let(::buildNod)
             is GateScreen.CheckIn -> task?.let(::buildCheckIn)
-            GateScreen.AddTasks -> buildAddTasks()
+            GateScreen.AddTasks -> buildFarm()
         } ?: return false
+        // Compose looks for its lifecycle on the window's root.
+        val owner = if (screen == GateScreen.AddTasks) OverlayOwner() else null
         val host = OverlayRoot(context, backActionFor(screen, task)).apply {
             addView(next, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            owner?.let {
+                setViewTreeLifecycleOwner(it)
+                setViewTreeSavedStateRegistryOwner(it)
+                setViewTreeOnBackPressedDispatcherOwner(it)
+            }
         }
 
         removeView()
+        farmOwner = owner
         return try {
             windowManager.addView(host, layoutParams(screen))
             view = host
@@ -127,6 +129,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show the ${screen.logName} overlay", e)
+            owner?.destroy()
+            farmOwner = null
             shown = null
             releaseAudioFocus()
             false
@@ -141,7 +145,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
     }
 
     private fun removeView() {
-        stopListening()
+        farmOwner?.destroy()
+        farmOwner = null
         view?.let {
             try {
                 windowManager.removeView(it)
@@ -159,10 +164,35 @@ class GateOverlay(service: Context, private val actions: Actions) {
         choice()
     }
 
-    /** The system Back gesture: a step back where the screen has one; the gate itself only closes through its choices. */
+    /**
+     * The system Back gesture: on the farm, a step back where it has one (planting, a crop's sheet), otherwise back to
+     * the feed; the gate itself only closes through its choices.
+     */
     private fun backActionFor(screen: GateScreen, task: Task?): (() -> Unit)? = when {
-        screen == GateScreen.AddTasks -> { -> plantBack?.invoke() ?: actions.onAddTasksClosed() }
+        screen == GateScreen.AddTasks -> { ->
+            val back = farmOwner?.onBackPressedDispatcher
+            if (back != null && back.hasEnabledCallbacks()) back.onBackPressed() else actions.onAddTasksClosed()
+            (view as? OverlayRoot)?.nextBack()
+        }
         else -> null
+    }
+
+    /** The farm, the same as the app's home screen ([OverlayFarm]), in Compose; its lifecycle is on the window ([show]). */
+    private fun buildFarm(): View {
+        val farm = ComposeView(context).apply {
+            setContent {
+                ProjDIICTheme {
+                    // The app's Scaffold gives text its colour; here a Surface does.
+                    Surface(color = MaterialTheme.colorScheme.background) { OverlayFarm(actions) }
+                }
+            }
+        }
+        val root = FrameLayout(context).apply {
+            setBackgroundColor(ContextCompat.getColor(context, R.color.sg_bg))
+            addView(farm, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        }
+        fitSystemBars(root, bottom = root)
+        return root
     }
 
     private fun buildGate(task: Task): View {
@@ -282,439 +312,6 @@ class GateOverlay(service: Context, private val actions: Actions) {
         return root
     }
 
-    /** Planting, step 1: the field so far, and the next task said or typed ([draft] when coming back to it). */
-    private fun buildAddTasks(draft: String = ""): View {
-        plantBack = null
-        val root = inflater.inflate(R.layout.overlay_add_tasks, null)
-        val list = root.findViewById<LinearLayout>(R.id.taskList)
-        val listTitle = root.findViewById<TextView>(R.id.tvListTitle)
-        val voiceBlock = root.findViewById<View>(R.id.voiceBlock)
-        val typeBlock = root.findViewById<View>(R.id.typeBlock)
-        val listFull = root.findViewById<View>(R.id.tvListFull)
-        val input = root.findViewById<EditText>(R.id.etNewTask)
-        val mic = root.findViewById<ImageButton>(R.id.btnMic)
-        val micStatus = root.findViewById<TextView>(R.id.tvMicStatus)
-        val transcript = root.findViewById<TextView>(R.id.tvTranscript)
-        val start = root.findViewById<Button>(R.id.btnStartScrolling)
-        val title = root.findViewById<TextView>(R.id.tvAddTitle)
-        val subtitle = root.findViewById<TextView>(R.id.tvAddSubtitle)
-        val voiceReady = PermissionUtils.hasMicPermission(context) &&
-            SpeechRecognizer.isRecognitionAvailable(context)
-        // The task whose time chips are open: one whose time pill was tapped.
-        var expandedId: String? = null
-
-        fun bind() {
-            val now = System.currentTimeMillis()
-            val tasks = TaskCache.getTasks(context)
-            val next = TaskRules.next(tasks, now)
-            list.removeAllViews()
-            tasks.forEach { task ->
-                list.addView(
-                    taskRow(
-                        parent = list,
-                        task = task,
-                        isNext = task.id == next?.id,
-                        now = now,
-                        expanded = task.id == expandedId,
-                        onToggle = {
-                            expandedId = if (expandedId == task.id) null else task.id
-                            bind()
-                        },
-                        onWhen = { window ->
-                            actions.onWhenChanged(task, window)
-                            expandedId = null
-                            bind()
-                        },
-                        onRemove = {
-                            actions.onTaskRemoved(task)
-                            bind()
-                        },
-                    )
-                )
-            }
-            // Tasks, but none for now: say so, so the screen doesn't look like the list was lost.
-            val nothingDue = tasks.isNotEmpty() && next == null
-            title.setText(if (nothingDue) R.string.add_title_nothing_due else R.string.add_title)
-            subtitle.setText(if (nothingDue) R.string.add_subtitle_nothing_due else R.string.add_subtitle)
-            listTitle.isVisible = tasks.isNotEmpty()
-            listTitle.text = context.getString(R.string.add_list_title, tasks.size, TaskRules.MAX_TASKS)
-            val hasRoom = tasks.size < TaskRules.MAX_TASKS
-            if (!hasRoom) hideKeyboard(input)
-            voiceBlock.isVisible = hasRoom && voiceReady
-            typeBlock.isVisible = hasRoom
-            listFull.isVisible = !hasRoom
-            start.setText(if (tasks.isEmpty()) R.string.add_not_now else R.string.add_start_scrolling)
-        }
-
-        fun toSeeds(text: String, via: String) {
-            val planting = SeedPackets.planting(text, System.currentTimeMillis()) ?: return
-            hideKeyboard(input)
-            swapTo(buildSeeds(planting, via, text), R.id.tvSeedsTitle)
-        }
-
-        fun addTyped() = toSeeds(input.text.toString(), Task.VIA_TEXT)
-
-        input.setText(draft)
-        bind()
-        root.findViewById<Button>(R.id.btnAddTyped).setOnClickListener { addTyped() }
-        // Done on the on-screen keyboard, or Enter on a physical one (which reports no action).
-        input.setOnEditorActionListener { _, actionId, event ->
-            val enter = event?.keyCode == KeyEvent.KEYCODE_ENTER
-            when {
-                actionId == EditorInfo.IME_ACTION_DONE || (enter && event?.action == KeyEvent.ACTION_DOWN) -> {
-                    addTyped()
-                    true
-                }
-                enter -> true
-                else -> false
-            }
-        }
-        mic.setOnClickListener {
-            toggleListening(mic, micStatus, transcript) { heard -> toSeeds(heard, Task.VIA_VOICE) }
-        }
-        start.setOnClickListener { actions.onAddTasksClosed() }
-        root.findViewById<Button>(R.id.btnSnoozeApp).setOnClickListener { actions.onSnoozeAppUntilTomorrow() }
-        fitSystemBars(root, bottom = root)
-        return root
-    }
-
-    /**
-     * Planting, step 2: four seeds, one per stretch of days. Tapping one moves it up where the time said would be, hides
-     * the others and opens its days on a calendar and a time; the time said in the task opens that way already.
-     */
-    private fun buildSeeds(planting: SeedPackets.Planting, via: String, draft: String): View {
-        val root = inflater.inflate(R.layout.overlay_plant_seeds, null)
-        val zone = TimeZone.getDefault()
-        val now = System.currentTimeMillis()
-        val title = planting.title
-        val firstDayOfWeek = java.util.Calendar.getInstance(zone).firstDayOfWeek
-        var pick = planting.said
-        var monthShown = 0
-        var binding = false
-        val plant = root.findViewById<Button>(R.id.btnPlant)
-        val seedRows = root.findViewById<LinearLayout>(R.id.seedRows)
-        val pickedCard = root.findViewById<View>(R.id.pickedCard).apply { isSelected = true }
-        val calendar = root.findViewById<View>(R.id.calendar)
-        val dayRows = root.findViewById<LinearLayout>(R.id.dayRows)
-        val timeRow = root.findViewById<View>(R.id.timeRow)
-        val timeSwitch = root.findViewById<Switch>(R.id.swTime)
-        val wheel = root.findViewById<TimePicker>(R.id.timeWheel).apply { setIs24HourView(DateFormat.is24HourFormat(context)) }
-        val ripeBy = root.findViewById<TextView>(R.id.tvRipeBy)
-        root.findViewById<TextView>(R.id.tvSeedsTask).text = title
-
-        fun monthOf(p: SeedPackets.Pick) =
-            SeedCalendar.months(p.seed, now, zone, firstDayOfWeek).indexOfFirst { m -> m.weeks.flatten().any { it?.day == p.day } }.coerceAtLeast(0)
-
-        lateinit var bind: () -> Unit
-        fun choose(next: SeedPackets.Pick?) {
-            val opened = pick == null && next != null
-            pick = next
-            next?.let { monthShown = monthOf(it) }
-            bind()
-            if (opened) pickedCard.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
-        }
-        // Set by hand: no longer the time said, so it starts now.
-        fun change(next: SeedPackets.Pick) {
-            pick = next.copy(said = false, startsAt = 0L)
-            bind()
-        }
-
-        val gap = (10 * context.resources.displayMetrics.density).toInt()
-        SeedPackets.seeds(now, zone).chunked(2).forEach { pair ->
-            val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-            pair.forEachIndexed { column, seed ->
-                val card = inflater.inflate(R.layout.item_seed_packet, row, false).apply {
-                    findViewById<ImageView>(R.id.ivPacket).setImageResource(CropArt.seedPacket(seed.crop))
-                    findViewById<TextView>(R.id.tvPacketWhen).text = seed.name
-                    findViewById<TextView>(R.id.tvPacketCrop).text = FarmViews.cropName(seed.crop)
-                    contentDescription = context.getString(R.string.plant_seed, seed.name, seed.crop)
-                    setOnClickListener { choose(SeedPackets.pick(seed)) }
-                }
-                row.addView(card, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    if (column > 0) marginStart = gap
-                })
-            }
-            seedRows.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = gap
-            })
-        }
-        root.findViewById<LinearLayout>(R.id.weekdays).apply {
-            SeedCalendar.weekdayLetters(firstDayOfWeek).forEach { letter ->
-                addView(TextView(context).apply {
-                    text = letter
-                    gravity = Gravity.CENTER
-                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                    setTextColor(ContextCompat.getColor(context, R.color.sg_faint))
-                    textSize = 13f
-                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            }
-        }
-        root.findViewById<Button>(R.id.btnChangeSeed).setOnClickListener { choose(null) }
-        root.findViewById<View>(R.id.btnPrevMonth).setOnClickListener { monthShown--; bind() }
-        root.findViewById<View>(R.id.btnNextMonth).setOnClickListener { monthShown++; bind() }
-        timeSwitch.setOnCheckedChangeListener { _, on ->
-            val p = pick ?: return@setOnCheckedChangeListener
-            if (binding) return@setOnCheckedChangeListener
-            change(p.copy(minute = if (on) SeedPackets.defaultMinute(p.day, System.currentTimeMillis(), zone) else null))
-            // The wheels open under the fold: bring them, and the line under them, into view.
-            if (on) root.findViewById<ScrollView>(R.id.seedsScroll).let { scroll -> scroll.post { scroll.fullScroll(View.FOCUS_DOWN) } }
-        }
-        timeRow.setOnClickListener { timeSwitch.toggle() }
-        wheel.setOnTimeChangedListener { _, hour, minute ->
-            val p = pick ?: return@setOnTimeChangedListener
-            if (!binding && p.minute != hour * 60 + minute) change(p.copy(minute = hour * 60 + minute))
-        }
-
-        fun dayCell(day: SeedCalendar.Day?, picked: Int): View {
-            val cell = android.widget.FrameLayout(context)
-            if (day == null) return cell
-            val size = (40 * context.resources.displayMetrics.density).toInt()
-            cell.addView(TextView(context).apply {
-                text = day.dayOfMonth.toString()
-                gravity = Gravity.CENTER
-                textSize = 15f
-                typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.nunito_bold)
-                setBackgroundResource(R.drawable.bg_day)
-                isSelected = day.day == picked
-                val color = when {
-                    isSelected -> R.color.sg_on_accent
-                    day.open -> R.color.sg_text
-                    else -> R.color.sg_dot_muted
-                }
-                setTextColor(ContextCompat.getColor(context, color))
-                if (day.open) {
-                    contentDescription = SeedCalendar.spoken(day.day, now, zone)
-                    setOnClickListener { pick?.let { change(it.copy(day = day.day)) } }
-                } else {
-                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                }
-            }, android.widget.FrameLayout.LayoutParams(size, size, Gravity.CENTER))
-            return cell
-        }
-
-        bind = {
-            binding = true
-            val p = pick
-            seedRows.isVisible = p == null
-            root.findViewById<View>(R.id.tvSeedsBody).isVisible = p == null
-            pickedCard.isVisible = p != null
-            calendar.isVisible = p != null && p.seed.lastDay > 0
-            timeRow.isVisible = p != null
-            wheel.isVisible = p?.minute != null
-            ripeBy.isVisible = p != null
-            if (p != null) {
-                val seed = p.seed
-                root.findViewById<ImageView>(R.id.ivPickedPacket).setImageResource(CropArt.seedPacket(seed.crop))
-                root.findViewById<TextView>(R.id.tvPickedEyebrow).text =
-                    if (p.said) context.getString(R.string.plant_you_said_seed, seed.name) else seed.name
-                root.findViewById<TextView>(R.id.tvPickedCrop).text = FarmViews.cropName(seed.crop)
-                val months = SeedCalendar.months(seed, now, zone, firstDayOfWeek)
-                monthShown = monthShown.coerceIn(0, months.lastIndex)
-                val month = months[monthShown]
-                root.findViewById<TextView>(R.id.tvMonth).text = SeedCalendar.title(month, now, zone)
-                root.findViewById<View>(R.id.btnPrevMonth).isVisible = months.size > 1
-                root.findViewById<View>(R.id.btnNextMonth).isVisible = months.size > 1
-                root.findViewById<View>(R.id.btnPrevMonth).isEnabled = monthShown > 0
-                root.findViewById<View>(R.id.btnNextMonth).isEnabled = monthShown < months.lastIndex
-                dayRows.removeAllViews()
-                month.weeks.forEach { week ->
-                    val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-                    week.forEach { day -> row.addView(dayCell(day, p.day), LinearLayout.LayoutParams(0, (44 * context.resources.displayMetrics.density).toInt(), 1f)) }
-                    dayRows.addView(row)
-                }
-                val window = SeedPackets.window(p, now, zone)
-                root.findViewById<TextView>(R.id.tvTime).text =
-                    if (p.minute == null) context.getString(R.string.plant_any_time) else formats.time(window.end)
-                timeSwitch.isChecked = p.minute != null
-                p.minute?.let {
-                    if (wheel.hour != it / 60) wheel.hour = it / 60
-                    if (wheel.minute != it % 60) wheel.minute = it % 60
-                }
-                val gone = SeedPackets.isPast(p, System.currentTimeMillis(), zone)
-                ripeBy.text = if (gone) {
-                    context.getString(R.string.plant_time_gone)
-                } else {
-                    context.getString(R.string.plant_ripe_by, WhenText.due(window, now, zone, formats) ?: "")
-                }
-                ripeBy.setTextColor(ContextCompat.getColor(context, if (gone) R.color.sg_wood else R.color.sg_text_soft))
-                plant.isEnabled = !gone
-                plant.text = context.getString(R.string.plant_button, FarmViews.cropName(seed.crop).lowercase())
-            } else {
-                plant.isEnabled = false
-                plant.text = context.getString(R.string.plant_pick)
-            }
-            plant.alpha = if (plant.isEnabled) 1f else 0.4f
-            binding = false
-        }
-
-        val back = { swapTo(buildAddTasks(draft), R.id.tvAddTitle) }
-        plantBack = back
-        root.findViewById<Button>(R.id.btnSeedsBack).setOnClickListener { back() }
-        plant.setOnClickListener {
-            val chosen = pick ?: return@setOnClickListener
-            val at = System.currentTimeMillis()
-            if (SeedPackets.isPast(chosen, at, zone)) return@setOnClickListener bind()
-            val task = actions.onTaskPlanted(title, SeedPackets.window(chosen, at, zone), via)
-            if (task == null) swapTo(buildAddTasks(draft), R.id.tvAddTitle) else swapTo(buildPlanted(task), R.id.tvPlantedTitle)
-        }
-        pick?.let { monthShown = monthOf(it) }
-        bind()
-        fitSystemBars(root, bottom = root)
-        return root
-    }
-
-    /** Planting, the last step: the seeds pour into the bed; then back to the feed, or plant another. */
-    private fun buildPlanted(task: Task): View {
-        val root = inflater.inflate(R.layout.overlay_plant_done, null)
-        val now = System.currentTimeMillis()
-        val crop = FarmRules.crop(task)
-        root.findViewById<View>(R.id.bed).contentDescription = context.getString(R.string.planted_bed, FarmViews.cropName(crop))
-        BedStack(root.findViewById(R.id.bed)).plant(CropArt.emptyBed(true), CropArt.bed(crop, "seed", true), CropMotion.plant(crop)) {}
-        val due = WhenText.due(TaskRules.window(task), now, TimeZone.getDefault(), formats)
-        root.findViewById<TextView>(R.id.tvPlantedLine).text =
-            FarmViews.plantedLine(task.title, crop, due, FarmViews.bloomDays(task, now, TimeZone.getDefault()))
-        root.findViewById<TextView>(R.id.tvPlantedWhen)
-            .setText(if (task.deferredUntil > now) R.string.planted_waits else R.string.planted_now)
-        root.findViewById<Button>(R.id.btnPlantedScroll).setOnClickListener { actions.onAddTasksClosed() }
-        val another = { swapTo(buildAddTasks(), R.id.tvAddTitle) }
-        plantBack = another
-        root.findViewById<Button>(R.id.btnPlantAnother).apply {
-            isVisible = TaskCache.getTasks(context).size < TaskRules.MAX_TASKS
-            setOnClickListener { another() }
-        }
-        fitSystemBars(root, bottom = root)
-        return root
-    }
-
-    /**
-     * Puts [step] where the screen is, in the same window: the steps of planting on the ask-for-tasks screen. TalkBack
-     * moves to its [heading], since the button it was on is gone.
-     */
-    private fun swapTo(step: View, heading: Int) {
-        val host = view as? OverlayRoot ?: return
-        stopListening()
-        host.removeAllViews()
-        host.addView(step, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        ViewCompat.requestApplyInsets(step)
-        host.nextBack()
-        step.post { step.findViewById<View>(heading)?.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null) }
-    }
-
-    private fun taskRow(
-        parent: ViewGroup,
-        task: Task,
-        isNext: Boolean,
-        now: Long,
-        expanded: Boolean,
-        onToggle: () -> Unit,
-        onWhen: (TimeWindow?) -> Unit,
-        onRemove: () -> Unit,
-    ): View {
-        val row = inflater.inflate(R.layout.item_task_row, parent, false)
-        row.findViewById<ImageView>(R.id.ivRowBed).apply {
-            setImageResource(FarmViews.bed(task, now))
-            alpha = if (isNext) 1f else 0.75f
-        }
-        row.findViewById<TextView>(R.id.tvRowTitle).text = task.title
-        row.findViewById<TextView>(R.id.tvRowWhen).apply {
-            text = pillText(task, now)
-            contentDescription = context.getString(R.string.when_change, text)
-            setOnClickListener { onToggle() }
-        }
-        row.findViewById<ImageButton>(R.id.btnRemoveTask).apply {
-            isVisible = true
-            contentDescription = context.getString(R.string.add_remove, task.title)
-            setOnClickListener { onRemove() }
-        }
-        row.findViewById<View>(R.id.whenChipsScroll).isVisible = expanded
-        if (expanded) {
-            val chips = row.findViewById<LinearLayout>(R.id.whenChips)
-            // The seeds, each on its last day: the one the task's crop is marked.
-            val crop = FarmRules.crop(task)
-            SeedPackets.seeds(now).forEach { seed ->
-                val chip = inflater.inflate(R.layout.item_when_chip, chips, false) as Button
-                chip.text = seed.name
-                chip.isSelected = seed.crop == crop
-                chip.setOnClickListener { onWhen(SeedPackets.window(SeedPackets.pick(seed), System.currentTimeMillis())) }
-                chips.addView(chip)
-            }
-        }
-        return row
-    }
-
-    /** The task's time, or when it comes back after its 5 more minutes. */
-    private fun pillText(task: Task, now: Long): String =
-        if (task.deferredBy != Task.BY_WHEN && task.deferredUntil > now) {
-            context.getString(R.string.status_back_at, timeText(task.deferredUntil))
-        } else {
-            WhenText.label(TaskRules.window(task), now, TimeZone.getDefault(), formats)
-        }
-
-    private fun hideKeyboard(input: EditText) {
-        context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(input.windowToken, 0)
-        input.clearFocus()
-    }
-
-    private fun toggleListening(mic: ImageButton, status: TextView, transcript: TextView, onHeard: (String) -> Unit) {
-        // A second tap cancels, even if the recognizer never answered.
-        if (recognizer != null) {
-            stopListening(mic)
-            status.setText(R.string.add_mic_idle)
-            return
-        }
-        val speech = SpeechRecognizer.createSpeechRecognizer(context)
-        recognizer = speech
-        speech.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) = status.setText(R.string.add_listening)
-            override fun onBeginningOfSpeech() = Unit
-            override fun onRmsChanged(rmsdB: Float) = Unit
-            override fun onBufferReceived(buffer: ByteArray?) = Unit
-            override fun onEndOfSpeech() = Unit
-            override fun onEvent(eventType: Int, params: Bundle?) = Unit
-
-            override fun onPartialResults(partialResults: Bundle?) {
-                firstResult(partialResults)?.let { showTranscript(transcript, it) }
-            }
-
-            override fun onResults(results: Bundle?) {
-                val heard = firstResult(results)
-                stopListening(mic)
-                if (heard.isNullOrBlank()) {
-                    status.setText(R.string.add_voice_retry)
-                } else {
-                    showTranscript(transcript, heard)
-                    onHeard(heard)
-                }
-            }
-
-            override fun onError(error: Int) {
-                stopListening(mic)
-                status.setText(R.string.add_voice_retry)
-            }
-        })
-        speech.startListening(
-            Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-        )
-        mic.contentDescription = context.getString(R.string.add_mic_stop)
-        status.setText(R.string.add_listening)
-    }
-
-    private fun stopListening(mic: ImageButton? = null) {
-        recognizer?.destroy()
-        recognizer = null
-        mic?.contentDescription = context.getString(R.string.add_mic)
-    }
-
-    private fun showTranscript(transcript: TextView, text: String) {
-        transcript.isVisible = true
-        transcript.text = context.getString(R.string.add_transcript, text)
-    }
-
-    private fun firstResult(bundle: Bundle?): String? =
-        bundle?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-
     private fun metaFor(task: Task): String {
         val now = System.currentTimeMillis()
         if (task.deferredUntil in 1..now && task.deferredBy == Task.BY_SNOOZE) return context.getString(R.string.gate_meta_snoozed)
@@ -728,8 +325,6 @@ class GateOverlay(service: Context, private val actions: Actions) {
         val template = if (task.addedVia == Task.VIA_VOICE) R.string.gate_meta_said else R.string.gate_meta_added
         return context.getString(template, day, FarmViews.cropAndStage(FarmRules.crop(task), FarmRules.stage(task, now)))
     }
-
-    private fun timeText(time: Long): String = DateFormat.getTimeFormat(context).format(Date(time))
 
     /**
      * The window covers the whole screen (see [layoutParams]); this keeps the content clear of

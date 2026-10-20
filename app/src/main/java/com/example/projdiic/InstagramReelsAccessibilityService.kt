@@ -360,24 +360,19 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         return task
     }
 
-    override fun onWhenChanged(task: Task, window: TimeWindow?) {
-        val current = latest(task) ?: return
-        val changed = TaskRules.withWhen(current, window, System.currentTimeMillis())
-        TaskCache.update(this, changed)
+    override fun onTaskRemoved(task: Task) {
+        TaskCache.remove(this, task.id)
         EventLog.log(
-            this, "when_changed",
+            this, "task_removed",
             "where" to "overlay",
             "task" to task.title,
-            "from" to current.whenKey.ifEmpty { "anytime" },
-            "to" to (window?.key ?: "anytime"),
-            "due_ms" to window?.end,
-            "crop" to FarmRules.crop(changed),
+            "stage" to FarmRules.stage(task, System.currentTimeMillis()),
         )
     }
 
-    override fun onTaskRemoved(task: Task) {
+    override fun onFieldHarvested(task: Task, ripe: Boolean) {
         TaskCache.remove(this, task.id)
-        EventLog.log(this, "task_removed", "where" to "overlay", "task" to task.title)
+        EventLog.log(this, "task_done", "task" to task.title, "screen" to GateScreen.AddTasks.logName, "ripe" to ripe)
     }
 
     override fun onSnoozeAppUntilTomorrow() {

@@ -12,17 +12,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -30,9 +26,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -78,12 +71,7 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
     var tasks by remember { mutableStateOf(TaskCache.getTasks(context)) }
     var logCount by remember { mutableIntStateOf(EventLog.count(context)) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var reap by remember { mutableStateOf<Reap?>(null) }
-    val scroll = rememberScrollState()
-    val scope = rememberCoroutineScope()
     var showFacilitator by rememberSaveable { mutableStateOf(false) }
-    var openId by rememberSaveable { mutableStateOf<String?>(null) }
-    var planting by rememberSaveable { mutableStateOf(false) }
 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
@@ -103,51 +91,38 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    fun plant(title: String, window: TimeWindow?, via: String): Task? {
-        val task = TaskCache.plant(context, title, window, via) ?: return null
-        EventLog.log(
-            context, "task_added",
-            "via" to via,
-            "where" to "app",
-            "task" to task.title,
-            "when" to task.whenKey.ifEmpty { "anytime" },
-            "due_ms" to task.dueAt.takeIf { it > 0 },
-            "crop" to FarmRules.crop(task),
-        )
-        tasks = TaskCache.getTasks(context)
-        return task
-    }
+    val farmer = remember {
+        object : Farmer {
+            override fun plant(title: String, window: TimeWindow?, via: String): Task? {
+                val task = TaskCache.plant(context, title, window, via) ?: return null
+                EventLog.log(
+                    context, "task_added",
+                    "via" to via,
+                    "where" to "app",
+                    "task" to task.title,
+                    "when" to task.whenKey.ifEmpty { "anytime" },
+                    "due_ms" to task.dueAt.takeIf { it > 0 },
+                    "crop" to FarmRules.crop(task),
+                )
+                tasks = TaskCache.getTasks(context)
+                return task
+            }
 
-    // Not while a crop is being harvested: its Harvest it would wait for nothing.
-    fun open(task: Task) {
-        if (reap == null) openId = task.id
-    }
-
-    // Harvest it from the crop's sheet: the crop ripens if it must and flies out of its bed on the field; then it's done.
-    fun harvest(task: Task) {
-        if (reap != null) return
-        openId = null
-        val at = System.currentTimeMillis()
-        val crop = FarmRules.crop(task)
-        val stage = CropMotion.harvestedAs(crop, FarmRules.stage(task, at))
-        val ripe = FarmRules.isReady(task, at)
-        reap = Reap(task.id, crop, stage, frame = -1)
-        // The harvest plays on the field: bring it into view from a card further down.
-        scope.launch { scroll.animateScrollTo(0) }
-        scope.launch {
-            try {
-                delay(FarmViews.RIPEN_MS)
-                for (frame in CropMotion.harvest(crop, stage).indices) {
-                    reap = Reap(task.id, crop, stage, frame)
-                    delay(1000L / CropMotion.FPS)
-                }
-            } finally {
-                // Leaving the screen mid-harvest still harvests it, as on the pause.
-                reap = null
+            override fun harvested(task: Task, ripe: Boolean) {
                 TaskCache.remove(context, task.id)
                 EventLog.log(context, "task_done", "task" to task.title, "screen" to "app", "ripe" to ripe)
                 tasks = TaskCache.getTasks(context)
-                Toast.makeText(context, R.string.toast_done, Toast.LENGTH_SHORT).show()
+            }
+
+            override fun removed(task: Task) {
+                TaskCache.remove(context, task.id)
+                EventLog.log(
+                    context, "task_removed",
+                    "where" to "app",
+                    "task" to task.title,
+                    "stage" to FarmRules.stage(task, System.currentTimeMillis()),
+                )
+                tasks = TaskCache.getTasks(context)
             }
         }
     }
@@ -156,34 +131,15 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
         hasMicPermission = granted
     }
 
-    if (planting) {
-        Box(modifier.fillMaxSize()) {
-            PlantFlow(tasks = tasks, onPlant = ::plant, onClose = { planting = false })
-        }
-        return
-    }
-
-    Column(modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .imePadding()
-                .verticalScroll(scroll)
-                .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.app_name),
-                fontSize = 30.sp,
-                fontWeight = FontWeight.ExtraBold,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .semantics { heading() }
-                    .pointerInput(Unit) {
-                        detectTapGestures(onLongPress = { showFacilitator = !showFacilitator })
-                    }
-            )
-
+    val needsSetup = !isAccessibilityRunning || !hasOverlayPermission
+    Farm(
+        tasks = tasks,
+        now = now,
+        farmer = farmer,
+        hearing = VoiceScreenHearing,
+        modifier = modifier,
+        onTitleLongPress = { showFacilitator = !showFacilitator },
+        header = {
             if (snoozedUntil > now) {
                 GateClosedCard(onOpen = {
                     settings.snoozedUntil = 0L
@@ -191,8 +147,6 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                     EventLog.log(context, "app_turned_back_on", "where" to "app")
                 })
             }
-
-            val needsSetup = !isAccessibilityRunning || !hasOverlayPermission
             if (needsSetup) {
                 Section("Setup") {
                     SetupRow(
@@ -221,46 +175,15 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                     MicRow(hasMicPermission) { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
                 }
             }
-
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Field(
-                    tasks = tasks,
-                    now = now,
-                    reap = reap,
-                    onOpen = ::open,
-                    onPlant = { planting = true },
-                    modifier = Modifier.bleed(20.dp),
-                )
-                CropCards(tasks = tasks, now = now, onOpen = ::open)
-                if (!needsSetup && !hasMicPermission) {
-                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
-                        Column(Modifier.padding(horizontal = 16.dp)) {
-                            MicRow(hasMicPermission) { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
-                        }
+        },
+        footer = {
+            if (!needsSetup && !hasMicPermission) {
+                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        MicRow(hasMicPermission) { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
                     }
                 }
             }
-
-            tasks.firstOrNull { it.id == openId }?.let { task ->
-                PlotSheet(
-                    task = task,
-                    now = now,
-                    onHarvest = { harvest(task) },
-                    onRemove = {
-                        TaskCache.remove(context, task.id)
-                        EventLog.log(
-                            context, "task_removed",
-                            "where" to "app",
-                            "task" to task.title,
-                            "stage" to FarmRules.stage(task, System.currentTimeMillis()),
-                        )
-                        tasks = TaskCache.getTasks(context)
-                        openId = null
-                    },
-                    onDismiss = { openId = null },
-                )
-            }
-
             if (showFacilitator) {
                 FacilitatorPanel(
                     settings = settings,
@@ -278,21 +201,9 @@ fun TaskFarmScreen(modifier: Modifier = Modifier) {
                     }
                 )
             }
-        }
-        // Always in reach at the foot of the screen, whatever is above it.
-        PlantButton(
-            full = tasks.size >= TaskRules.MAX_TASKS,
-            onPlant = { planting = true },
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-        )
-    }
-}
-
-/** Widens the content by [by] on each side, over the screen's side padding. */
-private fun Modifier.bleed(by: Dp): Modifier = layout { measurable, constraints ->
-    val extra = if (constraints.hasBoundedWidth) by.roundToPx() * 2 else 0
-    val placeable = measurable.measure(constraints.copy(minWidth = constraints.minWidth + extra, maxWidth = constraints.maxWidth + extra))
-    layout(placeable.width - extra, placeable.height) { placeable.place(-extra / 2, 0) }
+        },
+        buttons = { plant -> PlantButton(full = tasks.size >= TaskRules.MAX_TASKS, onPlant = plant) },
+    )
 }
 
 /** Shown while the app is snoozed until tomorrow: the farm gate is closed. */

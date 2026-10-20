@@ -92,13 +92,39 @@ private const val NAME = "name"
 private const val SEEDS = "seeds"
 private const val PLANTED = "planted"
 
+/** How a task is being heard: [listening] while it listens; [start] begins, or stops while listening. */
+class Listen(val listening: Boolean, val start: () -> Unit)
+
+/** A way to hear a task, given what to do with the words heard; null when there is none (no microphone). */
+typealias Hearing = @Composable (onHeard: (String) -> Unit) -> Listen?
+
+/** Android's voice screen, which the app can open. */
+val VoiceScreenHearing: Hearing = { onHeard ->
+    val context = LocalContext.current
+    val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.let(onHeard)
+    }
+    Listen(listening = false) {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, "What are you planting?")
+        try {
+            voice.launch(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "Voice input isn't available on this phone.", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
 /**
- * Planting a task, step by step over the home screen: name it (typed or said), pick its seeds (when it's for), then
- * watch the seeds go in. [onPlant] adds the task and returns it, or null when it couldn't (the field filled up).
+ * Planting a task, step by step over the farm: name it (typed or said, through [hearing]), pick its seeds (when it's
+ * for), then watch the seeds go in. [onPlant] adds the task and returns it, or null when it couldn't (the field filled
+ * up).
  */
 @Composable
 fun PlantFlow(
     tasks: List<Task>,
+    hearing: Hearing,
     onPlant: (title: String, window: TimeWindow?, via: String) -> Task?,
     onClose: () -> Unit,
 ) {
@@ -125,6 +151,7 @@ fun PlantFlow(
     when (step) {
         NAME -> NameStep(
             draft = draft,
+            hearing = hearing,
             heard = WhenParser.parse(draft, System.currentTimeMillis()).window?.let {
                 WhenText.label(it, System.currentTimeMillis(), TimeZone.getDefault(), whenFormats(context))
             },
@@ -192,17 +219,15 @@ fun PlantFlow(
 @Composable
 private fun NameStep(
     draft: String,
+    hearing: Hearing,
     heard: String?,
     onDraft: (String) -> Unit,
     onHeard: (String) -> Unit,
     onNext: () -> Unit,
     onClose: () -> Unit,
 ) {
-    val context = LocalContext.current
     val focus = remember { FocusRequester() }
-    val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.let(onHeard)
-    }
+    val listen = hearing(onHeard)
     LaunchedEffect(Unit) { focus.requestFocus() }
     StepScreen(
         pane = "What are you planting?",
@@ -248,24 +273,16 @@ private fun NameStep(
                 )
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-            FilledIconButton(
-                onClick = {
-                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                        .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                        .putExtra(RecognizerIntent.EXTRA_PROMPT, "What are you planting?")
-                    try {
-                        voice.launch(intent)
-                    } catch (e: ActivityNotFoundException) {
-                        Toast.makeText(context, "Voice input isn't available on this phone.", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.size(60.dp)
-            ) {
-                Icon(painterResource(R.drawable.ic_mic), contentDescription = "Say it", modifier = Modifier.size(28.dp))
+        if (listen != null) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+            FilledIconButton(onClick = listen.start, modifier = Modifier.size(60.dp)) {
+                Icon(
+                    painterResource(R.drawable.ic_mic),
+                    contentDescription = if (listen.listening) "Stop listening" else "Say it",
+                    modifier = Modifier.size(28.dp)
+                )
             }
             Column(Modifier.padding(start = 14.dp)) {
-                Text("Or say it", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text(if (listen.listening) "Listening…" else "Or say it", fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "\"Gym on Monday\", \"Pay rent this month\"",
                     fontSize = 14.sp,
