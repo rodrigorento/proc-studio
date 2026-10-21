@@ -1,67 +1,77 @@
 package com.example.projdiic
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.PixelFormat
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
-import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.text.format.DateFormat
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.Gravity
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.view.WindowManager
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
+import android.view.animation.DecelerateInterpolator
 import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.LinearLayout
+import android.widget.FrameLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
+import androidx.annotation.DrawableRes
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.platform.ComposeView
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.example.projdiic.ui.theme.ProjDIICTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.roundToInt
 
 /**
- * Draws the Scroll Gate screens over Instagram, one at a time, and reports
+ * Draws Task Farm's pause screens over Instagram, one at a time, and reports
  * every tap to [actions]. The service decides which screen to show and when.
  */
 class GateOverlay(service: Context, private val actions: Actions) {
 
     interface Actions {
-        fun onDoItNow(task: Task)
-        fun onPickTime(task: Task)
+        /** Harvest it, tapped at [tappedAt] on the gate or the check-in ([where]), once its harvest has played. */
+        fun onHarvested(task: Task, where: String, tappedAt: Long)
+
         fun onSnooze(task: Task)
-        fun onTimeChosen(task: Task, choice: TimeChoice)
-        fun onAddToCalendar(task: Task)
-        fun onBackToChoices(task: Task, from: GateScreen)
-        fun onDone(task: Task, startedAt: Long)
-        fun onCloseInstagram(task: Task)
         fun onCheckInAccepted(task: Task)
         fun onCheckInOff(task: Task)
 
-        /** Returns the new task, or null when it could not be added (blank, or the list is full). */
-        fun onTaskAdded(title: String, via: String): Task?
+        /** Plants a task for [window] (null: Anytime). Returns it, or null when it could not (blank, or the field is full). */
+        fun onTaskPlanted(title: String, window: TimeWindow?, via: String): Task?
         fun onTaskRemoved(task: Task)
-        fun onWhenChanged(task: Task, window: TimeWindow?)
+
+        /** A crop harvested on the farm over Instagram, once its harvest has played. */
+        fun onFieldHarvested(task: Task, ripe: Boolean)
+
+        /** A crop watered on the farm over Instagram, by tapping its bed or Water it in its sheet ([via]). */
+        fun onFieldWatered(task: Task, via: String)
+
+        /** Undo on the farm over Instagram: [task], just harvested or removed ([after]), back at [index]; false if it couldn't be. */
+        fun onTaskRestored(task: Task, index: Int, after: String): Boolean
+
+        /** The farm over Instagram told that [task]'s crop has grown to [stage] since it was last seen. */
+        fun onGrowthNews(task: Task, stage: String)
         fun onAddTasksClosed()
 
-        /** "Snooze until tomorrow" on the ask-for-tasks screen: no gates until midnight. */
+        /** "Close the gate until tomorrow" on the ask-for-tasks screen: no gates until midnight. */
         fun onSnoozeAppUntilTomorrow()
     }
 
@@ -77,9 +87,21 @@ class GateOverlay(service: Context, private val actions: Actions) {
 
     private var view: View? = null
     private var shown: GateScreen? = null
-    private var recognizer: SpeechRecognizer? = null
+
+    /** Harvest it was tapped and its animation is playing; it takes effect when that ends or the screen goes. */
+    private var pending: (() -> Unit)? = null
+
+    /** Set when a pause opens (not when it's shown again): the next farm built slides in. */
+    var slideIn = false
+
+    /** The farm's Compose host while the farm is up over Instagram (the ask for tasks). */
+    private var farmOwner: OverlayOwner? = null
     private var focusRequest: AudioFocusRequest? = null
     private val focusListener = AudioManager.OnAudioFocusChangeListener { }
+
+    /** A harvest is playing, so walking away isn't passing on its task: it happens either way. */
+    val busy: Boolean
+        get() = pending != null
 
     /** Whether Android let us pause Instagram's sound for the screen that is up. */
     var holdsAudioFocus = false
@@ -94,16 +116,22 @@ class GateOverlay(service: Context, private val actions: Actions) {
         }
         val next = when (screen) {
             is GateScreen.Gate -> task?.let(::buildGate)
-            is GateScreen.PickTime -> task?.let(::buildPickTime)
-            is GateScreen.DoingNow -> task?.let { buildDoingNow(it, screen.startedAt) }
             is GateScreen.CheckIn -> task?.let(::buildCheckIn)
-            GateScreen.AddTasks -> buildAddTasks()
+            GateScreen.AddTasks -> buildFarm()
         } ?: return false
+        // Compose looks for its lifecycle on the window's root.
+        val owner = if (screen == GateScreen.AddTasks) OverlayOwner() else null
         val host = OverlayRoot(context, backActionFor(screen, task)).apply {
             addView(next, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            owner?.let {
+                setViewTreeLifecycleOwner(it)
+                setViewTreeSavedStateRegistryOwner(it)
+                setViewTreeOnBackPressedDispatcherOwner(it)
+            }
         }
 
         removeView()
+        farmOwner = owner
         return try {
             windowManager.addView(host, layoutParams(screen))
             view = host
@@ -112,6 +140,8 @@ class GateOverlay(service: Context, private val actions: Actions) {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show the ${screen.logName} overlay", e)
+            owner?.destroy()
+            farmOwner = null
             shown = null
             releaseAudioFocus()
             false
@@ -119,13 +149,15 @@ class GateOverlay(service: Context, private val actions: Actions) {
     }
 
     fun hide() {
+        finishPending()
         removeView()
         shown = null
         releaseAudioFocus()
     }
 
     private fun removeView() {
-        stopListening()
+        farmOwner?.destroy()
+        farmOwner = null
         view?.let {
             try {
                 windowManager.removeView(it)
@@ -136,65 +168,112 @@ class GateOverlay(service: Context, private val actions: Actions) {
         view = null
     }
 
-    /** The system Back gesture: a step back where the screen has one; the gate itself only closes through its choices. */
+    /** The harvest or the watering has played, or the screen is going before it could: it happens either way. */
+    private fun finishPending() {
+        val choice = pending ?: return
+        pending = null
+        choice()
+    }
+
+    /**
+     * The system Back gesture: on the farm, a step back where it has one (planting, a crop's sheet), otherwise back to
+     * the feed; the gate itself only closes through its choices.
+     */
     private fun backActionFor(screen: GateScreen, task: Task?): (() -> Unit)? = when {
-        screen == GateScreen.AddTasks -> actions::onAddTasksClosed
-        task != null && (screen is GateScreen.PickTime || screen is GateScreen.DoingNow) ->
-            { -> actions.onBackToChoices(task, screen) }
+        screen == GateScreen.AddTasks -> { ->
+            val back = farmOwner?.onBackPressedDispatcher
+            if (back != null && back.hasEnabledCallbacks()) back.onBackPressed() else actions.onAddTasksClosed()
+            (view as? OverlayRoot)?.nextBack()
+        }
         else -> null
+    }
+
+    /** The farm, the same as the app's home screen ([OverlayFarm]), in Compose; its lifecycle is on the window ([show]). */
+    private fun buildFarm(): View {
+        val farm = ComposeView(context).apply {
+            setContent {
+                ProjDIICTheme {
+                    // The app's Scaffold gives text its colour; here a Surface does.
+                    Surface(color = MaterialTheme.colorScheme.background) { OverlayFarm(actions) }
+                }
+            }
+        }
+        val root = FrameLayout(context).apply {
+            setBackgroundColor(ContextCompat.getColor(context, R.color.sg_bg))
+            addView(farm, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        }
+        fitSystemBars(root, bottom = root)
+        // A farm just opened slides up over the feed rather than cutting to it; one shown again (back from another app)
+        // is simply there. It starts below the window, set just before its first frame.
+        if (slideIn && motionOn(context)) {
+            root.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    root.viewTreeObserver.removeOnPreDrawListener(this)
+                    root.translationY = root.height.toFloat()
+                    root.animate().translationY(0f).setDuration(FARM_SLIDE_MS).setInterpolator(DecelerateInterpolator(2f)).start()
+                    return true
+                }
+            })
+        }
+        slideIn = false
+        return root
     }
 
     private fun buildGate(task: Task): View {
         val root = inflater.inflate(R.layout.overlay_gate, null)
+        val now = System.currentTimeMillis()
+        val bed = BedStack(root.findViewById(R.id.bed)).apply { show(FarmViews.bed(task, now)) }
         root.findViewById<TextView>(R.id.tvEyebrow).text = eyebrow
         root.findViewById<TextView>(R.id.tvTaskTitle).text = task.title
         root.findViewById<TextView>(R.id.tvTaskMeta).text = metaFor(task)
-        root.findViewById<Button>(R.id.btnDoItNow).setOnClickListener { actions.onDoItNow(task) }
-        root.findViewById<Button>(R.id.btnPickTime).setOnClickListener { actions.onPickTime(task) }
-        root.findViewById<Button>(R.id.btnSnooze).apply {
+        // A due crop: Harvest it, or 5 more minutes once.
+        val where = GateScreen.Gate(task.id).logName
+        val harvest = root.findViewById<Button>(R.id.btnHarvest).apply { withIcon(R.drawable.prop_basket) }
+        val snooze = root.findViewById<Button>(R.id.btnSnooze).apply {
             isVisible = !task.snoozeUsed
             setOnClickListener { actions.onSnooze(task) }
         }
+        harvest.setOnClickListener { harvestOn(bed, task, where, listOf(harvest, snooze)) }
         root.findViewById<TextView>(R.id.tvSnoozeUsed).isVisible = task.snoozeUsed
+        // With the 5 minutes had, Harvest it is the only choice left.
+        root.findViewById<TextView>(R.id.tvGateHint).isVisible = !task.snoozeUsed
+        root.findViewById<View>(R.id.bed).contentDescription = FarmViews.describe(task, now)
         fitSystemBars(root, bottom = root.findViewById(R.id.sheet))
         return root
     }
 
-    private fun buildPickTime(task: Task): View {
-        val root = inflater.inflate(R.layout.overlay_pick_time, null)
-        root.findViewById<TextView>(R.id.tvPickTask).text = task.title
-        root.findViewById<Button>(R.id.btnPickBack).setOnClickListener {
-            actions.onBackToChoices(task, GateScreen.PickTime(task.id))
+    /**
+     * Harvest it: the crop ripens first if it isn't ready, flies out of [bed], and then the task is done. The other
+     * [choices] are off while it plays.
+     */
+    private fun harvestOn(bed: BedStack, task: Task, where: String, choices: List<View>) {
+        if (pending != null) return
+        choices.forEach { it.isEnabled = false }
+        val tappedAt = System.currentTimeMillis()
+        val crop = FarmRules.crop(task)
+        val stage = CropMotion.harvestedAs(crop, FarmRules.stage(task, tappedAt))
+        pending = { actions.onHarvested(task, where, tappedAt) }
+        val wet = FarmRules.isWatered(task, tappedAt)
+        bed.fadeTo(CropArt.bed(crop, stage, wet), FarmViews.RIPEN_MS) {
+            FarmSounds.play(context, FarmSound.POP)
+            bed.harvest(CropArt.emptyBed(wet), CropMotion.harvest(crop, stage)) { finishPending() }
         }
-        val options = root.findViewById<LinearLayout>(R.id.timeOptions)
-        TimeChoices.forNow(System.currentTimeMillis()).forEach { choice ->
-            val label = context.getString(labelFor(choice.key))
-            val time = timeText(choice.at)
-            val row = inflater.inflate(R.layout.item_time_option, options, false)
-            row.findViewById<TextView>(R.id.tvOptionLabel).text = label
-            row.findViewById<TextView>(R.id.tvOptionTime).text = time
-            row.contentDescription = "$label, $time"
-            row.setOnClickListener { actions.onTimeChosen(task, choice) }
-            options.addView(row)
-        }
-        root.findViewById<Button>(R.id.btnCalendar).setOnClickListener { actions.onAddToCalendar(task) }
-        fitSystemBars(root, bottom = root.findViewById(R.id.sheet))
-        return root
     }
 
-    private fun buildDoingNow(task: Task, startedAt: Long): View {
-        val root = inflater.inflate(R.layout.overlay_doing_now, null)
-        root.findViewById<TextView>(R.id.tvDoingTitle).text = task.title
-        root.findViewById<TextView>(R.id.tvStarted).text =
-            context.getString(R.string.doing_started, timeText(startedAt))
-        root.findViewById<Button>(R.id.btnBackToChoices).setOnClickListener {
-            actions.onBackToChoices(task, GateScreen.DoingNow(task.id, startedAt))
+    /** Shows [icon] just before the button's text, the two centred together: a platform [Button] has no icon of its own. */
+    private fun Button.withIcon(@DrawableRes icon: Int) {
+        val size = dp(30)
+        val picture = ContextCompat.getDrawable(context, icon)?.mutate()?.apply { setBounds(0, 0, size, size) } ?: return
+        setCompoundDrawablesRelative(picture, null, null, null)
+        compoundDrawablePadding = dp(10)
+        // The picture sits at the button's start edge: padding both sides alike brings it in beside the centred text.
+        addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            val side = ((width - size - compoundDrawablePadding - paint.measureText(text.toString())) / 2).toInt().coerceAtLeast(dp(16))
+            if (paddingStart != side || paddingEnd != side) setPaddingRelative(side, paddingTop, side, paddingBottom)
         }
-        root.findViewById<Button>(R.id.btnDone).setOnClickListener { actions.onDone(task, startedAt) }
-        root.findViewById<Button>(R.id.btnCloseInstagram).setOnClickListener { actions.onCloseInstagram(task) }
-        fitSystemBars(root, bottom = root)
-        return root
     }
+
+    private fun dp(value: Int): Int = (value * context.resources.displayMetrics.density).roundToInt()
 
     private fun buildCheckIn(task: Task): View {
         val root = inflater.inflate(R.layout.overlay_check_in, null)
@@ -204,257 +283,44 @@ class GateOverlay(service: Context, private val actions: Actions) {
         root.findViewById<TextView>(R.id.tvCheckInWho).text = context.getString(R.string.check_in_who, person)
         root.findViewById<TextView>(R.id.tvCheckInMessage).text =
             context.getString(R.string.check_in_message, task.title)
-        root.findViewById<Button>(R.id.btnCheckInDoNow).setOnClickListener { actions.onDoItNow(task) }
-        root.findViewById<Button>(R.id.btnCheckInOk).apply {
+        // As on the gate: Harvest it. A check-in only comes for a due crop (TaskRules.needsCheckIn).
+        val where = GateScreen.CheckIn(task.id).logName
+        val harvest = root.findViewById<Button>(R.id.btnCheckInHarvest).apply { withIcon(R.drawable.prop_basket) }
+        val ok = root.findViewById<Button>(R.id.btnCheckInOk).apply {
             text = context.getString(R.string.check_in_ok, person)
             setOnClickListener { actions.onCheckInAccepted(task) }
         }
-        root.findViewById<Button>(R.id.btnCheckInOff).setOnClickListener { actions.onCheckInOff(task) }
-        fitSystemBars(root, bottom = root)
-        return root
-    }
-
-    private fun buildAddTasks(): View {
-        val root = inflater.inflate(R.layout.overlay_add_tasks, null)
-        val list = root.findViewById<LinearLayout>(R.id.taskList)
-        val listTitle = root.findViewById<TextView>(R.id.tvListTitle)
-        val voiceBlock = root.findViewById<View>(R.id.voiceBlock)
-        val typeBlock = root.findViewById<View>(R.id.typeBlock)
-        val listFull = root.findViewById<View>(R.id.tvListFull)
-        val input = root.findViewById<EditText>(R.id.etNewTask)
-        val mic = root.findViewById<ImageButton>(R.id.btnMic)
-        val micStatus = root.findViewById<TextView>(R.id.tvMicStatus)
-        val transcript = root.findViewById<TextView>(R.id.tvTranscript)
-        val start = root.findViewById<Button>(R.id.btnStartScrolling)
-        val title = root.findViewById<TextView>(R.id.tvAddTitle)
-        val subtitle = root.findViewById<TextView>(R.id.tvAddSubtitle)
-        val voiceReady = PermissionUtils.hasMicPermission(context) &&
-            SpeechRecognizer.isRecognitionAvailable(context)
-        // The task whose time chips are open: the one just added, or one whose time pill was tapped.
-        var expandedId: String? = null
-
-        fun bind() {
+        val off = root.findViewById<Button>(R.id.btnCheckInOff).apply { setOnClickListener { actions.onCheckInOff(task) } }
+        val choices = listOf(harvest, ok, off)
+        // The harvest plays where the mailbox was, scrolled into view, set up on the first tap.
+        val bed by lazy(LazyThreadSafetyMode.NONE) {
             val now = System.currentTimeMillis()
-            val tasks = TaskCache.getTasks(context)
-            val next = TaskRules.next(tasks, now)
-            list.removeAllViews()
-            tasks.forEach { task ->
-                list.addView(
-                    taskRow(
-                        parent = list,
-                        task = task,
-                        isNext = task.id == next?.id,
-                        now = now,
-                        expanded = task.id == expandedId,
-                        onToggle = {
-                            expandedId = if (expandedId == task.id) null else task.id
-                            bind()
-                        },
-                        onWhen = { window ->
-                            actions.onWhenChanged(task, window)
-                            expandedId = null
-                            bind()
-                        },
-                        onRemove = {
-                            actions.onTaskRemoved(task)
-                            bind()
-                        },
-                    )
-                )
+            root.findViewById<View>(R.id.ivMailbox).isVisible = false
+            val view = root.findViewById<View>(R.id.bed).apply {
+                isVisible = true
+                contentDescription = FarmViews.describe(task, now)
             }
-            // Tasks, but none for now: say so, so the screen doesn't look like the list was lost.
-            val nothingDue = tasks.isNotEmpty() && next == null
-            title.setText(if (nothingDue) R.string.add_title_nothing_due else R.string.add_title)
-            subtitle.setText(if (nothingDue) R.string.add_subtitle_nothing_due else R.string.add_subtitle)
-            listTitle.isVisible = tasks.isNotEmpty()
-            listTitle.text = context.getString(R.string.add_list_title, tasks.size, TaskRules.MAX_TASKS)
-            val hasRoom = tasks.size < TaskRules.MAX_TASKS
-            if (!hasRoom) hideKeyboard(input)
-            voiceBlock.isVisible = hasRoom && voiceReady
-            typeBlock.isVisible = hasRoom
-            listFull.isVisible = !hasRoom
-            start.setText(if (tasks.isEmpty()) R.string.add_not_now else R.string.add_start_scrolling)
+            (root as? ScrollView)?.smoothScrollTo(0, 0)
+            BedStack(view).apply { show(FarmViews.bed(task, now)) }
         }
-
-        fun addTyped() {
-            val task = actions.onTaskAdded(input.text.toString(), Task.VIA_TEXT) ?: return
-            input.text.clear()
-            expandedId = task.id
-            bind()
-        }
-
-        bind()
-        root.findViewById<Button>(R.id.btnAddTyped).setOnClickListener { addTyped() }
-        // Done on the on-screen keyboard, or Enter on a physical one (which reports no action).
-        input.setOnEditorActionListener { _, actionId, event ->
-            val enter = event?.keyCode == KeyEvent.KEYCODE_ENTER
-            when {
-                actionId == EditorInfo.IME_ACTION_DONE || (enter && event?.action == KeyEvent.ACTION_DOWN) -> {
-                    addTyped()
-                    true
-                }
-                enter -> true
-                else -> false
-            }
-        }
-        mic.setOnClickListener {
-            toggleListening(mic, micStatus, transcript) { heard ->
-                val task = actions.onTaskAdded(heard, Task.VIA_VOICE) ?: return@toggleListening
-                micStatus.setText(R.string.add_voice_added)
-                expandedId = task.id
-                bind()
-            }
-        }
-        start.setOnClickListener { actions.onAddTasksClosed() }
-        root.findViewById<Button>(R.id.btnSnoozeApp).setOnClickListener { actions.onSnoozeAppUntilTomorrow() }
+        harvest.setOnClickListener { harvestOn(bed, task, where, choices) }
         fitSystemBars(root, bottom = root)
         return root
     }
-
-    private fun taskRow(
-        parent: ViewGroup,
-        task: Task,
-        isNext: Boolean,
-        now: Long,
-        expanded: Boolean,
-        onToggle: () -> Unit,
-        onWhen: (TimeWindow?) -> Unit,
-        onRemove: () -> Unit,
-    ): View {
-        val row = inflater.inflate(R.layout.item_task_row, parent, false)
-        row.findViewById<View>(R.id.dot)
-            .setBackgroundResource(if (isNext) R.drawable.bg_dot_accent else R.drawable.bg_dot_muted)
-        row.findViewById<TextView>(R.id.tvRowTitle).text = task.title
-        row.findViewById<TextView>(R.id.tvRowWhen).apply {
-            text = pillText(task, now)
-            contentDescription = context.getString(R.string.when_change, text)
-            setOnClickListener { onToggle() }
-        }
-        row.findViewById<ImageButton>(R.id.btnRemoveTask).apply {
-            isVisible = true
-            contentDescription = context.getString(R.string.add_remove, task.title)
-            setOnClickListener { onRemove() }
-        }
-        row.findViewById<View>(R.id.whenChipsScroll).isVisible = expanded
-        if (expanded) {
-            val chips = row.findViewById<LinearLayout>(R.id.whenChips)
-            val current = TaskRules.window(task)
-            val options = WhenChoices.chips(now).toMutableList<TimeWindow?>()
-            // What he said that isn't one of the chips ("Tomorrow 15:00") stays on offer, first so it's in view.
-            if (current != null && current.key == WhenChoices.CUSTOM) options.add(0, current)
-            options.forEach { window ->
-                val chip = inflater.inflate(R.layout.item_when_chip, chips, false) as Button
-                chip.text = WhenText.label(window, now, TimeZone.getDefault(), formats)
-                chip.isSelected = (window?.key ?: "") == task.whenKey &&
-                    (window?.key != WhenChoices.CUSTOM || window == current)
-                chip.setOnClickListener { onWhen(window) }
-                chips.addView(chip)
-            }
-        }
-        return row
-    }
-
-    /** The task's time, or when it comes back after a snooze or a picked time. */
-    private fun pillText(task: Task, now: Long): String =
-        if (task.deferredBy != Task.BY_WHEN && task.deferredUntil > now) {
-            context.getString(R.string.status_back_at, timeText(task.deferredUntil))
-        } else {
-            WhenText.label(TaskRules.window(task), now, TimeZone.getDefault(), formats)
-        }
-
-    private fun hideKeyboard(input: EditText) {
-        context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(input.windowToken, 0)
-        input.clearFocus()
-    }
-
-    private fun toggleListening(mic: ImageButton, status: TextView, transcript: TextView, onHeard: (String) -> Unit) {
-        // A second tap cancels, even if the recognizer never answered.
-        if (recognizer != null) {
-            stopListening(mic)
-            status.setText(R.string.add_mic_idle)
-            return
-        }
-        val speech = SpeechRecognizer.createSpeechRecognizer(context)
-        recognizer = speech
-        speech.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) = status.setText(R.string.add_listening)
-            override fun onBeginningOfSpeech() = Unit
-            override fun onRmsChanged(rmsdB: Float) = Unit
-            override fun onBufferReceived(buffer: ByteArray?) = Unit
-            override fun onEndOfSpeech() = Unit
-            override fun onEvent(eventType: Int, params: Bundle?) = Unit
-
-            override fun onPartialResults(partialResults: Bundle?) {
-                firstResult(partialResults)?.let { showTranscript(transcript, it) }
-            }
-
-            override fun onResults(results: Bundle?) {
-                val heard = firstResult(results)
-                stopListening(mic)
-                if (heard.isNullOrBlank()) {
-                    status.setText(R.string.add_voice_retry)
-                } else {
-                    showTranscript(transcript, heard)
-                    onHeard(heard)
-                }
-            }
-
-            override fun onError(error: Int) {
-                stopListening(mic)
-                status.setText(R.string.add_voice_retry)
-            }
-        })
-        speech.startListening(
-            Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-        )
-        mic.contentDescription = context.getString(R.string.add_mic_stop)
-        status.setText(R.string.add_listening)
-    }
-
-    private fun stopListening(mic: ImageButton? = null) {
-        recognizer?.destroy()
-        recognizer = null
-        mic?.contentDescription = context.getString(R.string.add_mic)
-    }
-
-    private fun showTranscript(transcript: TextView, text: String) {
-        transcript.isVisible = true
-        transcript.text = context.getString(R.string.add_transcript, text)
-    }
-
-    private fun firstResult(bundle: Bundle?): String? =
-        bundle?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
 
     private fun metaFor(task: Task): String {
         val now = System.currentTimeMillis()
-        if (task.deferredUntil in 1..now && task.deferredBy != Task.BY_WHEN) {
-            return if (task.deferredBy == Task.BY_SNOOZE) {
-                context.getString(R.string.gate_meta_snoozed)
-            } else {
-                context.getString(R.string.gate_meta_picked, timeText(task.deferredUntil))
-            }
-        }
+        if (task.deferredUntil in 1..now && task.deferredBy == Task.BY_SNOOZE) return context.getString(R.string.gate_meta_snoozed)
         WhenText.gateLine(TaskRules.window(task), now, TimeZone.getDefault(), formats)?.let { return it }
-        val day = when (TimeChoices.daysBetween(task.createdAt, now)) {
+        val day = when (DayMath.daysBetween(task.createdAt, now, TimeZone.getDefault())) {
             0 -> context.getString(R.string.day_today)
             1 -> context.getString(R.string.day_yesterday)
             in 2..6 -> SimpleDateFormat("EEEE", Locale.getDefault()).format(Date(task.createdAt))
             else -> DateFormat.getMediumDateFormat(context).format(Date(task.createdAt))
         }
         val template = if (task.addedVia == Task.VIA_VOICE) R.string.gate_meta_said else R.string.gate_meta_added
-        return context.getString(template, day)
+        return context.getString(template, day, FarmViews.cropAndStage(FarmRules.crop(task), FarmRules.stage(task, now)))
     }
-
-    private fun labelFor(key: String): Int = when (key) {
-        TimeChoices.IN_15 -> R.string.time_in_15
-        TimeChoices.IN_60 -> R.string.time_in_60
-        TimeChoices.TONIGHT -> R.string.time_tonight
-        else -> R.string.time_tomorrow
-    }
-
-    private fun timeText(time: Long): String = DateFormat.getTimeFormat(context).format(Date(time))
 
     /**
      * The window covers the whole screen (see [layoutParams]); this keeps the content clear of
@@ -486,7 +352,7 @@ class GateOverlay(service: Context, private val actions: Actions) {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.CENTER
-            // The keyboard only opens when the text field is tapped.
+            // Over the farm the keyboard comes up for planting's text field, and the screen makes room for it.
             softInputMode = if (screen == GateScreen.AddTasks) {
                 WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
             } else {
@@ -547,8 +413,9 @@ class GateOverlay(service: Context, private val actions: Actions) {
         holdsAudioFocus = false
     }
 
-    private companion object {
-        const val TAG = "ReelsBlocker"
-        const val BLUR_RADIUS = 40
+    companion object {
+        private const val TAG = "ReelsBlocker"
+        private const val BLUR_RADIUS = 40
+        private const val FARM_SLIDE_MS = 320L
     }
 }

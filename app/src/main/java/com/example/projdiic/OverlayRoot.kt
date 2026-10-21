@@ -32,6 +32,17 @@ class OverlayRoot(context: Context, private val onBack: (() -> Unit)?) : FrameLa
         onBack?.invoke()
     }
 
+    /**
+     * The screen changed in place (a step of planting), so the next Back belongs to the new one. It waits a moment,
+     * so the second delivery of the Back that made the change isn't taken as another.
+     */
+    fun nextBack() {
+        removeCallbacks(rearm) // a later change moves it back, so an earlier one can't re-arm it too soon
+        postDelayed(rearm, BACK_ECHO_MS)
+    }
+
+    private val rearm = Runnable { backHandled = false }
+
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && backCallback is OnBackInvokedCallback) {
@@ -55,5 +66,9 @@ class OverlayRoot(context: Context, private val onBack: (() -> Unit)?) : FrameLa
             return true
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private companion object {
+        const val BACK_ECHO_MS = 300L
     }
 }

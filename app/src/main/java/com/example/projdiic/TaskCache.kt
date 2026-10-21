@@ -33,26 +33,28 @@ object TaskCache {
     fun find(context: Context, id: String): Task? = getTasks(context).firstOrNull { it.id == id }
 
     /**
-     * Adds a task at the end of the list, with the time it mentions ("tomorrow at 3")
-     * as its window. Returns null when the title is blank or the list is full.
+     * Plants a task in the next empty plot, for [window] (null: Anytime). Returns null when the title is blank or
+     * the field is full.
      */
-    fun addTask(context: Context, rawTitle: String, via: String): Task? {
+    fun plant(context: Context, rawTitle: String, window: TimeWindow?, via: String): Task? {
         val now = System.currentTimeMillis()
-        val parsed = WhenParser.parse(rawTitle, now)
-        val title = TaskRules.cleanTitle(parsed.title) ?: return null
+        val title = TaskRules.cleanTitle(rawTitle) ?: return null
         val tasks = getTasks(context)
         if (tasks.size >= TaskRules.MAX_TASKS) return null
-        val task = TaskRules.withWhen(
-            Task(id = UUID.randomUUID().toString(), title = title, createdAt = now, addedVia = via),
-            parsed.window,
-            now,
-        )
+        val task = TaskRules.planted(UUID.randomUUID().toString(), title, via, window, now)
         saveTasks(context, tasks + task)
         return task
     }
 
     fun update(context: Context, task: Task) {
         saveTasks(context, getTasks(context).map { if (it.id == task.id) task else it })
+    }
+
+    /** Puts [task] back at [index], as Undo; false when it couldn't ([TaskRules.restore]). */
+    fun restore(context: Context, task: Task, index: Int): Boolean {
+        val tasks = TaskRules.restore(getTasks(context), task, index) ?: return false
+        saveTasks(context, tasks)
+        return true
     }
 
     fun remove(context: Context, id: String) {
@@ -87,6 +89,8 @@ object TaskCache {
         .put("dueAt", task.dueAt)
         .put("dueHasTime", task.dueHasTime)
         .put("whenKey", task.whenKey)
+        .put("plantedAt", task.plantedAt)
+        .put("wateredAt", task.wateredAt)
 
     private fun fromJson(json: JSONObject) = Task(
         id = json.getString("id"),
@@ -100,6 +104,8 @@ object TaskCache {
         dueAt = json.optLong("dueAt"),
         dueHasTime = json.optBoolean("dueHasTime"),
         whenKey = json.optString("whenKey"),
+        plantedAt = json.optLong("plantedAt"),
+        wateredAt = json.optLong("wateredAt"),
     )
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

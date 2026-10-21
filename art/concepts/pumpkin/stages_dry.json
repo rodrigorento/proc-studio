@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image shows five copies of a chunky wooden raised garden bed in one row, the growth stages of one pumpkin plant, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, plain flat dark charcoal background (#16171A). Keep everything exactly the same: the beds, the angle, the size, number and position of every leaf, vine, flower and pumpkin. Change only how dry they are: in all five the soil becomes pale, dry and cracked, and every leaf droops, wilts and sags, a duller olive green, as if the plant badly needs water; the plants are thirsty, not dead, and the pumpkins keep their colour. No text.",
+  "refs": [
+    "art/concepts/pumpkin/stages_wet.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T16:21:03"
+}

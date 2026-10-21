@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image is a game asset for a mobile farming app: a chunky wooden raised garden bed with two carrots, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Keep the same style, bed, colours, angle and lighting. Only the parts of crops above the soil are visible unless they are pulled out. No text, no arrows, no people, no hands. Make a three-panel animation storyboard: three copies of this bed side by side in one row, evenly spaced and the same size, showing the start, middle and end of one short animation: 1) the bed is dry: pale cracked soil and drooping leaves; 2) a small puffy cartoon rain cloud hovers above the bed, raining short blue streaks and drops onto it; 3) the cloud is gone, the soil is dark and wet and the leaves stand up fresh, a few water droplets sparkling.",
+  "refs": [
+    "art/style/references/bed_carrot.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T16:53:13"
+}

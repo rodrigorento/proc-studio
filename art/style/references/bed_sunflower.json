@@ -1,0 +1,13 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The first reference image is a game asset for a mobile farming app: a chunky wooden raised bed with one sunflower plant (a big head and two smaller side blooms), in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Keep the bed, style, colours, angle, lighting and background exactly the same. Make the sunflower plant about one and a half times bigger, with larger flower heads and broader leaves, so it fills its bed as fully as the pumpkin fills its bed in the second reference image. The whole plant stays inside the image with margin. Only parts above the soil are visible. No text.",
+  "refs": [
+    "art/concepts/sunflower/bed_branching.png",
+    "art/style/references/bed_pumpkin.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T12:05:13"
+}

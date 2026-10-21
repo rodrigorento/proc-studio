@@ -8,6 +8,11 @@ import org.junit.Test
 
 class TaskRulesTest {
 
+    @Test
+    fun theListHoldsAsManyTasksAsTheFieldHasPlots() {
+        assertEquals(4, TaskRules.MAX_TASKS)
+    }
+
     private fun task(id: String, createdAt: Long, deferredUntil: Long = 0L) =
         Task(id = id, title = id, createdAt = createdAt, deferredUntil = deferredUntil)
 
@@ -26,10 +31,38 @@ class TaskRulesTest {
     }
 
     @Test
-    fun aTaskWhosePickedTimeHasComeGoesFirst() {
-        val next = TaskRules.next(listOf(task("a", 1), task("b", 2, deferredUntil = 40)), now = 50)
+    fun aTaskBackFromItsSnoozeGoesFirst() {
+        val next = TaskRules.next(listOf(task("a", 1), task("b", 2, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE)), now = 50)
 
         assertEquals("b", next?.id)
+    }
+
+    @Test
+    fun aTaskDueSoonerGoesBeforeOneBackFromItsFiveMoreMinutes() {
+        val tonight = task("a", 1, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE, dueAt = 1_000)
+        val atEleven = task("b", 2).copy(dueAt = 500, dueHasTime = true)
+
+        assertEquals("b", TaskRules.next(listOf(tonight, atEleven), now = 50)?.id)
+    }
+
+    @Test
+    fun theCropsGoInTheOrderTheyComeUp() {
+        val friday = task("dentist", 1).copy(dueAt = 5 * 86_400_000L)
+        val tonight = task("tonight", 2, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE, dueAt = 1_000)
+        val atEleven = task("eleven", 3).copy(dueAt = 500, dueHasTime = true)
+
+        assertEquals(listOf("eleven", "tonight", "dentist"), TaskRules.inOrder(listOf(friday, tonight, atEleven), now = 50).map { it.id })
+    }
+
+    @Test
+    fun undoPutsATaskBackInItsPlot() {
+        val list = listOf(task("a", 1), task("c", 3))
+
+        assertEquals(listOf("a", "b", "c"), TaskRules.restore(list, task("b", 2), index = 1)?.map { it.id })
+        assertEquals(listOf("a", "c", "b"), TaskRules.restore(list, task("b", 2), index = 9)?.map { it.id })
+        assertNull(TaskRules.restore(list, task("a", 1), index = 0)) // already back
+        val full = (1..TaskRules.MAX_TASKS).map { task("t$it", it.toLong()) }
+        assertNull(TaskRules.restore(full, task("b", 2), index = 0)) // planted over meanwhile
     }
 
     @Test
@@ -87,12 +120,11 @@ class TaskRulesTest {
     }
 
     @Test
-    fun pickTimeDefersWithoutUsingTheSnooze() {
-        val picked = TaskRules.pickTime(task("a", 1), at = 9_000)
+    fun aTaskOnItsFiveMoreMinutesIsStillSomethingToDo() {
+        val snoozed = TaskRules.snooze(task("a", 1), now = 1_000)
 
-        assertEquals(9_000, picked.deferredUntil)
-        assertEquals(Task.BY_TIME, picked.deferredBy)
-        assertFalse(picked.snoozeUsed)
+        assertFalse(TaskRules.shouldAskForTasks(listOf(snoozed), now = 2_000))
+        assertTrue(TaskRules.shouldAskForTasks(listOf(task("a", 1, deferredUntil = 100)), now = 50))
     }
 
     @Test
@@ -100,14 +132,22 @@ class TaskRulesTest {
         val once = TaskRules.pass(task("a", 1))
         val twice = TaskRules.pass(once)
 
-        assertFalse(TaskRules.needsCheckIn(once, checkInEnabled = true))
-        assertTrue(TaskRules.needsCheckIn(twice, checkInEnabled = true))
-        assertFalse(TaskRules.needsCheckIn(twice, checkInEnabled = false))
+        val inBloom = 10 * 24 * 60 * 60_000L // an Anytime task's sunflower: due once it blooms
+        assertFalse(TaskRules.needsCheckIn(once, checkInEnabled = true, now = inBloom))
+        assertTrue(TaskRules.needsCheckIn(twice, checkInEnabled = true, now = inBloom))
+        assertFalse(TaskRules.needsCheckIn(twice, checkInEnabled = false, now = inBloom))
     }
 
     @Test
-    fun aPassUsesUpThePickedTimeSoOlderTasksGetTheirTurn() {
-        val returned = task("c", 3, deferredUntil = 40).copy(deferredBy = Task.BY_TIME)
+    fun aCheckInOnlyComesForADueCrop() {
+        val twice = TaskRules.pass(TaskRules.pass(task("a", 1)))
+
+        assertFalse(TaskRules.needsCheckIn(twice, checkInEnabled = true, now = 50)) // still a seed
+    }
+
+    @Test
+    fun aPassUsesUpTheSnoozeSoOlderTasksGetTheirTurn() {
+        val returned = task("c", 3, deferredUntil = 40).copy(deferredBy = Task.BY_SNOOZE)
 
         val passed = TaskRules.pass(returned)
 

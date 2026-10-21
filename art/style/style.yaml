@@ -1,0 +1,77 @@
+# Art direction for the farm theme: what was decided, for people. The numbers the Blender scripts use (palette,
+# bed, camera, lights) live in art/farmkit/style.py; every asset and its status is in art/assets.yaml.
+# Images: references/ (approved look), lights/ (the four times of day). How each was made: sources.json.
+
+look:
+  style: cel-shaded toon 3D
+  shading_bands: 3
+  outline:
+    color: "#251803"  # warm dark brown ink, not black
+  background: transparent  # the concept images use the app's dark #16171A
+  underground: never shown  # no cut-aways or cross-sections
+
+camera:
+  projection: orthographic
+  view: isometric  # the same framing for every bed, so the 2x2 cards line up
+  render_size_px: 640
+
+bed:
+  reference: references/bed.png
+  shape: square bed with a low edging of thin rounded wooden planks and short corner posts, filled with tilled soil (chunkier walls until 2026-10-19)
+  soil:
+    wet: darker soil, smooth ridges
+    dry: paler cracked soil, drooping leaves
+
+crops:  # the smaller the crop, the more of them in a bed
+  radish: {when: today, count: 9, layout: 3x3, reference: references/bed_radish.png}
+  lettuce: {when: rest of this week, count: 4, layout: 2x2, reference: references/bed_lettuce.png}
+  carrot: {when: next week, count: 2, layout: side by side, reference: references/bed_carrot.png}
+  corn: {when: week after next, count: 3, layout: a row across the bed, reference: ../concepts/corn/ripe.png}
+  pumpkin: {when: three weeks on, count: 1, layout: centered, with vine and leaves, reference: references/bed_pumpkin.png}
+  grape: {when: later, count: 1, layout: centered vine on a wooden T trellis (bar on top, never a cross), reference: ../concepts/grape/ripe.png}
+  sunflower: {when: anytime (no longer offered), count: 1, layout: centered, shape: one big head and two side blooms, reference: references/bed_sunflower.png}
+
+stages:
+  timed: [seed, sprout, growing, ripe, overripe]  # seed shows one small mound per crop
+  sunflower: [seed, sprout, growing, bloom]
+  overripe:  # gone to seed: late, but never dead
+    radish: leaves yellow; 5 of the 9 (corners and centre) bolt with pink four-petal flowers
+    lettuce: each head stretches into a tall cone of pointed leaves with yellow flowers
+    carrot: leaves yellow; a tall stalk with a white umbrella of flowers
+    corn: stalks, leaves and husks dry to straw; the kernels dull
+    pumpkin: the orange dulls with pale speckles, some leaves yellow, the vine dries
+    grape: leaves turn yellow and orange, the bunches shrivel to raisins, a few drop on the soil
+  variants: [dry, wet]  # dry: pale cracked soil, drooping olive leaves; crops keep their colour
+  early: a task done before its crop is ripe ripens it quickly, then the normal harvest plays
+
+animations:  # 12 fps, rendered at 480 px
+  watering: the player watered; a blue toy watering can swings in, pours across the bed and leaves
+  rain: the field watered itself (gate closed, or a day without Instagram); a rain cloud drifts over
+  harvest: the plants pop out with their whole roots, one after another, and fly out of the top of the card
+
+props:
+  seed_packets: paper bags in each crop's colour with a rolled top, the crop printed big on the front
+  basket: round wicker harvest basket heaped with one of each crop
+  gate: chunky rounded toy planks, with a moon-and-stars plaque; paused until tomorrow
+  mailbox: rural mailbox on a post, door open with a letter, red flag up; the neighbour check-in
+  app_icon: a watered bed with one big sprout, on green (#2B5E16)
+
+lights:  # rendered for review; the app shows the day light only (decided 2026-10-19)
+  morning:
+    hours: [5, 11]
+    reference: lights/field_morning.png
+    look: very low sun far left, long soft shadows, pale pink-gold light, lavender-blue shadows, lighter and less saturated
+  day:
+    hours: [11, 17]
+    reference: lights/field_day.png
+    look: bright neutral white sun from high above, short crisp shadows, full saturation
+  dusk:
+    hours: [17, 20]
+    reference: lights/field_dusk.png
+    look: low golden-orange sun from the right, long warm shadows, magenta-purple shadow tint
+  night:
+    hours: [20, 5]
+    reference: lights/field_night.png
+    look: cool blue moonlight from above left, blue-violet shadows; the bed and soil go blue, the crops keep most of their colour
+
+palette: tuned in Blender; see PALETTE in art/farmkit/style.py ([lit, base, shade] per material)

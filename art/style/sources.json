@@ -1,0 +1,89 @@
+{
+  "note": "How each style image was made, oldest first. Paths are relative to art/style/.",
+  "images": [
+    {
+      "step": "thick_tile",
+      "made_by": "generate",
+      "model": "gpt-image-2.5-sunburst",
+      "from": null,
+      "prompt": "A single small plot of tilled farm soil holding one ripe carrot, a game asset for a mobile farming app. Only the parts of the carrot above the soil are visible: its orange shoulder peeking out and its feathery leaves. Nothing underground is shown: the soil is solid, with no cross-section, no cut-away and no glass. Strict isometric view: orthographic projection with no perspective, camera turned 45 degrees and tilted about 35 degrees down, so parallel edges stay parallel. Soft morning sunlight from the upper left. The plot is centered with generous empty margin around it. No text, no people, no ground plane. Plain flat dark charcoal background (#16171A).\n\nThe plot is a square tile of tilled soil with neat furrows, sitting on a chunky slab about a third as tall as it is wide: a thin grass rim on top and solid earthy sides. The carrot grows in the middle furrow.\n\nStyle: cel-shaded toon 3D. Clean simple shapes with two or three flat shading bands, crisp dark ink outlines around every shape, bright saturated colours, no textures. Like a cel-shaded adventure game."
+    },
+    {
+      "step": "plank_sides",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "thick_tile",
+      "prompt": "The reference image is a game asset for a mobile farming app: a thick tile of tilled soil holding a carrot, in cel-shaded toon 3D with crisp dark ink outlines. Make a variation of it. Keep the same style, colours, strict isometric orthographic angle, soft morning light from the upper left and plain flat dark charcoal background (#16171A). Only the parts of crops above the soil are visible: nothing underground is shown, the soil is solid, with no cross-section, no cut-away and no glass. No text. The variation: Make the slab's sides out of horizontal wooden planks with small corner posts, like a low raised bed of the same thickness. Keep the furrows on top."
+    },
+    {
+      "step": "references/bed.png",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "plank_sides",
+      "prompt": "The reference image is a game asset for a mobile farming app: a low raised bed with wooden plank sides and corner posts, filled with tilled soil holding a carrot, in cel-shaded toon 3D with crisp dark ink outlines. Make a variation of it. Keep the same style, colours, strict isometric orthographic angle, soft morning light from the upper left and plain flat dark charcoal background (#16171A). Only the parts of crops above the soil are visible: nothing underground is shown, the soil is solid, with no cross-section, no cut-away and no glass. No text. The variation: Make the planks and posts thick and chunky with rounded, bevelled edges, like a soft wooden toy."
+    },
+    {
+      "step": "references/bed_radish.png",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "references/bed.png",
+      "prompt": "The reference image is a game asset for a mobile farming app: a low raised bed with chunky rounded wooden planks and corner posts, filled with tilled soil holding a carrot, in cel-shaded toon 3D with crisp dark ink outlines. Make a variation of it. Keep the same style, colours, strict isometric orthographic angle, soft morning light from the upper left and plain flat dark charcoal background (#16171A). Only the parts of crops above the soil are visible: nothing underground is shown, the soil is solid, with no cross-section, no cut-away and no glass. No text. The variation: Keep the bed exactly as it is: same chunky planks, posts, size, position and angle. Replace the carrot with nine small ripe red radishes evenly spaced in a 3x3 grid across the soil, each showing its round red top and a small tuft of leaves."
+    },
+    {
+      "step": "references/bed_lettuce.png",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "references/bed.png",
+      "prompt": "The reference image is a game asset for a mobile farming app: a low raised bed with chunky rounded wooden planks and corner posts, filled with tilled soil holding a carrot, in cel-shaded toon 3D with crisp dark ink outlines. Make a variation of it. Keep the same style, colours, strict isometric orthographic angle, soft morning light from the upper left and plain flat dark charcoal background (#16171A). Only the parts of crops above the soil are visible: nothing underground is shown, the soil is solid, with no cross-section, no cut-away and no glass. No text. The variation: Keep the bed exactly as it is: same chunky planks, posts, size, position and angle. Replace the carrot with four ripe round lettuce heads evenly spaced in a 2x2 grid, filling the bed."
+    },
+    {
+      "step": "references/bed_carrot.png",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "references/bed.png",
+      "prompt": "The reference image is a game asset for a mobile farming app: a low raised bed with chunky rounded wooden planks and corner posts, filled with tilled soil holding a carrot, in cel-shaded toon 3D with crisp dark ink outlines. Make a variation of it. Keep the same style, colours, strict isometric orthographic angle, soft morning light from the upper left and plain flat dark charcoal background (#16171A). Only the parts of crops above the soil are visible: nothing underground is shown, the soil is solid, with no cross-section, no cut-away and no glass. No text. The variation: Keep the bed exactly as it is: same chunky planks, posts, size, position and angle. Replace the carrot with two big ripe carrots side by side, each showing a large orange shoulder and tall feathery leaves, filling the bed."
+    },
+    {
+      "step": "references/bed_pumpkin.png",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "references/bed.png",
+      "prompt": "The reference image is a game asset for a mobile farming app: a low raised bed with chunky rounded wooden planks and corner posts, filled with tilled soil holding a carrot, in cel-shaded toon 3D with crisp dark ink outlines. Make a variation of it. Keep the same style, colours, strict isometric orthographic angle, soft morning light from the upper left and plain flat dark charcoal background (#16171A). Only the parts of crops above the soil are visible: nothing underground is shown, the soil is solid, with no cross-section, no cut-away and no glass. No text. The variation: Keep the bed exactly as it is: same chunky planks, posts, size, position and angle. Replace the carrot with one big ripe orange pumpkin in the middle, with its curly vine and a few broad leaves spreading over the soil, filling the bed."
+    },
+    {
+      "step": "references/field.png",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "references/bed.png",
+      "prompt": "The reference image is a game asset for a mobile farming app: a low raised bed with chunky rounded wooden planks and corner posts, filled with tilled soil holding a carrot, in cel-shaded toon 3D with crisp dark ink outlines. Make a variation of it. Keep the same style, colours, strict isometric orthographic angle, soft morning light from the upper left and plain flat dark charcoal background (#16171A). Only the parts of crops above the soil are visible: nothing underground is shown, the soil is solid, with no cross-section, no cut-away and no glass. No text. The variation: Show four of these beds arranged in a 2x2 isometric grid with small gaps between them, all the same size. Each holds a different ripe crop, shown only above the soil: nine small red radishes in a 3x3 grid; four round lettuce heads in a 2x2 grid; two big carrots side by side; one big orange pumpkin with its vine and leaves."
+    },
+    {
+      "step": "lights/field_morning.png",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "references/field.png",
+      "prompt": "The reference image shows four chunky wooden raised garden beds in a 2x2 isometric grid, holding radishes, lettuces, carrots and a pumpkin, in cel-shaded toon 3D with crisp dark ink outlines. Keep everything exactly the same: composition, objects, crop counts, camera angle, style, outlines and the plain flat dark charcoal background (#16171A). Add no new objects or light sources. Change only the lighting, to: dawn. A very low sun far to the left casting long soft shadows across the beds, pale pink-gold light on the lit faces, cool lavender-blue shadows, a gentle misty softness, colours noticeably lighter and less saturated than at midday."
+    },
+    {
+      "step": "lights/field_day.png",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "references/field.png",
+      "prompt": "The reference image shows four chunky wooden raised garden beds in a 2x2 isometric grid, holding radishes, lettuces, carrots and a pumpkin, in cel-shaded toon 3D with crisp dark ink outlines. Keep everything exactly the same: composition, objects, crop counts, camera angle, style, outlines and the plain flat dark charcoal background (#16171A). Add no new objects or light sources. Change only the lighting, to: midday. Bright neutral white sunlight from high above, short crisp shadows, full saturated colours."
+    },
+    {
+      "step": "lights/field_dusk.png",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "references/field.png",
+      "prompt": "The reference image shows four chunky wooden raised garden beds in a 2x2 isometric grid, holding radishes, lettuces, carrots and a pumpkin, in cel-shaded toon 3D with crisp dark ink outlines. Keep everything exactly the same: composition, objects, crop counts, camera angle, style, outlines and the plain flat dark charcoal background (#16171A). Add no new objects or light sources. Change only the lighting, to: dusk. A low golden-orange sun from the right, long warm shadows, a magenta-purple tint in the shadows."
+    },
+    {
+      "step": "lights/field_night.png",
+      "made_by": "edit",
+      "model": "gpt-image-2.5-sunburst",
+      "from": "references/field.png",
+      "prompt": "The reference image shows four chunky wooden raised garden beds in a 2x2 isometric grid, holding radishes, lettuces, carrots and a pumpkin, in cel-shaded toon 3D with crisp dark ink outlines. Keep everything exactly the same: composition, objects, crop counts, camera angle, style, outlines and the plain flat dark charcoal background (#16171A). Add no new objects or light sources. Change only the lighting, to: night. Cool blue moonlight from above left, deep blue-violet shadows, muted colours, and a soft pale rim light along the top edges so every bed and crop still reads clearly against the dark background."
+    }
+  ]
+}

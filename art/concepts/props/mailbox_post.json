@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image is a game asset for a mobile farming app, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, simple chunky toy-like shapes, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Make a new asset in exactly the same style, colours, outlines and lighting, centered with generous margin. No text, no letters, no numbers. The asset: a chunky rural mailbox with a rounded top on a wooden post, its red flag raised and a letter peeking out of the open door.",
+  "refs": [
+    "art/style/references/bed.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T17:45:33"
+}

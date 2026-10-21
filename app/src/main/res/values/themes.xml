@@ -7,6 +7,8 @@
         <item name="android:colorAccent">@color/sg_accent</item>
         <item name="android:textColorPrimary">@color/sg_text</item>
         <item name="android:textColorSecondary">@color/sg_muted</item>
+        <!-- Android 8+ (font resources); older phones keep the system font. -->
+        <item name="android:fontFamily">@font/nunito</item>
     </style>
 
     <!-- Base for the overlay styles below; the dotted names inherit from it. -->
@@ -22,15 +24,18 @@
         <item name="android:textSize">17sp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/nunito_semibold</item>
         <item name="android:stateListAnimator">@null</item>
     </style>
 
     <style name="ScrollGate.Button.Primary">
         <item name="android:background">@drawable/bg_button_primary</item>
         <item name="android:textColor">@color/sg_on_accent</item>
+        <item name="android:fontFamily">@font/nunito_bold</item>
+        <!-- Bold for phones before Android 8, which skip the font; a bold font isn't made bolder. -->
         <item name="android:textStyle">bold</item>
     </style>
+
 
     <style name="ScrollGate.Button.Secondary">
         <item name="android:background">@drawable/bg_button_secondary</item>
@@ -48,7 +53,7 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:background">@drawable/bg_button_text</item>
         <item name="android:textColor">@color/sg_text_soft</item>
-        <item name="android:minHeight">44dp</item>
+        <item name="android:minHeight">48dp</item>
         <item name="android:paddingStart">8dp</item>
         <item name="android:paddingEnd">12dp</item>
         <item name="android:textSize">15sp</item>
@@ -71,7 +76,7 @@
         <item name="android:textColor">@color/chip_text</item>
         <item name="android:textSize">14sp</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/nunito_semibold</item>
         <item name="android:stateListAnimator">@null</item>
     </style>
 
@@ -79,6 +84,7 @@
     <style name="ScrollGate.Title">
         <item name="android:textColor">@color/sg_text</item>
         <item name="android:textSize">30sp</item>
+        <item name="android:fontFamily">@font/nunito_extrabold</item>
         <item name="android:textStyle">bold</item>
         <item name="android:lineSpacingMultiplier">1.05</item>
     </style>
@@ -86,17 +92,19 @@
     <style name="ScrollGate.Body">
         <item name="android:textColor">@color/sg_muted</item>
         <item name="android:textSize">17sp</item>
+        <item name="android:fontFamily">@font/nunito</item>
         <item name="android:lineSpacingMultiplier">1.2</item>
     </style>
 
     <style name="ScrollGate.Small">
         <item name="android:textColor">@color/sg_faint</item>
         <item name="android:textSize">13sp</item>
+        <item name="android:fontFamily">@font/nunito</item>
     </style>
 
     <style name="ScrollGate.Label">
         <item name="android:textColor">@color/sg_muted</item>
         <item name="android:textSize">14sp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/nunito_semibold</item>
     </style>
 </resources>

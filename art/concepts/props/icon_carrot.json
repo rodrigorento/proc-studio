@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "An Android app icon in the same style: a square with rounded corners, filled edge to edge with a flat background colour, the subject centered and large enough to read at a tiny size, no text. Deep teal background; a big orange carrot popping out of a mound of soil, leaves up.",
+  "refs": [
+    "art/style/references/bed.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T17:45:50"
+}

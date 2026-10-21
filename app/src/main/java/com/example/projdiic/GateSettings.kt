@@ -24,11 +24,16 @@ class GateSettings(context: Context) {
         get() = prefs.getBoolean(KEY_CHECK_IN, false)
         set(value) = prefs.edit().putBoolean(KEY_CHECK_IN, value).apply()
 
+    /** The farm's pop, pour and seed sounds; silent and vibrate mode mute them as well. */
+    var soundsEnabled: Boolean
+        get() = prefs.getBoolean(KEY_SOUNDS, true)
+        set(value) = prefs.edit().putBoolean(KEY_SOUNDS, value).apply()
+
     var trustedPerson: String
         get() = prefs.getString(KEY_TRUSTED_PERSON, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_TRUSTED_PERSON, value.trim()).apply()
 
-    /** No gates and no asking for tasks until this time ("Snooze until tomorrow"); 0 when on. */
+    /** No gates and no asking for tasks until this time ("Close the gate until tomorrow"); 0 when on. */
     var snoozedUntil: Long
         get() = prefs.getLong(KEY_SNOOZED_UNTIL, 0L)
         set(value) = prefs.edit().putLong(KEY_SNOOZED_UNTIL, value).apply()
@@ -55,6 +60,7 @@ class GateSettings(context: Context) {
         private const val KEY_COOLDOWN = "cooldown_minutes"
         private const val KEY_CHECK_IN = "check_in_enabled"
         private const val KEY_TRUSTED_PERSON = "trusted_person"
+        private const val KEY_SOUNDS = "sounds_enabled"
         private const val KEY_WORDING = "wording_index"
         private const val KEY_SNOOZED_UNTIL = "snoozed_until"
 

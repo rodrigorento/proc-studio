@@ -9,20 +9,10 @@ sealed interface GateScreen {
     /** Drawn as a sheet over the dimmed feed rather than as a full screen. */
     val overFeed: Boolean get() = false
 
-    /** One task and three ways out. */
+    /** A due crop and its ways out: harvest it, or 5 more minutes once. */
     data class Gate(override val taskId: String) : GateScreen {
         override val logName get() = "gate"
         override val overFeed get() = true
-    }
-
-    data class PickTime(override val taskId: String) : GateScreen {
-        override val logName get() = "pick_time"
-        override val overFeed get() = true
-    }
-
-    /** The feed stays closed until Done or Back. */
-    data class DoingNow(override val taskId: String, val startedAt: Long) : GateScreen {
-        override val logName get() = "doing_now"
     }
 
     /** After two passes on the same task, when he has switched check-ins on. */
@@ -30,7 +20,7 @@ sealed interface GateScreen {
         override val logName get() = "check_in"
     }
 
-    /** Shown instead of the gate while the list is empty. */
+    /** The farm itself: while a crop is still dry today, or with nothing for now on the list (see [PauseRules]). */
     data object AddTasks : GateScreen {
         override val taskId: String? get() = null
         override val logName get() = "add_tasks"

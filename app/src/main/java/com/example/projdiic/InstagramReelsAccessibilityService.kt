@@ -1,9 +1,6 @@
 package com.example.projdiic
 
 import android.accessibilityservice.AccessibilityService
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.provider.CalendarContract
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -27,12 +24,19 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     private var gateOpenedAt = 0L
     private var passCounted = false
 
+    /** Why the farm over Instagram opened ([PauseRules.Pick.why]), for the log when it closes. */
+    private var farmOpenedFor: String? = null
+    private val session = InstagramSession(SESSION_GAP_MS)
+
     companion object {
         private const val TAG = "ReelsBlocker"
         private const val INSTAGRAM = "com.instagram.android"
 
         /** A gate he walked away from for longer than this is dropped; the next stretch starts fresh. */
         private const val STALE_GATE_MS = 10 * 60_000L
+
+        /** Instagram away for longer than this ends an Instagram session ([InstagramSession]). */
+        private const val SESSION_GAP_MS = 10 * 60_000L
 
         var currentReelsCount = 0
             private set
@@ -48,6 +52,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         super.onCreate()
         settings = GateSettings(this)
         overlay = GateOverlay(this, this)
+        // Loaded now, so the pause's first harvest pops.
+        FarmSounds.warmUp(this)
         isServiceEnabled = true
     }
 
@@ -83,8 +89,7 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             }
             return
         }
-        instagramOnScreen = false
-        leftInstagramAt = System.currentTimeMillis()
+        markLeft(System.currentTimeMillis())
         onLeftInstagram(pkg, className, windowType)
     }
 
@@ -103,14 +108,15 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         instagramOnScreen = true
         val current = screen
         val now = System.currentTimeMillis()
-        if (current != null && current !is GateScreen.DoingNow && now - leftInstagramAt > STALE_GATE_MS) {
+        session.seen(now)
+        if (current != null && now - leftInstagramAt > STALE_GATE_MS) {
             EventLog.log(this, "gate_expired", "screen" to current.logName, "away_ms" to now - leftInstagramAt)
             screen = null
         } else if (current != null) {
             gateOpenedAt = now
             EventLog.log(this, "gate_shown_again", "screen" to current.logName, "away_ms" to now - leftInstagramAt)
         }
-        // Opening Instagram with nothing due on the list asks for tasks straight away. The window
+        // Opening Instagram with nothing for now on the list asks for tasks straight away, once a session. The window
         // event itself says Instagram is on screen, so there's no need to check the active window.
         if (screen == null && !settings.isSnoozed(now) && shouldAskNow(now)) {
             openGate(TriggerReason.EMPTY_LIST, now, confirmActive = false)
@@ -120,14 +126,14 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     }
 
     private fun shouldAskNow(now: Long): Boolean =
-        !trigger.coolingDown(now) && TaskRules.shouldAskForTasks(TaskCache.getTasks(this), now)
+        session.mayAskForTasks && !trigger.coolingDown(now) && TaskRules.shouldAskForTasks(TaskCache.getTasks(this), now)
 
     /** [pkg], [className] and [windowType] describe the window that replaced Instagram, for the log. */
     private fun onLeftInstagram(pkg: String, className: String?, windowType: Int?) {
         val current = screen ?: return
         val task = current.taskId?.let { TaskCache.find(this, it) }
-        // Walking away from a gate counts as passing on its task.
-        if (task != null && current !is GateScreen.DoingNow) TaskCache.update(this, passOnce(task))
+        // Walking away from a gate counts as passing on its task (unless it is being harvested).
+        if (task != null && !overlay.busy) TaskCache.update(this, passOnce(task))
         EventLog.log(
             this, "left_instagram",
             "screen" to current.logName,
@@ -146,11 +152,12 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             if (activePackage() != INSTAGRAM) return
             onReturnedToInstagram()
         }
+        val now = System.currentTimeMillis()
+        session.seen(now)
         if (screen != null) {
             render()
             return
         }
-        val now = System.currentTimeMillis()
         val result = trigger.onScroll(now, settings.triggerConfig())
         if (!result.counted) return
         currentReelsCount = trigger.swipes
@@ -172,21 +179,22 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     private fun openGate(reason: TriggerReason, now: Long, confirmActive: Boolean = true) {
         val tasks = TaskCache.getTasks(this)
         val next = TaskRules.next(tasks, now)
-        val opened = when {
-            TaskRules.shouldAskForTasks(tasks, now) -> GateScreen.AddTasks
-            next == null -> null
-            TaskRules.needsCheckIn(next, settings.checkInEnabled) -> GateScreen.CheckIn(next.id)
-            else -> GateScreen.Gate(next.id)
-        }
+        val pick = PauseRules.pick(
+            tasks, now,
+            mayAskForTasks = session.mayAskForTasks,
+            facilitator = reason == TriggerReason.FACILITATOR,
+            checkInEnabled = settings.checkInEnabled,
+        )
+        val opened = pick.screen
         if (opened == null) {
-            // A full list, all of it for later: nothing to show or ask for, so let him scroll.
-            EventLog.log(this, "gate_skipped", "trigger" to reason.logName, "why" to "full_list_all_for_later")
+            // Every crop watered and none due, tasks asked for already this session, or all for later: let him scroll.
+            EventLog.log(this, "gate_skipped", "trigger" to reason.logName, "why" to pick.why)
             trigger.startCooldown(now, settings.triggerConfig())
             return
         }
         if (confirmActive && activePackage() != INSTAGRAM) {
             // A late scroll event after Instagram left: never open the gate over another app.
-            instagramOnScreen = false
+            markLeft(now)
             return
         }
         Log.d(TAG, "Opening the ${opened.logName} after ${reason.logName}")
@@ -195,18 +203,26 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         val wordings = resources.getStringArray(R.array.gate_eyebrows)
         overlay.eyebrow = wordings[settings.nextWordingIndex() % wordings.size]
         screen = opened
+        overlay.slideIn = true
         if (!render()) {
             trigger.startCooldown(now, settings.triggerConfig())
             return
         }
+        // The farm with nothing for now on it is the ask for tasks too, watering or not: once a session.
+        if (pick.asks) session.askedForTasks()
+        farmOpenedFor = pick.why
+        val firm = opened.taskId != null
         EventLog.log(
             this, "gate_shown",
             "trigger" to reason.logName,
             "screen" to opened.logName,
-            "task" to next?.title,
-            "passes" to next?.passes,
-            "snooze_left" to next?.let { !it.snoozeUsed },
+            "why" to pick.why,
+            "task" to next?.title?.takeIf { firm },
+            "passes" to next?.passes?.takeIf { firm },
+            "due" to next?.let { FarmRules.isDue(it, now) }?.takeIf { firm },
+            "snooze_left" to next?.let { opened is GateScreen.Gate && !it.snoozeUsed }?.takeIf { firm },
             "tasks" to tasks.size,
+            "dry" to tasks.count { !FarmRules.isWatered(it, now) },
             "sound_paused" to overlay.holdsAudioFocus,
         )
     }
@@ -236,8 +252,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     }
 
     /**
-     * Closes the overlay. After a gate a cooldown follows; after the ask-for-tasks screen
-     * ([withCooldown] false) it comes back after the usual number of swipes.
+     * Closes the overlay. After a gate a cooldown follows; after the ask-for-tasks screen ([withCooldown] false) the
+     * count starts again at once, though the ask itself doesn't come back this session.
      */
     private fun backToFeed(withCooldown: Boolean = true) {
         screen = null
@@ -246,6 +262,13 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         currentReelsCount = 0
         overlay.hide()
         EventLog.log(this, "back_to_feed", "cooldown_min" to if (withCooldown) settings.cooldownMinutes else 0)
+    }
+
+    /** Instagram is no longer on screen as of [now]. */
+    private fun markLeft(now: Long) {
+        instagramOnScreen = false
+        leftInstagramAt = now
+        session.left(now)
     }
 
     /** Counts at most one pass per gate, however it ends. */
@@ -266,14 +289,21 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
 
     // GateOverlay.Actions: what each tap does.
 
-    override fun onDoItNow(task: Task) {
-        EventLog.log(this, "choice", "choice" to "do_it_now", "task" to task.title, "ms_on_gate" to msOnGate())
-        show(GateScreen.DoingNow(task.id, System.currentTimeMillis()))
-    }
-
-    override fun onPickTime(task: Task) {
-        EventLog.log(this, "choice", "choice" to "pick_a_time", "task" to task.title, "ms_on_gate" to msOnGate())
-        show(GateScreen.PickTime(task.id))
+    override fun onHarvested(task: Task, where: String, tappedAt: Long) {
+        val ready = latest(task)?.let { FarmRules.isReady(it, tappedAt) }
+        EventLog.log(
+            this, "choice",
+            "choice" to "harvest",
+            "screen" to where,
+            "task" to task.title,
+            "ripe" to ready,
+            "ms_on_gate" to tappedAt - gateOpenedAt,
+        )
+        TaskCache.remove(this, task.id)
+        FarmTally.Store(this).harvested(task, tappedAt)
+        EventLog.log(this, "task_done", "task" to task.title, "screen" to where)
+        Toast.makeText(this, R.string.toast_done, Toast.LENGTH_SHORT).show()
+        backToFeed()
     }
 
     override fun onSnooze(task: Task) {
@@ -282,58 +312,6 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         TaskCache.update(this, TaskRules.snooze(passOnce(current), System.currentTimeMillis()))
         EventLog.log(this, "choice", "choice" to "snooze", "task" to task.title, "ms_on_gate" to msOnGate())
         backToFeed()
-    }
-
-    override fun onTimeChosen(task: Task, choice: TimeChoice) {
-        val current = latest(task) ?: return backToFeed()
-        TaskCache.update(this, TaskRules.pickTime(passOnce(current), choice.at))
-        EventLog.log(this, "time_picked", "option" to choice.key, "task" to task.title, "back_at_ms" to choice.at)
-        backToFeed()
-    }
-
-    override fun onAddToCalendar(task: Task) {
-        val current = latest(task) ?: return backToFeed()
-        val startTime = System.currentTimeMillis() + 15 * 60_000L
-        val endTime = startTime + 30 * 60_000L
-        TaskCache.update(this, TaskRules.pickTime(passOnce(current), startTime))
-        EventLog.log(this, "time_picked", "option" to "calendar", "task" to task.title, "back_at_ms" to startTime)
-        backToFeed()
-
-        val calendarIntent = Intent(Intent.ACTION_INSERT).apply {
-            data = CalendarContract.Events.CONTENT_URI
-            putExtra(CalendarContract.Events.TITLE, task.title)
-            putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startTime)
-            putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endTime)
-            putExtra(CalendarContract.Events.DESCRIPTION, getString(R.string.calendar_description))
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        try {
-            startActivity(calendarIntent)
-        } catch (e: ActivityNotFoundException) {
-            Log.e(TAG, "No calendar app", e)
-            Toast.makeText(this, R.string.calendar_missing, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    override fun onBackToChoices(task: Task, from: GateScreen) {
-        EventLog.log(this, "back_to_choices", "from" to from.logName, "task" to task.title)
-        show(GateScreen.Gate(task.id))
-    }
-
-    override fun onDone(task: Task, startedAt: Long) {
-        TaskCache.remove(this, task.id)
-        EventLog.log(
-            this, "task_done",
-            "task" to task.title,
-            "ms_doing" to System.currentTimeMillis() - startedAt,
-        )
-        Toast.makeText(this, R.string.toast_done, Toast.LENGTH_SHORT).show()
-        backToFeed()
-    }
-
-    override fun onCloseInstagram(task: Task) {
-        EventLog.log(this, "close_instagram", "task" to task.title)
-        performGlobalAction(GLOBAL_ACTION_HOME)
     }
 
     override fun onCheckInAccepted(task: Task) {
@@ -352,8 +330,8 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
         show(GateScreen.Gate(task.id))
     }
 
-    override fun onTaskAdded(title: String, via: String): Task? {
-        val task = TaskCache.addTask(this, title, via) ?: return null
+    override fun onTaskPlanted(title: String, window: TimeWindow?, via: String): Task? {
+        val task = TaskCache.plant(this, title, window, via) ?: return null
         EventLog.log(
             this, "task_added",
             "via" to via,
@@ -361,30 +339,64 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
             "task" to task.title,
             "when" to task.whenKey.ifEmpty { "anytime" },
             "due_ms" to task.dueAt.takeIf { it > 0 },
+            "crop" to FarmRules.crop(task),
         )
         return task
     }
 
-    override fun onWhenChanged(task: Task, window: TimeWindow?) {
-        val current = latest(task) ?: return
-        TaskCache.update(this, TaskRules.withWhen(current, window, System.currentTimeMillis()))
+    override fun onTaskRemoved(task: Task) {
+        TaskCache.remove(this, task.id)
         EventLog.log(
-            this, "when_changed",
+            this, "task_removed",
             "where" to "overlay",
             "task" to task.title,
-            "from" to current.whenKey.ifEmpty { "anytime" },
-            "to" to (window?.key ?: "anytime"),
-            "due_ms" to window?.end,
+            "stage" to FarmRules.stage(task, System.currentTimeMillis()),
         )
     }
 
-    override fun onTaskRemoved(task: Task) {
+    override fun onFieldHarvested(task: Task, ripe: Boolean) {
         TaskCache.remove(this, task.id)
-        EventLog.log(this, "task_removed", "where" to "overlay", "task" to task.title)
+        FarmTally.Store(this).harvested(task, System.currentTimeMillis())
+        EventLog.log(this, "task_done", "task" to task.title, "screen" to GateScreen.AddTasks.logName, "ripe" to ripe)
+    }
+
+    override fun onFieldWatered(task: Task, via: String) {
+        val now = System.currentTimeMillis()
+        val current = latest(task) ?: return
+        TaskCache.update(this, TaskRules.water(current, now))
+        EventLog.log(
+            this, "watered",
+            "where" to "overlay",
+            "via" to via,
+            "task" to task.title,
+            "stage" to FarmRules.stage(current, now),
+            "dry_left" to TaskCache.getTasks(this).count { !FarmRules.isWatered(it, now) },
+            "ms_on_gate" to now - gateOpenedAt,
+        )
+    }
+
+    override fun onTaskRestored(task: Task, index: Int, after: String): Boolean {
+        if (!TaskCache.restore(this, task, index)) return false
+        if (after == "harvest") FarmTally.Store(this).unharvested(task)
+        val now = System.currentTimeMillis()
+        EventLog.log(
+            this, "task_restored",
+            "where" to "overlay",
+            "task" to task.title,
+            "after" to after,
+            "stage" to FarmRules.stage(task, now),
+            "ms_on_gate" to now - gateOpenedAt,
+        )
+        return true
+    }
+
+    override fun onGrowthNews(task: Task, stage: String) {
+        EventLog.log(this, "growth_news", "where" to "overlay", "task" to task.title, "crop" to FarmRules.crop(task), "stage" to stage)
     }
 
     override fun onSnoozeAppUntilTomorrow() {
-        val until = WhenChoices.startOfTomorrow(System.currentTimeMillis())
+        // Until the next farm day (4:00), not midnight: closed late at night, the crops would be dry again at once.
+        val until = FarmRules.nextDayStart(System.currentTimeMillis())
         settings.snoozedUntil = until
         EventLog.log(this, "app_snoozed", "until_ms" to until, "tasks" to TaskCache.getTasks(this).size)
         Toast.makeText(this, R.string.toast_app_snoozed, Toast.LENGTH_LONG).show()
@@ -392,8 +404,16 @@ class InstagramReelsAccessibilityService : AccessibilityService(), GateOverlay.A
     }
 
     override fun onAddTasksClosed() {
-        EventLog.log(this, "add_tasks_closed", "tasks" to TaskCache.getTasks(this).size)
-        // With nothing for now, it asks again after the next few swipes rather than after a cooldown.
+        val tasks = TaskCache.getTasks(this)
+        val now = System.currentTimeMillis()
+        EventLog.log(
+            this, "add_tasks_closed",
+            "why" to farmOpenedFor,
+            "tasks" to tasks.size,
+            "dry" to tasks.count { !FarmRules.isWatered(it, now) },
+        )
+        // No cooldown: while a crop is still dry the farm comes back after the usual swipes; it won't ask for tasks
+        // again this session.
         backToFeed(withCooldown = false)
     }
 

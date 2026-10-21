@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image is a game asset for a mobile farming app: a chunky wooden raised garden bed with rounded planks and corner posts, filled with tilled soil, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Keep the same style, bed, colours, angle and lighting. Only the parts of crops above the soil are visible; nothing underground is shown. No text. Show five copies of this bed side by side in one row, evenly spaced and the same size, left to right showing the two carrots' growth stages: 1) seed: two small soil mounds where seeds were planted, nothing growing yet; 2) sprout: two tiny pale-green sprouts with two leaves each; 3) growing: two young carrot plants with short feathery leaves and no orange visible yet; 4) ripe: two big carrots exactly like the reference, orange shoulders showing; 5) overripe, gone to seed: the same two carrots with leaves starting to yellow and a tall stalk rising from each, topped by a white umbrella-shaped flower head. In all five the soil is pale, dry and cracked and the leaves droop and sag as if they badly need water; the plants are thirsty, not dead.",
+  "refs": [
+    "art/style/references/bed_carrot.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T12:00:47"
+}

@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image shows four lettuces in a raised bed, in cel-shaded toon 3D with crisp warm dark-brown ink outlines. Make a modeling reference sheet for one of those ripe lettuce heads, pulled out of the ground and shown whole: the ruffled outer leaves, the tight heart and a short pale stem with a few roots, no bed and no soil. Three orthographic views side by side at the same scale on one baseline: front, side and top. Same style, colours and outlines, soft even daylight, plain flat dark charcoal background (#16171A). No text.",
+  "refs": [
+    "art/style/references/bed_lettuce.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T15:59:56"
+}

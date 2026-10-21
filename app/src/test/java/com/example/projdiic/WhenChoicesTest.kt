@@ -1,7 +1,9 @@
 package com.example.projdiic
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -31,25 +33,11 @@ class WhenChoicesTest {
     private fun label(window: TimeWindow?, now: Long = friday) = WhenText.label(window, now, utc, formats)
 
     @Test
-    fun theFixedChips() {
-        val chips = WhenChoices.chips(friday, utc)
+    fun thisMonthRunsToTheLastDay() {
+        val month = WhenChoices.thisMonth(friday, utc)
 
-        assertEquals(
-            listOf(null, WhenChoices.TODAY, WhenChoices.TONIGHT, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK),
-            chips.map { it?.key },
-        )
-    }
-
-    @Test
-    fun lateAtNightAndOnSundaysThereAreFewerChips() {
-        assertEquals(
-            listOf(null, WhenChoices.TODAY, WhenChoices.TOMORROW, WhenChoices.THIS_WEEK),
-            WhenChoices.chips(at(16, 23, 30), utc).map { it?.key },
-        )
-        assertEquals(
-            listOf(null, WhenChoices.TODAY, WhenChoices.TONIGHT, WhenChoices.TOMORROW),
-            WhenChoices.chips(at(18, 10), utc).map { it?.key },
-        )
+        assertEquals(friday, month.start)
+        assertEquals(at(31, 23, 59) + 59_999, month.end)
     }
 
     @Test
@@ -59,6 +47,8 @@ class WhenChoicesTest {
         assertEquals("Tonight", label(WhenChoices.tonight(friday, utc)))
         assertEquals("Tomorrow", label(WhenChoices.tomorrow(friday, utc)))
         assertEquals("This week", label(WhenChoices.thisWeek(friday, utc)))
+        assertEquals("This month", label(WhenChoices.thisMonth(friday, utc)))
+        assertEquals("15 days, 9 hours left", WhenText.gateLine(WhenChoices.thisMonth(friday, utc), friday, utc, formats))
     }
 
     @Test
@@ -87,18 +77,29 @@ class WhenChoicesTest {
     }
 
     @Test
-    fun snoozingTheAppLastsUntilMidnight() {
-        assertEquals(at(17, 0), WhenChoices.startOfTomorrow(friday, utc))
-        assertEquals(at(17, 0), WhenChoices.startOfTomorrow(at(16, 23, 59), utc))
+    fun timeLeftIsInDaysAndHoursThenMinutes() {
+        val sunday = at(18, 23, 59) + 59_999 // the end of this week
+
+        assertEquals("2 days, 9 hours left", WhenText.timeLeft(sunday, friday))
+        assertEquals("1 day, 1 hour left", WhenText.timeLeft(at(17, 15, 50), friday))
+        assertEquals("1 day left", WhenText.timeLeft(at(17, 14, 50), friday))
+        assertEquals("1 hour left", WhenText.timeLeft(sunday, at(18, 23)))
+        assertEquals("30 minutes left", WhenText.timeLeft(sunday, at(18, 23, 30)))
+        assertEquals("1 minute left", WhenText.timeLeft(sunday, sunday - 1_000))
     }
 
     @Test
     fun theGateLine() {
         assertNull(WhenText.gateLine(null, friday, utc, formats))
-        assertEquals("For today", WhenText.gateLine(WhenChoices.today(friday, utc), friday, utc, formats))
+        assertEquals("9 hours left", WhenText.gateLine(WhenChoices.today(friday, utc), friday, utc, formats))
+        assertEquals("2 days, 9 hours left", WhenText.gateLine(WhenChoices.thisWeek(friday, utc), friday, utc, formats))
         assertEquals(
-            "For tomorrow 15:00",
+            "1 day left",
             WhenText.gateLine(WhenParser.parse("Dentist tomorrow at 3pm", friday, utc).window, friday, utc, formats),
+        )
+        assertEquals(
+            "From 16:50",
+            WhenText.gateLine(WhenParser.parse("Stretch in 2 hours", friday, utc).window, friday, utc, formats),
         )
         assertEquals(
             "This was for yesterday",

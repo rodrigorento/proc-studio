@@ -1,0 +1,186 @@
+# Every farm asset: where it comes from, what it becomes and how far along it is.
+#
+# status:
+#   exported  rendered and in the app's resources, but only the facilitator's art preview shows it so far
+#   in_app    used by the app itself
+# reference: the approved look it is held to. concepts: the images it was modelled from (and, under options, the
+# alternatives that were weighed). model: the farmkit code that builds it. outputs: the files the export writes.
+#
+# `python3 art/review.py check` confirms every file listed here exists and every exported image is listed.
+
+beds:
+  empty:
+    reference: art/style/references/bed.png
+    model: art/farmkit/bed.py
+    outputs: [app/src/main/res/drawable-nodpi/bed_empty_*.webp]
+    status: exported
+    notes: low edging of thin planks and short posts around tilled ridges; watered and dry; the app uses the day light
+
+crops:
+  radish:
+    when: today
+    count: 9 in a 3x3 grid
+    reference: art/style/references/bed_radish.png
+    concepts: [art/concepts/radish/stages_wet.png, art/concepts/radish/stages_dry.png, art/concepts/radish/turnaround.png]
+    model: art/farmkit/crops/radish.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_radish_*.webp]
+    status: exported
+    notes: gone to seed, the corners and centre (5 of 9) bolt with pink flowers
+  lettuce:
+    when: the rest of this week
+    count: 4 in a 2x2 grid
+    reference: art/style/references/bed_lettuce.png
+    concepts: [art/concepts/lettuce/stages_wet.png, art/concepts/lettuce/stages_dry.png,
+               art/concepts/lettuce/turnaround.png, art/concepts/lettuce/overripe_cone.png]
+    options: [art/concepts/lettuce/overripe_puffs.png, art/concepts/lettuce/overripe_open.png,
+              art/concepts/lettuce/overripe_yellowed.png]
+    model: art/farmkit/crops/lettuce.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_lettuce_*.webp]
+    status: exported
+    notes: gone to seed, each head stretches into a tall cone with yellow flowers
+  carrot:
+    when: next week
+    count: 2 side by side
+    reference: art/style/references/bed_carrot.png
+    concepts: [art/concepts/carrot/stages_wet.png, art/concepts/carrot/stages_dry.png, art/concepts/carrot/turnaround.png]
+    model: art/farmkit/crops/carrot.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_carrot_*.webp]
+    status: exported
+  corn:
+    when: the week after next
+    count: 3 stalks in a row across the bed
+    reference: art/concepts/corn/ripe.png
+    concepts: [art/concepts/corn/stages_wet.png, art/concepts/corn/turnaround.png]
+    options: [art/concepts/corn/options/corn_1.png, art/concepts/corn/options/corn_3.png,
+              art/concepts/corn/options/corn_4.png, art/concepts/corn/options/sheet_corn_and_grape.png]
+    model: art/farmkit/crops/corn.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_corn_*.webp]
+    status: in_app
+    notes: picked 2026-10-20 (option 2, three stalks with half-peeled cobs); overripe, stalks, leaves and husks dry to straw
+  pumpkin:
+    when: three weeks on
+    count: 1 in the middle, with its vine
+    reference: art/style/references/bed_pumpkin.png
+    concepts: [art/concepts/pumpkin/stages_wet.png, art/concepts/pumpkin/stages_dry.png, art/concepts/pumpkin/turnaround.png]
+    model: art/farmkit/crops/pumpkin.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_pumpkin_*.webp]
+    status: exported
+    notes: overripe, the orange dulls with pale speckles
+  grape:
+    when: later than three weeks on
+    count: 1 vine on a wooden T trellis, two bunches
+    reference: art/concepts/grape/ripe.png
+    concepts: [art/concepts/grape/stages_wet.png, art/concepts/grape/turnaround.png]
+    options: [art/concepts/grape/options/grape_2.png, art/concepts/grape/options/grape_3.png,
+              art/concepts/grape/options/grape_4.png]
+    model: art/farmkit/crops/grape.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_grape_*.webp]
+    status: in_app
+    notes: picked 2026-10-20 (option 1); the trellis is a true T (bar on top), as a cross read like a grave marker; overripe, autumn leaves and raisin bunches, a few fallen; the harvest takes the bunches and the vine sinks away
+  sunflower:
+    when: anytime
+    count: 1, a big head and two side blooms
+    reference: art/style/references/bed_sunflower.png
+    concepts: [art/concepts/sunflower/stages_wet.png, art/concepts/sunflower/stages_dry.png,
+               art/concepts/sunflower/turnaround.png, art/concepts/sunflower/bed_big_2.png]
+    options: [art/concepts/sunflower/bed_branching.png]
+    model: art/farmkit/crops/sunflower.py
+    outputs: [app/src/main/res/drawable-nodpi/crop_sunflower_*.webp]
+    status: exported
+    notes: no due date, so no overripe stage; it stops at bloom
+
+animations:
+  watering:
+    concepts: [art/concepts/animations/water_can.png]
+    options: [art/concepts/animations/water_drops.png]
+    model: art/farmkit/anim.py
+    outputs: [app/src/main/res/drawable-nodpi/anim_water_can_*.webp]
+    status: in_app
+    notes: watering a dry bed on the field (a tap, or Water it in its sheet); the bed fades from dry to wet under it (only time grows a crop)
+  rain:
+    concepts: [art/concepts/animations/water_cloud.png]
+    model: art/farmkit/anim.py
+    outputs: [app/src/main/res/drawable-nodpi/anim_water_rain_*.webp]
+    status: exported
+    notes: the field watered itself (gate closed, or a day without Instagram)
+  planting:
+    concepts: [art/concepts/ui/plant_flow.png]
+    model: art/farmkit/anim.py
+    outputs: [app/src/main/res/drawable-nodpi/anim_plant_*.webp]
+    status: exported
+    notes: per crop, its seed packet tips over and pours a seed onto each spot; plays over any bed while the empty card fades to the seed stage
+  harvest:
+    concepts: [art/concepts/animations/harvest_fly.png]
+    options: [art/concepts/animations/harvest_basket.png, art/concepts/animations/harvest_sparkle.png]
+    model: art/farmkit/anim.py
+    outputs: [app/src/main/res/drawable-nodpi/anim_harvest_*.webp]
+    status: exported
+    notes: per crop, from ripe or overripe (sunflower from bloom); plays over the watered empty bed
+
+field:
+  meadow:
+    concepts: [art/concepts/field/meadow.png, art/concepts/field/field_mockup.png]
+    model: art/farmkit/field.py
+    outputs: [app/src/main/res/drawable-nodpi/field_meadow.webp]
+    status: in_app
+    notes: the home screen's lawn for the 2x2 field, rendered with the card camera at the cards' scale; FieldArt.kt places each plot's card on it
+  plot_marked:
+    concepts: [art/concepts/field/plot_marked.png]
+    options: [art/concepts/field/options/empty_lawn.png, art/concepts/field/options/empty_daisies.png, art/concepts/field/options/empty_tufts.png, art/concepts/field/options/empty_overgrown.png, art/concepts/field/options/empty_bed_on_turf.png, art/concepts/field/options/empty_turf.png, art/concepts/field/options/empty_turf_sign.png]
+    model: art/farmkit/field.py
+    outputs: [app/src/main/res/drawable-nodpi/field_plot_marked.webp]
+    status: in_app
+    notes: an empty plot, pegs and string on the grass (a card)
+  bed_shadow:
+    model: art/farmkit/field.py
+    outputs: [app/src/main/res/drawable-nodpi/field_bed_shadow.webp]
+    status: in_app
+    notes: a bed's shadow on the grass, drawn under every bed card on the field
+
+props:
+  watering_can:
+    concepts: [art/concepts/animations/water_can.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_watering_can.webp]
+    status: in_app
+    notes: the Water it button
+  seed_packets:
+    concepts: [art/concepts/props/packets_paper.png]
+    options: [art/concepts/props/packets_sack.png, art/concepts/props/packets_jar.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_seed_*.webp]
+    status: exported
+    notes: one per crop, for planting a task; a paper bag turned three-quarters to the day sun, its crop printed big on the front
+  basket:
+    concepts: [art/concepts/props/basket_wicker.png]
+    options: [art/concepts/props/basket_crate.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_basket.webp]
+    status: exported
+    notes: the harvest
+  gate:
+    concepts: [art/concepts/props/gate_plank.png]
+    options: [art/concepts/props/gate_picket.png, art/concepts/props/gate_arch.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_gate.webp]
+    status: exported
+    notes: paused until tomorrow
+  mailbox:
+    concepts: [art/concepts/props/mailbox_post.png]
+    options: [art/concepts/props/mailbox_barn.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_mailbox.webp]
+    status: exported
+    notes: the neighbour check-in
+  pulled:
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/drawable-nodpi/prop_pulled.webp]
+    status: in_app
+    notes: a sprout pulled up with its clod and roots, on the crop sheet's Remove it button
+  app_icon:
+    concepts: [art/concepts/props/icon_bed.png]
+    options: [art/concepts/props/icon_gate.png, art/concepts/props/icon_can.png, art/concepts/props/icon_carrot.png]
+    model: art/farmkit/stills.py
+    outputs: [app/src/main/res/mipmap-*/ic_launcher*.webp]
+    status: in_app
+    notes: the launcher icon; its green is ICON_BACKGROUND in art/export_android.py

@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image shows four copies of a chunky wooden raised garden bed in one row, the growth stages of one sunflower plant, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, plain flat dark charcoal background (#16171A). Keep everything exactly the same: the beds, the angle, the size, number and position of every leaf, bud and flower. Change only how dry they are: in all four the soil becomes pale, dry and cracked, every leaf droops and sags, a duller olive green, and the flower heads nod down a little, as if the plant badly needs water; the plant is thirsty, not dead, and the petals stay yellow. No text.",
+  "refs": [
+    "art/concepts/sunflower/stages_wet.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T16:37:58"
+}

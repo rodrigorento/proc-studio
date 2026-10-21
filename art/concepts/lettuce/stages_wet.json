@@ -1,0 +1,25 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image shows five copies of a chunky wooden raised garden bed in one row, the growth stages of four lettuces, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, plain flat dark charcoal background (#16171A). Keep everything exactly the same in all five beds except the third one from the left. In the third bed, replace the four lettuce heads with four young lettuces in the same positions: small, low, open rosettes of five or six loose rounded leaves spreading flat over the soil, about half as wide as a ripe head, with no tight heart in the middle. No text.",
+  "refs": [
+    "art/concepts/lettuce/stages_wet.png (the first version, made by edit_of below)"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T16:01:43",
+  "edit_of": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "1536x1024",
+    "quality": "medium",
+    "background": "opaque",
+    "prompt": "The first reference image is a game asset for a mobile farming app: a chunky wooden raised garden bed with rounded planks and corner posts, filled with tilled soil, holding four lettuces, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). The second reference image shows the same bed after the lettuces have gone to seed. Keep the same style, bed, colours, angle and lighting. Only the parts of crops above the soil are visible; nothing underground is shown. No text. Show five copies of this bed side by side in one row, evenly spaced and the same size, left to right showing the growth stages of the four lettuces, always exactly four in the same 2 by 2 positions: 1) seed: four small soil mounds where seeds were planted, nothing growing yet; 2) sprout: four tiny pale-green sprouts, each with two small oval seed leaves; 3) growing: four small loose rosettes of a few rounded leaves, no tight heart yet; 4) ripe: four full round lettuce heads exactly like the first reference; 5) overripe, gone to seed: exactly like the second reference, each head stretched into a tall cone of pointed leaves topped by small yellow flowers. The soil is dark and freshly watered in all five.",
+    "refs": [
+      "art/style/references/bed_lettuce.png",
+      "art/concepts/lettuce/overripe_cone.png"
+    ],
+    "endpoint": "edits",
+    "created": "2026-10-19T16:01:09"
+  }
+}

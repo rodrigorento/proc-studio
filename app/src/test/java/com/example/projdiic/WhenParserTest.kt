@@ -133,6 +133,15 @@ class WhenParserTest {
     }
 
     @Test
+    fun thisMonth() {
+        val rent = parse("Pay rent this month")
+
+        assertEquals("Pay rent", rent.title)
+        assertEquals(WhenChoices.THIS_MONTH, rent.window?.key)
+        assertEquals(endOf(31), rent.window?.end)
+    }
+
+    @Test
     fun inSomeTime() {
         val hours = parse("Stretch in 2 hours")
         val halfHour = parse("Text Joana in half an hour")

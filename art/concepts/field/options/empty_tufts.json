@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1024",
+  "quality": "medium",
+  "background": "transparent",
+  "prompt": "Keep everything exactly the same: the strict isometric camera angle, the cel-shaded toon look with three tone bands, the warm dark-brown ink outlines, the daylight lighting, and the size and position of the object in the frame. Transparent background. Change only this: keep the dark soil, but add seven or eight small tufts of green toon grass and two little clover patches scattered across it and poking up along the inner edges of the planks, as if the bed has rested for a while.",
+  "refs": [
+    "/private/tmp/claude-501/-Users-arthurchau-Projects-proc-studio/c74f5edd-f0d4-4b8f-adfd-af63cfc32a86/scratchpad/home_grass/bed_empty_wet.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T22:18:29"
+}

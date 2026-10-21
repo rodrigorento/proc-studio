@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image shows a pumpkin with its vine in a raised bed, in cel-shaded toon 3D with crisp warm dark-brown ink outlines. Make a modeling reference sheet for that ripe pumpkin, cut from the vine and shown whole: the ribbed orange body and its short curved green stem, no leaves, no bed and no soil. Three orthographic views side by side at the same scale on one baseline: front, side and top. Then, on a second row, one of its big lobed leaves seen flat from above and one curly tendril. Same style, colours and outlines, soft even daylight, plain flat dark charcoal background (#16171A). No text.",
+  "refs": [
+    "art/style/references/bed_pumpkin.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T16:20:34"
+}

@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "transparent",
+  "prompt": "Keep the same strict isometric camera angle, the cel-shaded toon look with three tone bands, the warm dark-brown ink outlines and the daylight lighting. Transparent background. Remove the wooden bed. Make the grass turf one large flat isometric lawn, a diamond about twice as wide as it is tall that fills most of the frame, big enough for four raised beds in a 2x2 layout. Short green toon grass with a few small tufts and three or four tiny white flowers near the edges, a slightly darker grass rim and the ink outline around the edge. No soil sides and nothing underground: just the flat lawn top.",
+  "refs": [
+    "/private/tmp/claude-501/-Users-arthurchau-Projects-proc-studio/c74f5edd-f0d4-4b8f-adfd-af63cfc32a86/scratchpad/home_grass/e_bed_on_turf.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T22:20:19"
+}

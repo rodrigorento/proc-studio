@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android's time wheels, for the time a seed should be ripe by; on the home screen and over Instagram alike. -->
+<TimePicker xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/timeWheel"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center_horizontal"
+    android:timePickerMode="spinner" />

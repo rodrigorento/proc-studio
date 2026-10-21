@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image shows a sunflower plant in a raised bed, in cel-shaded toon 3D with crisp warm dark-brown ink outlines. Make a modeling reference sheet for its parts, no bed and no soil: on the top row, the big flower head seen from the front, from the side (showing its thickness, the green back and where the stem joins) and from behind; on the bottom row, one side bloom from the front, one broad heart-shaped leaf seen flat, and the closed green bud. Same style, colours and outlines, soft even daylight, plain flat dark charcoal background (#16171A). No text.",
+  "refs": [
+    "art/style/references/bed_sunflower.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T16:37:31"
+}

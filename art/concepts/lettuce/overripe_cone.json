@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image is a game asset for a mobile farming app: a chunky wooden raised garden bed holding four lettuces, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Keep the bed, style, colours, angle, lighting and the positions of the four lettuces exactly the same. Only the parts of crops above the soil are visible. No text. Change only the lettuces: they are overripe and have gone to seed, past harvest but not dead: each head has stretched upwards into a tall narrow cone of small pointed leaves, about twice as tall as before, topped by a little cluster of small yellow flowers.",
+  "refs": [
+    "art/style/references/bed_lettuce.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T15:59:59"
+}

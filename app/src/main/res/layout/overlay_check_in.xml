@@ -15,19 +15,21 @@
         android:paddingEnd="24dp"
         android:paddingBottom="28dp">
 
-        <FrameLayout
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:background="@drawable/bg_icon_circle">
+        <!-- The farm's mailbox: someone you trust will check in. Harvesting plays the bed in its place. -->
+        <ImageView
+            android:id="@+id/ivMailbox"
+            android:layout_width="112dp"
+            android:layout_height="112dp"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/prop_mailbox" />
 
-            <ImageView
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:layout_gravity="center"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_people"
-                android:tint="@color/sg_accent" />
-        </FrameLayout>
+        <include
+            android:id="@+id/bed"
+            layout="@layout/view_bed"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:visibility="gone" />
 
         <TextView
             style="@style/ScrollGate.Title"
@@ -97,9 +99,9 @@
             android:minHeight="24dp" />
 
         <Button
-            android:id="@+id/btnCheckInDoNow"
+            android:id="@+id/btnCheckInHarvest"
             style="@style/ScrollGate.Button.Primary"
-            android:text="@string/check_in_do_now" />
+            android:text="@string/gate_harvest" />
 
         <Button
             android:id="@+id/btnCheckInOk"

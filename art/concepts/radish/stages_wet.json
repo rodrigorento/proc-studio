@@ -1,0 +1,12 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "medium",
+  "background": "opaque",
+  "prompt": "The reference image is a game asset for a mobile farming app: a chunky wooden raised garden bed with rounded planks and corner posts, filled with tilled soil, in cel-shaded toon 3D with crisp warm dark-brown ink outlines, strict isometric orthographic view, soft daylight, plain flat dark charcoal background (#16171A). Keep the same style, bed, colours, angle and lighting. Only the parts of crops above the soil are visible; nothing underground is shown. No text. Show five copies of this bed side by side in one row, evenly spaced and the same size, left to right showing the growth stages of the nine radishes, always exactly nine in a 3 by 3 grid: 1) seed: nine small soil mounds where seeds were planted, nothing growing yet; 2) sprout: nine tiny pale-green sprouts, each with two small heart-shaped seed leaves; 3) growing: nine young radish plants with a few rounded leaves and only a hint of red at the soil line; 4) ripe: nine round red radishes exactly like the reference, red tops showing above the soil; 5) overripe, gone to seed: the same nine radishes with leaves starting to yellow and a thin tall stalk rising from each, topped by small pale pink four-petal flowers. The soil is dark and freshly watered in all five.",
+  "refs": [
+    "art/style/references/bed_radish.png"
+  ],
+  "endpoint": "edits",
+  "created": "2026-10-19T15:19:23"
+}

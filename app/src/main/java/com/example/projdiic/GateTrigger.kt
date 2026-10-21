@@ -15,7 +15,7 @@ enum class TriggerReason(val logName: String) {
     MINUTES("minutes"),
     FACILITATOR("facilitator"),
 
-    /** Instagram opened with nothing on the list due now: ask for tasks straight away. */
+    /** Instagram opened with nothing on the list for now: ask for tasks straight away. */
     EMPTY_LIST("nothing_due"),
 }
 
